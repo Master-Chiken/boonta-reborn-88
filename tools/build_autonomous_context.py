@@ -19,9 +19,9 @@ ALLOWED_SUFFIXES = {
     ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh",
 }
 MAX_SOURCE_PATHS = 6
-MAX_SOURCE_RANGES = 10
+MAX_SOURCE_RANGES = 13
 MAX_RANGE_LINES = 80
-MAX_TOTAL_RANGE_LINES = 240
+MAX_TOTAL_RANGE_LINES = 432
 MAX_SOURCE_FILE_BYTES = 96 * 1024
 MAX_WRITE_PATHS = 20
 APPROVAL_REF_RE = re.compile(
@@ -224,7 +224,7 @@ def _build_source_excerpt(
             "A non-empty exact source-range allow-list is required when source excerpts are enabled"
         )
     if not isinstance(read_ranges, list) or not 1 <= len(read_ranges) <= MAX_SOURCE_RANGES:
-        raise ContextBuildError("Selected task source ranges must contain 1-10 exact ranges")
+        raise ContextBuildError("Selected task source ranges must contain 1-13 exact ranges")
     checked: list[tuple[str, int, int]] = []
     total_lines = 0
     for item in read_ranges:
