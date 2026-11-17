@@ -475,7 +475,7 @@ async function runCase(testCase) {{
               content: Buffer.from(JSON.stringify(payload), "utf8").toString("base64")
             }}
           }};
-        }}}
+        }}
       }},
       pulls: {{
         list: async (options) => {{
