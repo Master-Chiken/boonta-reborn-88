@@ -122,8 +122,8 @@
       "status": "queued",
       "target_branch": "dev",
       "read_paths": [
-        "gamecube-demo/source/route_graph_sampling.h",
         "gamecube-demo/source/route_cursor.h",
+        "gamecube-demo/source/route_graph_sampling.h",
         "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/main.c",
         "gamecube-demo/tests/test_rival_ai.c"
@@ -131,53 +131,43 @@
       "read_ranges": [
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 13,
-          "end_line": 20
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 22,
-          "end_line": 66
+          "start_line": 98,
+          "end_line": 118
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
           "start_line": 232,
-          "end_line": 236
+          "end_line": 275
+        },
+        {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 276,
+          "end_line": 300
+        },
+        {
+          "path": "gamecube-demo/source/route_graph_sampling.h",
+          "start_line": 73,
+          "end_line": 110
+        },
+        {
+          "path": "gamecube-demo/source/route_graph_sampling.h",
+          "start_line": 761,
+          "end_line": 780
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 7,
-          "end_line": 18
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 24,
-          "end_line": 55
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 579,
-          "end_line": 600
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 714,
-          "end_line": 744
+          "start_line": 393,
+          "end_line": 421
         },
         {
           "path": "gamecube-demo/source/main.c",
-          "start_line": 1431,
+          "start_line": 1427,
           "end_line": 1477
         },
         {
           "path": "gamecube-demo/tests/test_rival_ai.c",
           "start_line": 173,
           "end_line": 184
-        },
-        {
-          "path": "gamecube-demo/source/route_graph_sampling.h",
-          "start_line": 761,
-          "end_line": 782
         }
       ],
       "question_excerpt": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
@@ -190,7 +180,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Owner-approved 2026-11-17 scope refinement: keep existing rival AI helpers read-only and unchanged; use the shared native route sampler with independent per-rival route cursors. Implement and test route-relative distance, lap completion and finish state before standings."
+      "next_action_excerpt": "Owner-approved 2026-11-17 refinement: preserve rival AI helpers; use shared native route sampler and independent per-rival cursors. Bounded reads cover cursor init/movement/lap transitions, sampler prepare/sample, lap/finish helpers, rival update loop and regression tests."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
