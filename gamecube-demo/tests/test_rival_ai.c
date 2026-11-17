@@ -337,6 +337,54 @@ static void rival_route_cursors_are_independent_and_order_invariant(void)
     }
 }
 
+/*
+ * The production target builder consumes one immutable snapshot, and the
+ * production movement step is independent for each rival. Reversing the
+ * application order must therefore produce identical per-rival state.
+ */
+static void shared_frame_snapshot_and_movement_are_order_invariant(void)
+{
+    BoontaRivalAIFrameSnapshot snapshot;
+    BoontaRivalAITargetSnapshot targets;
+    BoontaRivalAIFrameStep forward[BOONTA_RIVAL_COUNT];
+    BoontaRivalAIFrameStep reverse[BOONTA_RIVAL_COUNT];
+    const float current_lateral[BOONTA_RIVAL_COUNT] = {-0.35f, 0.10f, 0.65f};
+    const float current_speed[BOONTA_RIVAL_COUNT] = {0.72f, 0.81f, 0.93f};
+    const float current_progress[BOONTA_RIVAL_COUNT] = {15.0f, 31.0f, 47.0f};
+    unsigned int rival;
+
+    snapshot.player_lateral = -0.12f;
+    for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+        snapshot.rival_z[rival] = boonta_rival_initial_z(rival);
+        snapshot.rival_lateral[rival] = current_lateral[rival];
+        snapshot.lookahead_curvature[rival] = 0.025f * (float)(rival + 1U);
+        snapshot.signed_lookahead_curvature[rival] =
+            rival == 1U ? -0.06f : 0.04f * (float)(rival + 1U);
+        snapshot.road_half_width[rival] = 3.4f - 0.2f * (float)rival;
+        snapshot.rivalry_score[rival] = 12U + rival * 9U;
+    }
+
+    assert(boonta_rival_ai_prepare_frame_snapshot(&snapshot, &targets));
+    for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+        assert(boonta_rival_ai_step_from_snapshot(
+            &targets, rival, current_lateral[rival], current_speed[rival],
+            current_progress[rival], 1.0f, &forward[rival]));
+    }
+    for (rival = BOONTA_RIVAL_COUNT; rival > 0U; --rival) {
+        const unsigned int index = rival - 1U;
+        assert(boonta_rival_ai_step_from_snapshot(
+            &targets, index, current_lateral[index], current_speed[index],
+            current_progress[index], 1.0f, &reverse[index]));
+    }
+
+    for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+        assert(nearf_ai(forward[rival].next_lateral, reverse[rival].next_lateral));
+        assert(nearf_ai(forward[rival].next_speed, reverse[rival].next_speed));
+        assert(nearf_ai(forward[rival].distance_delta, reverse[rival].distance_delta));
+        assert(forward[rival].distance_delta > 0.0f);
+    }
+}
+
 /* Exercise the same cursor-to-race-distance conversion used by main.c. */
 static void rival_route_progress_finishes_independently_and_resets(void)
 {
@@ -366,29 +414,60 @@ static void rival_route_progress_finishes_independently_and_resets(void)
 
     boonta_race_state_reset(&race);
     boonta_race_session_start_press(&race);
-    for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
-        float lap_progress = 0.0f;
-        BoontaRouteCursor before_invalid;
-        assert(boonta_route_cursor_init(&cursors[rival], &graph,
-            sampler.edge_lengths, start_edge) == BOONTA_ROUTE_CURSOR_OK);
-        assert(boonta_route_cursor_move(&cursors[rival],
-            boonta_rival_initial_progress(rival), NULL, 0U) ==
-            BOONTA_ROUTE_CURSOR_OK);
-        assert(boonta_route_cursor_lap_progress(&cursors[rival],
-            &lap_progress) == BOONTA_ROUTE_CURSOR_OK);
-        assert(boonta_rival_progress_from_cursor_state(
-            cursors[rival].completed_laps, lap_progress,
-            sampler.total_length, &race.rival_progress[rival]));
-        assert(nearf_ai(race.rival_progress[rival],
-            boonta_rival_initial_progress(rival)));
+    {
+        float route_distance[BOONTA_RIVAL_COUNT] = {0.0f, 0.0f, 0.0f};
+        for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+            float next_route_distance = 0.0f;
+            float next_progress = 0.0f;
+            BoontaRouteCursor before_invalid;
+            assert(boonta_route_cursor_init(&cursors[rival], &graph,
+                sampler.edge_lengths, start_edge) == BOONTA_ROUTE_CURSOR_OK);
+            assert(boonta_rival_advance_cursor_transaction(
+                &cursors[rival], boonta_rival_initial_progress(rival),
+                route_distance[rival], sampler.total_length,
+                &next_route_distance, &next_progress));
+            route_distance[rival] = next_route_distance;
+            race.rival_progress[rival] = next_progress;
+            assert(nearf_ai(route_distance[rival],
+                boonta_rival_initial_progress(rival)));
+            assert(nearf_ai(race.rival_progress[rival],
+                boonta_rival_initial_progress(rival)));
 
-        before_invalid = cursors[rival];
-        assert(boonta_route_cursor_move(&cursors[rival], NAN, NULL, 0U) ==
-            BOONTA_ROUTE_CURSOR_INVALID);
-        assert(cursors[rival].path_index == before_invalid.path_index);
-        assert(cursors[rival].completed_laps == before_invalid.completed_laps);
-        assert(nearf_ai(cursors[rival].distance_on_edge,
-            before_invalid.distance_on_edge));
+            before_invalid = cursors[rival];
+            next_route_distance = -1.0f;
+            next_progress = -1.0f;
+            assert(!boonta_rival_advance_cursor_transaction(
+                &cursors[rival], NAN, route_distance[rival],
+                sampler.total_length, &next_route_distance, &next_progress));
+            assert(next_route_distance == 0.0f && next_progress == 0.0f);
+            assert(cursors[rival].path_index == before_invalid.path_index);
+            assert(cursors[rival].completed_laps == before_invalid.completed_laps);
+            assert(cursors[rival].history_count == before_invalid.history_count);
+            assert(cursors[rival].finished == before_invalid.finished);
+            assert(nearf_ai(cursors[rival].distance_on_edge,
+                before_invalid.distance_on_edge));
+        }
+
+        /* Advance each independent cursor in small steps through real lap seams. */
+        for (frame = 0U; frame < 2000U && race.rival_finished_mask != all_finished;
+             ++frame) {
+            for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+                const unsigned int finish_bit = 1U << rival;
+                float next_route_distance = 0.0f;
+                float next_progress = 0.0f;
+                const float distance_delta = 0.4f + (float)rival * 0.1f;
+                const float finish_distance = boonta_rival_finish_distance(
+                    rival, sampler.total_length, BOONTA_RACE_LAP_CAPACITY);
+                if ((race.rival_finished_mask & finish_bit) != 0U) continue;
+                assert(boonta_rival_advance_cursor_transaction(
+                    &cursors[rival], distance_delta, route_distance[rival],
+                    sampler.total_length, &next_route_distance, &next_progress));
+                route_distance[rival] = next_route_distance;
+                race.rival_progress[rival] = next_progress;
+                (void)boonta_rival_record_finish(&race, rival, finish_distance,
+                    ((float)frame + 1.0f) / 60.0f);
+            }
+        }
     }
 
     /* Advance each independent cursor in small steps through real lap seams. */
@@ -485,6 +564,7 @@ int main(void)
     closest_rival_conflict_wins_independent_of_array_order();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
+    shared_frame_snapshot_and_movement_are_order_invariant();
     rival_route_cursors_are_independent_and_order_invariant();
     rival_route_progress_finishes_independently_and_resets();
     puts("rival AI tests: PASS");
