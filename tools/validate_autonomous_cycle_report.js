@@ -108,7 +108,8 @@ async function validateAutonomousCycleReport(options) {
   const {
     github, context, core, summary, baseline, snapshotAt,
     expectedTaskId, expectedBase, provider,
-    maxPolls = 32, pollIntervalMs = 15000, sleep = delay
+    maxPolls = 32, pollIntervalMs = 15000, sleep = delay,
+    allowDraftResume = false
   } = options;
 
   if (!github || !context || !core || typeof summary !== 'string') {
@@ -205,7 +206,7 @@ async function validateAutonomousCycleReport(options) {
     pr.number !== pullNumber ||
     pr.state !== 'open' ||
     pr.merged_at ||
-    pr.draft === true ||
+    (pr.draft === true && allowDraftResume !== true) ||
     pr.head.repo?.full_name !== owner + '/' + repo ||
     pr.base.repo?.full_name !== owner + '/' + repo ||
     pr.head.sha !== exactHead ||
@@ -218,7 +219,7 @@ async function validateAutonomousCycleReport(options) {
     !contentChangedDuringCycle ||
     !commitCreatedDuringCycle
   ) {
-    return fail(core, 'PROGRESS requires a non-draft, non-empty same-repository PR tied to the reserved task, targeting ' +
+    return fail(core, 'PROGRESS requires a non-empty same-repository PR tied to the reserved task (draft is allowed only for an explicitly resumed task), targeting ' +
       expectedBase + ', at its exact current head, created or advanced during this cycle, with changed file content and a cycle-fresh commit.');
   }
 
@@ -268,7 +269,7 @@ async function validateAutonomousCycleReport(options) {
     finalPr.number !== pullNumber ||
     finalPr.state !== 'open' ||
     finalPr.merged_at ||
-    finalPr.draft === true ||
+    (finalPr.draft === true && allowDraftResume !== true) ||
     finalPr.head.repo?.full_name !== owner + '/' + repo ||
     finalPr.base.repo?.full_name !== owner + '/' + repo ||
     finalPr.head.sha !== exactHead ||
