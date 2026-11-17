@@ -513,7 +513,13 @@ with tempfile.TemporaryDirectory() as temp:
 
     try:
         MODULE._build_source_excerpt(
-            source_root, paths, [*ranges, dict(ranges[-1], start_line=1, end_line=1)], 1800
+            source_root,
+            paths,
+            [*ranges, *[
+                {"path": paths[0], "start_line": line, "end_line": line}
+                for line in range(1, 5)
+            ]],
+            1800,
         )
     except MODULE.ContextBuildError as exc:
         assert "1-13 exact ranges" in str(exc)
