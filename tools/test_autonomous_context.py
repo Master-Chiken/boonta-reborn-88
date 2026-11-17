@@ -591,7 +591,7 @@ rival = next(
     task for task in current_summary["tasks"]
     if task["task_id"] == "GC-RIVAL-ROUTE-PROGRESSION"
 )
-rival_handoff = "\\n".join([
+rival_handoff = "\n".join([
     "Task ID: " + rival["task_id"],
     "Title: " + rival["title"],
     "Target branch: " + rival["target_branch"],
