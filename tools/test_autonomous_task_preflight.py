@@ -301,6 +301,19 @@ cases = [
         "expected_resume_head_sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2",
     },
     {
+        "name": "unapproved queued draft PR remains blocked",
+        "tasks": [activation, {**valid_queued, "owner_approved": False}],
+        "open_task_prs": [queued_draft_pr],
+        "pr_files": [{"filename": "tools/check_task_ledger.py", "status": "modified"}],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+    },
+    {
         "name": "multiple queued task PRs fail closed instead of selecting one writer",
         "tasks": [valid_queued, task("AUTOMATION-TEST-SECOND-QUEUED", "queued")],
         "open_task_prs": [queued_ready_pr, {
