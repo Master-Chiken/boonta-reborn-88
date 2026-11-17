@@ -9,10 +9,9 @@
   "tasks": [
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
-      "purpose": "Implement deterministic GameCube/Wii rival route distance, lap completion, finish state and regression coverage.",
-      "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/400",
+      "purpose": "Implement deterministic GameCube/Wii rival route distance, lap completion and finish state using existing rival AI helpers unchanged, with regression coverage.",
+      "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/437",
       "allowed_paths": [
-        "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/main.c",

@@ -1015,18 +1015,13 @@
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
       "read_paths": [
-        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/source/route_graph_sampling.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/main.c",
         "gamecube-demo/tests/test_rival_ai.c"
       ],
       "read_ranges": [
-        {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 70,
-          "end_line": 83
-        },
         {
           "path": "gamecube-demo/source/route_cursor.h",
           "start_line": 13,
@@ -1064,13 +1059,18 @@
         },
         {
           "path": "gamecube-demo/source/main.c",
-          "start_line": 1427,
-          "end_line": 1483
+          "start_line": 1431,
+          "end_line": 1477
         },
         {
           "path": "gamecube-demo/tests/test_rival_ai.c",
           "start_line": 173,
           "end_line": 184
+        },
+        {
+          "path": "gamecube-demo/source/route_graph_sampling.h",
+          "start_line": 761,
+          "end_line": 782
         }
       ],
       "acceptance_criteria": [
@@ -1083,8 +1083,8 @@
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
       "evidence": [],
-      "next_action": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
-      "updated_at": "2026-11-16",
+      "next_action": "Owner-approved 2026-11-17 scope refinement: keep existing rival AI helpers read-only and unchanged; use the shared native route sampler with independent per-rival route cursors. Implement and test route-relative distance, lap completion and finish state before standings.",
+      "updated_at": "2026-11-17",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
