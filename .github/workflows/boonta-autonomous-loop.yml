@@ -153,8 +153,12 @@ jobs:
               const bodyLines = (pull.body || '').split(/\r?\n/).map((line) => line.trim());
               const taskMarker = 'BOONTA_TASK_ID: ' + task.task_id;
               const targetMarker = 'BOONTA_TASK_TARGET_BRANCH: ' + task.target_branch;
+              // Draft is workflow state, not authorization: only an owner-approved queued task may resume it.
+              // The writer updates the existing branch and deliberately never changes the PR's Draft state.
+              const draftStateAllowed = pull.draft === false ||
+                (pull.draft === true && task.status === 'queued' && task.owner_approved === true);
               return (
-                pull.state === 'open' && pull.draft === false &&
+                pull.state === 'open' && draftStateAllowed &&
                 pull.user?.login === context.repo.owner &&
                 pull.head?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
                 pull.base?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
@@ -207,10 +211,6 @@ jobs:
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
             const activationTaskOpenPr = openTaskPullRequest(activationTask);
-            const resumeCandidateTask = activeTasks.length === 1 ? activeTasks[0] : activationTask;
-            const resumeCandidatePr = activeTasks.length === 1 ? activeTaskOpenPr : activationTaskOpenPr;
-            const resumeCandidateTrusted = isTrustedResumeCandidate(resumeCandidateTask, resumeCandidatePr) &&
-              !resumeCandidateTask?.pr_url && !resumeCandidateTask?.head_sha;
             const usableTask = (task) => Boolean(
               task && typeof task.task_id === 'string' && task.task_id.trim() &&
               typeof task.title === 'string' && task.title.trim() &&
@@ -229,13 +229,68 @@ jobs:
               new Set(task.read_paths).size === task.read_paths.length &&
               ['main', 'dev'].includes(task.target_branch)
             );
+            const queuedTaskPrEntries = queuedTasks
+              .map((task) => ({ task, pull: openTaskPullRequest(task) }))
+              .filter((entry) => Boolean(entry.pull) || Boolean(entry.task.pr_url) || Boolean(entry.task.head_sha));
+            const queuedTaskPrInventorySafe = queuedTaskPrEntries.length === 1 &&
+              Boolean(queuedTaskPrEntries[0].pull) &&
+              !queuedTaskPrEntries[0].pull.unsafe_duplicate_markers;
+            const queuedResumeTask = activeTasks.length === 0 &&
+              !activationTaskOpenPr &&
+              queuedTaskPrInventorySafe &&
+              queuedTaskPrEntries[0].task.owner_approved === true &&
+              Array.isArray(queuedTaskPrEntries[0].task.depends_on) &&
+              queuedTaskPrEntries[0].task.depends_on.every((dependencyId) =>
+                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+              ) &&
+              !queuedTaskPrEntries[0].task.pr_url &&
+              !queuedTaskPrEntries[0].task.head_sha &&
+              usableTask(queuedTaskPrEntries[0].task)
+                ? queuedTaskPrEntries[0].task
+                : null;
+
+            /*
+             * A queued task with an existing PR is not new work. It may be resumed
+             * only when it is the sole queued PR, its dependencies are complete,
+             * its task is owner-approved, and the PR passes the full trusted,
+             * same-repository identity checks below; approved queued drafts remain drafts while being resumed.
+             */
+            const resumeCandidateTask = activeTasks.length === 1
+              ? activeTasks[0]
+              : activationTaskOpenPr
+                ? activationTask
+                : queuedTaskPrEntries.length === 1
+                  ? queuedTaskPrEntries[0].task
+                  : activationTask;
+            const resumeCandidatePr = activeTasks.length === 1
+              ? activeTaskOpenPr
+              : activationTaskOpenPr
+                ? activationTaskOpenPr
+                : queuedTaskPrEntries.length === 1
+                  ? queuedTaskPrEntries[0].pull
+                  : null;
+            const resumeCandidateTrusted = isTrustedResumeCandidate(resumeCandidateTask, resumeCandidatePr) &&
+              !resumeCandidateTask?.pr_url && !resumeCandidateTask?.head_sha;
             const resumeSlotValid = activeTasks.length === 0
-              ? resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' && resumeCandidateTask?.status === 'blocked'
-              : activeTasks.length === 1 && activeTasks[0].task_id === resumeCandidateTask?.task_id && resumeCandidateTask?.status === 'active';
-            const resumeCandidateReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
-            // Promote only the first explicitly owner-approved queued task whose complete dependency set
-            // is already completed in the canonical ledger. An open/in-review PR never satisfies a dependency.
-            const eligibleQueuedTask = activeTasks.length === 0 && canStartNewTask
+              ? (
+                  (resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' &&
+                    resumeCandidateTask?.status === 'blocked' &&
+                    queuedTaskPrEntries.length === 0) ||
+                  (queuedResumeTask?.task_id === resumeCandidateTask?.task_id &&
+                    resumeCandidateTask?.status === 'queued')
+                )
+              : activeTasks.length === 1 &&
+                activeTasks[0].task_id === resumeCandidateTask?.task_id &&
+                resumeCandidateTask?.status === 'active' &&
+                queuedTaskPrEntries.length === 0 &&
+                !activationTaskOpenPr;
+            const resumeCandidateReady = Boolean(
+              resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask)
+            );
+            // A queued PR owns the single writer slot: never start an unrelated task
+            // while it awaits review or trust validation.
+            const eligibleQueuedTask = activeTasks.length === 0 &&
+              queuedTaskPrEntries.length === 0 && canStartNewTask
               ? queuedTasks.find((task) =>
                   task.owner_approved === true &&
                   Array.isArray(task.depends_on) &&
@@ -243,7 +298,6 @@ jobs:
                     typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
                   ) &&
                   !task.pr_url && !task.head_sha &&
-                  !openTaskPullRequest(task) &&
                   usableTask(task)
                 )
               : null;
@@ -297,7 +351,9 @@ jobs:
             }
             let selectedTask = null;
             let taskReason = '';
-            if (canStartNewTask && activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
+            if (activeTasks.length === 1 && (queuedTaskPrEntries.length > 0 || activationTaskOpenPr)) {
+              taskReason = 'an active ledger task and a separate activation/queued task PR both reserve the single writer slot; reconcile the existing PR before any provider invocation';
+            } else if (canStartNewTask && activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
               selectedTask = activeTasks[0];
               taskReason = 'one complete active ledger task with no existing PR, head or open task PR';
             } else if (activeTasks.length === 1 && usableTask(activeTasks[0]) && activeTaskOpenPr) {
@@ -310,6 +366,7 @@ jobs:
               !activationTask.head_sha &&
               taskBackoffAllowsSelection &&
               canStartNewTask &&
+              queuedTaskPrEntries.length === 0 &&
               !activationTaskOpenPr
             ) {
               selectedTask = activationTask;
@@ -326,6 +383,16 @@ jobs:
               activationTaskOpenPr
             ) {
               taskReason = 'the activation task already has open PR #' + activationTaskOpenPr.number + '; reconcile it before another provider invocation';
+            } else if (activeTasks.length === 0 && queuedTaskPrEntries.length > 0) {
+              const queuedPr = queuedTaskPrEntries[0];
+              taskReason = queuedTaskPrEntries.length > 1
+                ? 'multiple queued tasks already carry PR or head metadata; reconcile all of them before any provider invocation'
+                : !queuedPr.pull
+                  ? 'queued task ' + queuedPr.task.task_id + ' has recorded PR/head metadata without one exact matching open PR marker; owner reconciliation is required'
+                  : queuedPr.pull.unsafe_duplicate_markers
+                    ? 'queued task ' + queuedPr.task.task_id + ' has duplicate open PR markers; owner reconciliation is required'
+                    : 'queued task ' + queuedPr.task.task_id + ' already has open PR #' + queuedPr.pull.number +
+                      ' but it is not eligible for unattended resume; check owner approval, dependencies and repository identity; only owner-approved queued drafts may resume and they remain drafts';
             } else if (activeTasks.length === 0 && eligibleQueuedTask) {
               selectedTask = eligibleQueuedTask;
               taskReason = 'first owner-approved queued task whose complete dependency set is completed and whose bounded execution scope is valid';
@@ -420,7 +487,7 @@ jobs:
               taskBlockedActive && !ownerReevaluationAllowed
             ) {
               queueState = 'TASK_BACKOFF';
-            } else if (activationTaskOpenPr) {
+            } else if (activationTaskOpenPr || queuedTaskPrEntries.length > 0) {
               queueState = 'WAITING_FOR_OPEN_TASK_PR';
             } else if (queuedTasks.length > 0) {
               queueState = 'QUEUED_TASKS_WAITING_FOR_PROMOTION';
@@ -522,9 +589,10 @@ jobs:
                 ['Queued / active / blocked', queuedTasks.length + ' / ' + activeTasks.length + ' / ' + blockedTasks.length],
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
                 ['Task target branch', taskReady ? selectedTask.target_branch : 'none'],
+                ['Queued task PR reconciliation', queuedTaskPrEntries.length === 0 ? 'none' : queuedTaskPrEntries.map((entry) => entry.task.task_id + ' → ' + (entry.pull?.number ? '#' + entry.pull.number : 'recorded PR/head')).join('; ')],
                 ['Trusted existing PR resume', resumeReady ? 'PR #' + resumeCandidatePr.number + ' (eligible provider selected by cooldown order)' : 'none'],
               ])
-              .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, active-task reconciliation and READY. An existing open PR for the selected task blocks duplicate provider work until it is reconciled.')
+              .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, open-PR reconciliation, active-task reconciliation and READY. A queued task with an existing PR owns the single writer slot: a trusted owner-approved queued PR with completed dependencies may resume on its exact branch; draft status is preserved; otherwise all provider invocation is blocked pending owner reconciliation.')
               .write();
 
   autonomous-cycle:
@@ -764,7 +832,7 @@ jobs:
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
             echo "- Queue state: **${QUEUE_STATE:-NOT_EVALUATED}** (queued=${QUEUED_COUNT:-unknown}, active=${ACTIVE_COUNT:-unknown}, blocked=${BLOCKED_COUNT:-unknown})"
-            if [[ "${RESUME_READY:-false}" == "true" ]]; then echo "- Safe resume candidate: **PR #${RESUME_PR_NUMBER}**; owner-dispatch only."; fi
+            if [[ "${RESUME_READY:-false}" == "true" ]]; then echo "- Safe resume candidate: **PR #${RESUME_PR_NUMBER}**; eligible for the scheduled loop or an owner-authorized manual dispatch after provider cooldown and free-tier gates."; fi
             case "${QUEUE_STATE:-NOT_EVALUATED}" in
               EMPTY_QUEUE)
                 echo

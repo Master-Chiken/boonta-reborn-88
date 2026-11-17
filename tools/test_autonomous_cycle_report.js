@@ -331,6 +331,7 @@ async function run(name, options = {}) {
     expectedTaskId: options.expectedTaskId || taskId,
     expectedBase: options.expectedBase || options.base || 'main',
     provider: 'Offline test',
+    allowDraftResume: options.allowDraftResume === true,
     maxPolls: options.maxPolls || 2,
     pollIntervalMs: 0,
     sleep: async () => {}
@@ -532,6 +533,14 @@ async function run(name, options = {}) {
     expectFailure: 'tied to the reserved task'
   });
   await run('PR closed', { pr: { ...makeGithub().pr, state: 'closed' }, expectFailure: 'non-draft' });
+  await run('draft PR is rejected for a fresh task', {
+    pr: { ...makeGithub().pr, draft: true },
+    expectFailure: 'draft is allowed only'
+  });
+  await run('owner-approved resume may advance an existing draft PR without marking it ready', {
+    pr: { ...makeGithub().pr, draft: true },
+    allowDraftResume: true
+  });
   await run('head SHA mismatch', { commitSha: 'b'.repeat(40), expectFailure: 'non-draft' });
   await run('new PR points at a commit created before this cycle', {
     committerDate: new Date(Date.now() - 120_000).toISOString(),

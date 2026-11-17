@@ -271,7 +271,9 @@ for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs
         "RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}",
         "pull.head?.sha !== expectedHeadSha",
         "pull.user?.login !== context.repo.owner",
-        "pull.draft !== false",
+        "const draftStateAllowed = pull.draft === false ||",
+        "pull.draft === true && task.status === 'queued' && task.owner_approved === true",
+        "!draftStateAllowed ||",
         "task.pr_url || task.head_sha",
         "bodyLines.filter((line) => line === targetMarker).length !== 1",
     ):
@@ -463,9 +465,12 @@ for label, workflow, validator_title, sync_title, failure_title in task_backoff_
             "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
         )
     )
+    validator_binding_requirements = (*validator_binding_requirements, "allowDraftResume: process.env.RESUME_MODE === 'true'")
     for required in ("validateAutonomousCycleReport", *validator_binding_requirements):
         if required not in validator_block:
             errors.append(f"{label} must delegate BLOCKED/PROGRESS validation to the shared validator using the reserved task in both modes: {required!r}")
+if "allowDraftResume = false" not in cycle_validator or "pr.draft === true && allowDraftResume !== true" not in cycle_validator or "finalPr.draft === true && allowDraftResume !== true" not in cycle_validator:
+    errors.append("Shared cycle validator must accept Draft only when the caller explicitly marks the cycle as a resume.")
 for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_status', 'blocked')", "require('crypto')", "const blocker = oneLine(lines, 'BOONTA_CYCLE_BLOCKER')", "const nextAction = oneLine(lines, 'BOONTA_CYCLE_NEXT_ACTION')"):
     if required not in cycle_validator:
         errors.append(f"Shared BLOCKED validator must produce a deterministic task fingerprint: {required!r}")

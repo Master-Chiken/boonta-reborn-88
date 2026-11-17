@@ -77,6 +77,78 @@ def task(
 
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
 valid_queued = task("AUTOMATION-TEST-QUEUED", "queued")
+queued_ready_pr = {
+    "number": 457,
+    "state": "open",
+    "draft": False,
+    "user": {"login": "Master-Chiken"},
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "automation-test-queued",
+        "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2",
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "main",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/457",
+    "body": (
+        "BOONTA_TASK_ID: AUTOMATION-TEST-QUEUED\n"
+        "BOONTA_TASK_TARGET_BRANCH: main"
+    ),
+}
+queued_draft_pr = {
+    **queued_ready_pr,
+    "number": 458,
+    "draft": True,
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/458",
+}
+rival_queued_task = task("GC-RIVAL-ROUTE-PROGRESSION", "queued", target_branch="dev")
+rival_queued_task.update({
+    "title": "Make rival racers progress through the native route and complete the race",
+    "depends_on": ["GC-RACE-PROGRESSION"],
+    "read_paths": [
+        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/source/route_cursor.h",
+        "gamecube-demo/source/gameplay_state.h",
+    ],
+})
+rival_draft_pr = {
+    **queued_draft_pr,
+    "number": 439,
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "gameplay/rival-route-cursors-20261117",
+        "sha": "194a323a8a822143c5c83737b8c966c2ee8db5ff",
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "dev",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+    "body": (
+        "BOONTA_TASK_ID: GC-RIVAL-ROUTE-PROGRESSION\n"
+        "BOONTA_TASK_TARGET_BRANCH: dev"
+    ),
+}
+activation_ready_pr = {
+    **queued_ready_pr,
+    "number": 456,
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "automation-ledger-activation",
+        "sha": "0123456789abcdef0123456789abcdef01234567",
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "main",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/456",
+    "body": (
+        "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\n"
+        "BOONTA_TASK_TARGET_BRANCH: main"
+    ),
+}
 valid_blocked = task("N64-COMPWOLF-PUPP-T2-PARSE-PROBE", "blocked")
 valid_active = task("AUTOMATION-TEST-ACTIVE", "active")
 incomplete_active = task("AUTOMATION-TEST-INCOMPLETE", "active", complete=False)
@@ -126,7 +198,7 @@ cases = [
         "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
     },
     {
-        "name": "queued task with an open matching PR is not promoted",
+        "name": "queued task with an open matching PR blocks duplicate promotion",
         "tasks": [valid_queued],
         "completed_task_ids": [],
         "open_task_prs": [{
@@ -137,7 +209,201 @@ cases = [
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
-        "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+        "reason_contains": "queued task AUTOMATION-TEST-QUEUED already has open PR #457",
+    },
+    {
+        "name": "owner-approved queued task resumes only its trusted ready PR after dependencies complete",
+        "tasks": [{**valid_queued, "depends_on": ["TASK-PREREQUISITE"]}],
+        "completed_task_ids": ["TASK-PREREQUISITE"],
+        "open_task_prs": [queued_ready_pr],
+        "pr_files": [
+            {"filename": "tools/check_task_ledger.py", "status": "modified"},
+            {"filename": "tools/test_check_task_ledger.py", "status": "modified"}
+        ],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": True,
+        "expected_resume_pr_number": "457",
+        "expected_resume_task_id": "AUTOMATION-TEST-QUEUED",
+        "expected_resume_file_paths": [
+            "tools/check_task_ledger.py",
+            "tools/test_check_task_ledger.py"
+        ],
+        "expected_resume_target_branch": "main",
+        "expected_resume_pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/457",
+        "expected_resume_branch": "automation-test-queued",
+        "expected_resume_head_sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2",
+    },
+    {
+        "name": "queued task PR cannot resume until every dependency is completed",
+        "tasks": [{**valid_queued, "depends_on": ["TASK-PREREQUISITE"]}],
+        "completed_task_ids": [],
+        "open_task_prs": [queued_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": False,
+        "reason_contains": "not eligible for unattended resume",
+    },
+    {
+        "name": "unapproved queued task PR cannot resume",
+        "tasks": [{**valid_queued, "owner_approved": False}],
+        "open_task_prs": [queued_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": False,
+        "reason_contains": "not eligible for unattended resume",
+    },
+    {
+        "name": "activation PR cannot resume while a separate queued task PR exists",
+        "tasks": [activation, valid_queued],
+        "open_task_prs": [activation_ready_pr, queued_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": False,
+    },
+    {
+        "name": "active task PR cannot resume while a separate queued task PR exists",
+        "tasks": [valid_active, valid_queued],
+        "open_task_prs": [{
+            **activation_ready_pr,
+            "number": 455,
+            "head": {
+                "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+                "ref": "automation-test-active",
+                "sha": "fedcba9876543210fedcba9876543210fedcba98",
+            },
+            "base": {
+                "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+                "ref": "main",
+            },
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/455",
+            "body": (
+                "BOONTA_TASK_ID: AUTOMATION-TEST-ACTIVE\n"
+                "BOONTA_TASK_TARGET_BRANCH: main"
+            ),
+        }, queued_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": False,
+    },
+    {
+        "name": "owner-approved queued draft PR resumes in place and remains a draft",
+        "tasks": [activation, valid_queued],
+        "open_task_prs": [queued_draft_pr],
+        "pr_files": [{"filename": "tools/check_task_ledger.py", "status": "modified"}],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": True,
+        "expected_resume_pr_number": "458",
+        "expected_resume_task_id": "AUTOMATION-TEST-QUEUED",
+        "expected_resume_file_paths": ["tools/check_task_ledger.py"],
+        "expected_resume_target_branch": "main",
+        "expected_resume_pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/458",
+        "expected_resume_branch": "automation-test-queued",
+        "expected_resume_head_sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2",
+    },
+    {
+        "name": "unapproved queued draft PR remains blocked",
+        "tasks": [activation, {**valid_queued, "owner_approved": False}],
+        "open_task_prs": [queued_draft_pr],
+        "pr_files": [{"filename": "tools/check_task_ledger.py", "status": "modified"}],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+    },
+    {
+        "name": "real owner-approved GC rival Draft PR resumes after its canonical dependency completes",
+        "tasks": [rival_queued_task],
+        "completed_task_ids": ["GC-RACE-PROGRESSION"],
+        "open_task_prs": [rival_draft_pr],
+        "pr_files": [
+            {"filename": "gamecube-demo/source/gameplay_state.h", "status": "modified"},
+            {"filename": "gamecube-demo/source/main.c", "status": "modified"},
+            {"filename": "gamecube-demo/source/rival_ai.h", "status": "modified"},
+            {"filename": "gamecube-demo/tests/test_rival_ai.c", "status": "modified"}
+        ],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": True,
+        "expected_resume_pr_number": "439",
+        "expected_resume_task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+        "expected_resume_file_paths": [
+            "gamecube-demo/source/gameplay_state.h",
+            "gamecube-demo/source/main.c",
+            "gamecube-demo/source/rival_ai.h",
+            "gamecube-demo/tests/test_rival_ai.c"
+        ],
+        "expected_resume_target_branch": "dev",
+        "expected_resume_pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+        "expected_resume_branch": "gameplay/rival-route-cursors-20261117",
+        "expected_resume_head_sha": "194a323a8a822143c5c83737b8c966c2ee8db5ff",
+    },
+    {
+        "name": "multiple queued task PRs fail closed instead of selecting one writer",
+        "tasks": [valid_queued, task("AUTOMATION-TEST-SECOND-QUEUED", "queued")],
+        "open_task_prs": [queued_ready_pr, {
+            **queued_ready_pr,
+            "number": 459,
+            "body": (
+                "BOONTA_TASK_ID: AUTOMATION-TEST-SECOND-QUEUED\n"
+                "BOONTA_TASK_TARGET_BRANCH: main"
+            ),
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/459",
+        }],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+        "reason_contains": "multiple queued tasks already carry PR or head metadata",
+    },
+    {
+        "name": "recorded queued PR URL without a matching open marker blocks all writers",
+        "tasks": [{**valid_queued, "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/499"}],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+        "reason_contains": "recorded PR/head metadata without one exact matching open PR marker",
     },
     {
         "name": "blocked non-activation tasks are not auto-unblocked",
@@ -578,6 +844,35 @@ cases = [
         "expected_queue_state": "READY",
     },
     {
+        "name": "activation PR blocks an unrelated active task from becoming a second writer",
+        "tasks": [valid_active, activation],
+        "open_task_prs": [activation_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+        "reason_contains": "an active ledger task and a separate activation/queued task PR both reserve the single writer slot",
+    },
+    {
+        "name": "queued task PR blocks a separate active task from becoming a second writer",
+        "tasks": [valid_active, {
+            **valid_queued,
+            "owner_approved": True
+        }],
+        "open_task_prs": [queued_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+        "reason_contains": "an active ledger task and a separate activation/queued task PR both reserve the single writer slot",
+    },
+    {
         "name": "multiple active tasks fail closed",
         "tasks": [valid_active, task("AUTOMATION-TEST-SECOND", "active")],
         "marker_day_offset": None,
@@ -707,7 +1002,8 @@ async function runCase(testCase) {{
           return {{ data: testCase.open_task_prs || [] }};
         }},
         listFiles: async (options) => {{
-          if (options.pull_number !== 388 || options.per_page !== 100 || options.page !== 1) {{
+          const expectedPullNumber = Number(testCase.expected_resume_pr_number || "388");
+          if (options.pull_number !== expectedPullNumber || options.per_page !== 100 || options.page !== 1) {{
             throw new Error("unexpected resume changed-file query");
           }}
           return {{ data: testCase.pr_files || [] }};
@@ -837,10 +1133,10 @@ async function runCase(testCase) {{
     if (outputs.resume_ready === "true" && (
       outputs.task_ready !== "false" ||
       outputs.resume_task_context.indexOf(testCase.expected_resume_task_id) < 0 ||
-      outputs.resume_target_branch !== "main" ||
-      outputs.resume_pr_url !== "https://github.com/Master-Chiken/boonta-reborn-88/pull/388" ||
-      outputs.resume_branch !== "AUTOMATION-LEDGER-ACTIVATION" ||
-      outputs.resume_head_sha !== "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2" ||
+      outputs.resume_target_branch !== (testCase.expected_resume_target_branch || "main") ||
+      outputs.resume_pr_url !== (testCase.expected_resume_pr_url || "https://github.com/Master-Chiken/boonta-reborn-88/pull/388") ||
+      outputs.resume_branch !== (testCase.expected_resume_branch || "AUTOMATION-LEDGER-ACTIVATION") ||
+      outputs.resume_head_sha !== (testCase.expected_resume_head_sha || "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2") ||
       outputs.resume_file_paths !== JSON.stringify(testCase.expected_resume_file_paths || [])
     )) {{
       throw new Error(testCase.name + ": exact safe-resume metadata/task context was not propagated");
