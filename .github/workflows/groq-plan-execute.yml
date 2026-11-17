@@ -770,13 +770,8 @@ jobs:
               }
             },
             "permission": {
-              "*": "allow",
-              "bash": "deny",
-              "read": "deny",
-              "edit": "deny",
-              "glob": "deny",
-              "grep": "deny",
-              "list": "deny"
+              "*": "deny",
+              "boonta_submit_patch_proposal": "allow"
             }
           }
           JSON

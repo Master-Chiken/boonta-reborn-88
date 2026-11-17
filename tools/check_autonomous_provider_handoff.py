@@ -661,10 +661,30 @@ if groq_config.get("agent", {}).get("build", {}).get("steps") != 2:
     errors.append("Groq must use two model steps: one preloaded-source patch proposal followed by the final text-only response")
 elif 2 * 2750 + 2 * 700 + 50 > 8000:
     errors.append("Groq guarded worst-case two-step request budget must remain below the observed 8,000 TPM ceiling")
+# OpenCode 1.19.5 names MCP tools as <server>_<tool>. The configured
+# server is "boonta", so grant only the exact local tools each provider needs.
+expected_opencode_permissions = {
+    "OpenRouter": {
+        "*": "deny",
+        "boonta_read_approved_sources": "allow",
+        "boonta_submit_patch_proposal": "allow",
+    },
+    "Groq": {
+        "*": "deny",
+        "boonta_submit_patch_proposal": "allow",
+    },
+}
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
     if task_permissions.get("*") != "deny":
         errors.append(f"{label} build agent must deny Task subagents to preserve bounded direct MCP execution")
+    if config.get("permission") != expected_opencode_permissions[label]:
+        errors.append(
+            f"{label} OpenCode tool permissions must default-deny and allow only its exact bounded Boonta MCP tools"
+        )
+    build_agent = config.get("agent", {}).get("build", {})
+    if "tools" in config or "tools" in build_agent:
+        errors.append(f"{label} OpenCode config must not use legacy tools overrides that can widen the exact permission allow-list")
 # Exact task identity and target markers are produced by workflow-owned code,
 # not by model-authored report text.
 provider_cycle_source = read("provider_cycle")
