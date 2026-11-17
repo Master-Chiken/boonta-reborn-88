@@ -137,13 +137,28 @@
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 276,
-          "end_line": 288
+          "start_line": 90,
+          "end_line": 120
+        },
+        {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 225,
+          "end_line": 304
         },
         {
           "path": "gamecube-demo/source/route_graph_sampling.h",
           "start_line": 18,
           "end_line": 26
+        },
+        {
+          "path": "gamecube-demo/source/route_graph_sampling.h",
+          "start_line": 65,
+          "end_line": 120
+        },
+        {
+          "path": "gamecube-demo/source/route_graph_sampling.h",
+          "start_line": 121,
+          "end_line": 155
         },
         {
           "path": "gamecube-demo/source/route_graph_sampling.h",
