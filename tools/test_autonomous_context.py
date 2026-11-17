@@ -414,34 +414,34 @@ with tempfile.TemporaryDirectory() as temp:
         raise AssertionError("Queued context must fail closed without explicit owner approval")
 
 
-# The reader accepts exactly five paths and ten bounded source ranges,
+# The reader accepts exactly six paths and ten bounded source ranges,
 # matching the provider input preflight and local proposal MCP.
-assert MODULE.MAX_SOURCE_PATHS == 5
+assert MODULE.MAX_SOURCE_PATHS == 6
 assert MODULE.MAX_SOURCE_RANGES == 10
 with tempfile.TemporaryDirectory() as temp:
     source_root = Path(temp)
-    six_paths = [f"source/file{index}.h" for index in range(6)]
-    for path in six_paths:
+    seven_paths = [f"source/file{index}.h" for index in range(7)]
+    for path in seven_paths:
         target = source_root / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("line one\nline two\n", encoding="utf-8")
-    five_paths = six_paths[:5]
-    five_ranges = [
+    six_paths = seven_paths[:6]
+    six_ranges = [
         {"path": path, "start_line": 1, "end_line": 2}
-        for path in five_paths
+        for path in six_paths
     ]
-    excerpt = MODULE._build_source_excerpt(source_root, five_paths, five_ranges, 1800)
+    excerpt = MODULE._build_source_excerpt(source_root, six_paths, six_ranges, 1800)
     assert all(path in excerpt for path in five_paths)
     try:
         MODULE._build_source_excerpt(
-            source_root, six_paths, five_ranges + [
-                {"path": six_paths[5], "start_line": 1, "end_line": 2}
+            source_root, seven_paths, six_ranges + [
+                {"path": seven_paths[6], "start_line": 1, "end_line": 2}
             ], 1800
         )
     except MODULE.ContextBuildError:
         pass
     else:
-        raise AssertionError("Six source paths must be rejected")
+        raise AssertionError("Seven source paths must be rejected")
 
 # Exact multi-file source excerpts are loaded from the selected target checkout,
 # never by asking the model to browse the repository.
