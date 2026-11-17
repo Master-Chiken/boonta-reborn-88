@@ -1019,7 +1019,8 @@
         "gamecube-demo/source/route_graph_sampling.h",
         "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/main.c",
-        "gamecube-demo/tests/test_rival_ai.c"
+        "gamecube-demo/tests/test_rival_ai.c",
+        "gamecube-demo/source/generated_route_graph.h"
       ],
       "read_ranges": [
         {
@@ -1030,17 +1031,7 @@
         {
           "path": "gamecube-demo/source/route_cursor.h",
           "start_line": 232,
-          "end_line": 260
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 261,
-          "end_line": 275
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 276,
-          "end_line": 300
+          "end_line": 282
         },
         {
           "path": "gamecube-demo/source/route_graph_sampling.h",
@@ -1054,8 +1045,8 @@
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 393,
-          "end_line": 421
+          "start_line": 419,
+          "end_line": 429
         },
         {
           "path": "gamecube-demo/source/main.c",
@@ -1071,6 +1062,16 @@
           "path": "gamecube-demo/tests/test_rival_ai.c",
           "start_line": 173,
           "end_line": 184
+        },
+        {
+          "path": "gamecube-demo/source/generated_route_graph.h",
+          "start_line": 7,
+          "end_line": 17
+        },
+        {
+          "path": "gamecube-demo/source/generated_route_graph.h",
+          "start_line": 26,
+          "end_line": 42
         }
       ],
       "acceptance_criteria": [
@@ -1083,7 +1084,7 @@
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
       "evidence": [],
-      "next_action": "Owner-approved 2026-11-17 refinement: keep existing rival AI helpers read-only and unchanged; use the shared native route sampler with independent per-rival route cursors. The bounded source contract now includes cursor initialization/movement and lap transitions, sampler preparation and cursor sampling, race lap/finish helpers, the current rival update loop and existing rival regression tests. Implement route-relative distance, lap completion and finish state before standings.",
+      "next_action": "Owner-approved 2026-11-17 refinement: preserve rival AI helpers; use one shared native route sampler and independent per-rival cursors. Bounded reads now include the generated route constants/topology, forward cursor movement/lap transitions, sampler prepare/sample, distance integration, rival update loop and regression tests. Current graph is a single closed loop; branch behavior remains out of scope.",
       "updated_at": "2026-11-17",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
