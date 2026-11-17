@@ -431,7 +431,7 @@ with tempfile.TemporaryDirectory() as temp:
         for path in six_paths
     ]
     excerpt = MODULE._build_source_excerpt(source_root, six_paths, six_ranges, 1800)
-    assert all(path in excerpt for path in five_paths)
+    assert all(path in excerpt for path in six_paths)
     try:
         MODULE._build_source_excerpt(
             source_root, seven_paths, six_ranges + [
