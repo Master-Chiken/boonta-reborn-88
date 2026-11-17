@@ -223,7 +223,7 @@ jobs:
               Array.isArray(task.acceptance_criteria_excerpt) && task.acceptance_criteria_excerpt.length > 0 &&
               typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
               Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
-              Array.isArray(task.read_paths) && task.read_paths.length >= 1 && task.read_paths.length <= 5 &&
+              Array.isArray(task.read_paths) && task.read_paths.length >= 1 && task.read_paths.length <= 6 &&
               task.read_paths.every((path) => typeof path === 'string' && path.length <= 120 &&
                 /^[A-Za-z0-9._/-]+$/.test(path) && !path.startsWith('/') &&
                 path.split('/').every((part) => part && part !== '.' && part !== '..') &&
