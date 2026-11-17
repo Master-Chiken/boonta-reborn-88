@@ -18,7 +18,7 @@ ALLOWED_SUFFIXES = {
     ".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".toml", ".md",
     ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh",
 }
-MAX_SOURCE_PATHS = 5
+MAX_SOURCE_PATHS = 6
 MAX_SOURCE_RANGES = 10
 MAX_RANGE_LINES = 80
 MAX_TOTAL_RANGE_LINES = 240
@@ -218,7 +218,7 @@ def _build_source_excerpt(
         or any(not isinstance(path, str) or not _safe_source_path(path) for path in read_paths)
         or len(set(read_paths)) != len(read_paths)
     ):
-        raise ContextBuildError("Selected task source paths must contain 1-5 unique exact repository-relative paths")
+        raise ContextBuildError("Selected task source paths must contain 1-6 unique exact repository-relative paths")
     if not isinstance(read_ranges, list) or not read_ranges:
         raise ContextBuildError(
             "A non-empty exact source-range allow-list is required when source excerpts are enabled"
@@ -397,7 +397,7 @@ def build_context(
         and all(_safe_source_path(path) for path in read_paths)
         and len(set(read_paths)) == len(read_paths)
     ):
-        raise ContextBuildError("Selected task has no valid 1-5 path read allow-list")
+        raise ContextBuildError("Selected task has no valid 1-6 path read allow-list")
     handoff_paths_line = "Read-only source paths (select at most one): " + ", ".join(read_paths)
     required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5], handoff_paths_line]
     if not all(item in task_context for item in required_handoff_text):
