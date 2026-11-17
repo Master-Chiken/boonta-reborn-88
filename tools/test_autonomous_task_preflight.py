@@ -117,7 +117,7 @@ activation_ready_pr = {
     },
     "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/456",
     "body": (
-        "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\\n"
+        "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "BOONTA_TASK_TARGET_BRANCH: main"
     ),
 }
@@ -268,7 +268,7 @@ cases = [
             },
             "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/455",
             "body": (
-                "BOONTA_TASK_ID: AUTOMATION-TEST-ACTIVE\\n"
+                "BOONTA_TASK_ID: AUTOMATION-TEST-ACTIVE\n"
                 "BOONTA_TASK_TARGET_BRANCH: main"
             ),
         }, queued_ready_pr],
@@ -987,7 +987,7 @@ async function runCase(testCase) {{
       if (!result.error.includes(testCase.expected_error)) {{
         throw new Error(testCase.name + ": expected error containing " + testCase.expected_error + ", got " + result.error);
       }}
-      process.stdout.write("PASS: " + testCase.name + "\\n");
+      process.stdout.write("PASS: " + testCase.name + "\n");
       continue;
     }}
     if (result.error) throw new Error(testCase.name + ": unexpected preflight error: " + result.error);
@@ -1090,10 +1090,10 @@ async function runCase(testCase) {{
         throw new Error(testCase.name + ": expected " + provider + "_active=" + expected + ", got " + outputs[provider + "_active"]);
       }}
     }}
-    process.stdout.write("PASS: " + testCase.name + "\\n");
+    process.stdout.write("PASS: " + testCase.name + "\n");
   }}
 }})().catch((error) => {{
-  process.stderr.write(String(error.stack || error) + "\\n");
+  process.stderr.write(String(error.stack || error) + "\n");
   process.exitCode = 1;
 }});
 """
