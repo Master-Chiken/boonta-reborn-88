@@ -505,10 +505,20 @@ jobs:
               return;
             }
             const task = matches[0];
+            const sourceMatches = sourceLedger.tasks.filter((candidate) => candidate.task_id === taskId);
+            if (sourceMatches.length !== 1) {
+              failClosed('resume task is not present exactly once in the canonical full task ledger');
+              return;
+            }
+            const sourceTask = sourceMatches[0];
+            if (sourceTask.status !== task.status || sourceTask.owner_approved !== task.owner_approved) {
+              failClosed('compact and full task ledgers disagree on task status or owner approval');
+              return;
+            }
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
-            const dependenciesCompleted = Array.isArray(task.depends_on) &&
-              task.depends_on.every((dependencyId) =>
-                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+            const dependenciesCompleted = Array.isArray(sourceTask.depends_on) &&
+              sourceTask.depends_on.every((dependencyId) =>
+                typeof dependencyId === 'string' && sourceTaskIdsSet.has(dependencyId) && completedTaskIds.has(dependencyId)
               );
             const eligibleStatus = activationBootstrap
               ? task.status === 'blocked' && activeTasks.length === 0
@@ -516,6 +526,8 @@ jobs:
                 ? activeTasks.length === 1 && activeTasks[0].task_id === taskId
                 : task.status === 'queued' &&
                   task.owner_approved === true &&
+                  sourceTask.owner_approved === true &&
+                  sourceTask.status === 'queued' &&
                   activeTasks.length === 0 &&
                   dependenciesCompleted;
             if (
