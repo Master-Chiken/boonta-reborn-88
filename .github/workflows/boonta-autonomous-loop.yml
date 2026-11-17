@@ -153,6 +153,8 @@ jobs:
               const bodyLines = (pull.body || '').split(/\r?\n/).map((line) => line.trim());
               const taskMarker = 'BOONTA_TASK_ID: ' + task.task_id;
               const targetMarker = 'BOONTA_TASK_TARGET_BRANCH: ' + task.target_branch;
+              // Draft is workflow state, not authorization: only an owner-approved queued task may resume it.
+              // The writer updates the existing branch and deliberately never changes the PR's Draft state.
               const draftStateAllowed = pull.draft === false ||
                 (pull.draft === true && task.status === 'queued' && task.owner_approved === true);
               return (
