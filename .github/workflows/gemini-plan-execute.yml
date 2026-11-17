@@ -824,7 +824,8 @@ jobs:
               snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT,
               expectedTaskId: selectedTaskId,
               expectedBase: selectedTargetBranch,
-              provider: 'Gemini'
+              provider: 'Gemini',
+              allowDraftResume: process.env.RESUME_MODE === 'true'
             });
       - name: Sync the single-task daily backoff marker
         id: sync_task_queue_state
