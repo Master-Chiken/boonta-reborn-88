@@ -103,6 +103,24 @@ queued_draft_pr = {
     "draft": True,
     "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/458",
 }
+activation_ready_pr = {
+    **queued_ready_pr,
+    "number": 456,
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "automation-ledger-activation",
+        "sha": "0123456789abcdef0123456789abcdef01234567",
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "main",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/456",
+    "body": (
+        "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\\n"
+        "BOONTA_TASK_TARGET_BRANCH: main"
+    ),
+}
 valid_blocked = task("N64-COMPWOLF-PUPP-T2-PARSE-PROBE", "blocked")
 valid_active = task("AUTOMATION-TEST-ACTIVE", "active")
 incomplete_active = task("AUTOMATION-TEST-INCOMPLETE", "active", complete=False)
@@ -220,6 +238,47 @@ cases = [
         "expected_resume_candidate": True,
         "expected_resume_ready": False,
         "reason_contains": "not eligible for unattended resume",
+    },
+    {
+        "name": "activation PR cannot resume while a separate queued task PR exists",
+        "tasks": [activation, valid_queued],
+        "open_task_prs": [activation_ready_pr, queued_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+    },
+    {
+        "name": "active task PR cannot resume while a separate queued task PR exists",
+        "tasks": [valid_active, valid_queued],
+        "open_task_prs": [{
+            **activation_ready_pr,
+            "number": 455,
+            "head": {
+                "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+                "ref": "automation-test-active",
+                "sha": "fedcba9876543210fedcba9876543210fedcba98",
+            },
+            "base": {
+                "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+                "ref": "main",
+            },
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/455",
+            "body": (
+                "BOONTA_TASK_ID: AUTOMATION-TEST-ACTIVE\\n"
+                "BOONTA_TASK_TARGET_BRANCH: main"
+            ),
+        }, queued_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
     },
     {
         "name": "draft queued task PR blocks every writer including unrelated activation work",
