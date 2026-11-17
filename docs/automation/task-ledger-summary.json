@@ -191,7 +191,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Owner-approved: one shared native sampler, independent rival cursors; read scope now includes generated route topology and forward lap transitions."
+      "next_action_excerpt": "Use one shared route sampler and independent rival cursors; reset on boot/restart, advance by existing rival-distance delta, derive route/lap distance from each cursor, preserve snapshot AI and finish/collision helpers. Current graph is one 8-edge loop; no branch changes."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
