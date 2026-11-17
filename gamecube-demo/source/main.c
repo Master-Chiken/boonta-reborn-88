@@ -197,7 +197,6 @@ static int advance_rival_route_cursor(unsigned int rival_index,
 {
     BoontaRouteCursor *cursor;
     BoontaRouteCursor candidate;
-    float lap_progress = 0.0f;
     float next_route_distance;
     float next_progress;
     int branch_direction = 0;
@@ -209,15 +208,9 @@ static int advance_rival_route_cursor(unsigned int rival_index,
         !isfinite(g_rival_route_distance[rival_index])) return 0;
 
     cursor = &g_rival_route_cursors[rival_index];
-    next_route_distance = g_rival_route_distance[rival_index] + distance_delta;
-    if (!isfinite(next_route_distance) ||
-        !isfinite(g_current_course->lap_distance) ||
-        g_current_course->lap_distance <= 0.0f) return 0;
-
     /*
-     * Stage branch selection and movement on a private copy. If any cursor or
-     * progress validation fails, the live cursor and race coordinates stay in
-     * sync instead of leaving a half-committed rival update behind.
+     * Stage branch selection on a private cursor. The shared transaction helper
+     * then validates movement and both race-space coordinates before commit.
      */
     candidate = *cursor;
     if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
@@ -230,13 +223,10 @@ static int advance_rival_route_cursor(unsigned int rival_index,
             return 0;
         }
     }
-    if (boonta_route_cursor_move(&candidate, distance_delta, NULL, 0U) !=
-            BOONTA_ROUTE_CURSOR_OK ||
-        boonta_route_cursor_lap_progress(&candidate, &lap_progress) !=
-            BOONTA_ROUTE_CURSOR_OK ||
-        !boonta_rival_progress_from_cursor_state(
-            candidate.completed_laps, lap_progress,
-            g_current_course->lap_distance, &next_progress)) return 0;
+    if (!boonta_rival_advance_cursor_transaction(
+            &candidate, distance_delta, g_rival_route_distance[rival_index],
+            g_current_course->lap_distance, &next_route_distance,
+            &next_progress)) return 0;
 
     *cursor = candidate;
     g_rival_route_distance[rival_index] = next_route_distance;
@@ -1613,51 +1603,54 @@ int main(int argc, char **argv)
 
         /* Persistent opponents advance in route space and change lanes for upcoming corners. */
         if (!g_race_finished) {
-            float rival_target_lateral[BOONTA_RIVAL_COUNT];
-            float rival_target_speed[BOONTA_RIVAL_COUNT];
+            BoontaRivalAIFrameSnapshot rival_snapshot;
+            BoontaRivalAITargetSnapshot rival_targets;
 
-            /* Decide from one shared snapshot so rival update order cannot bias AI. */
+            /*
+             * Capture every rival and player decision input before moving any
+             * opponent. Target generation reads only this immutable snapshot.
+             */
+            rival_snapshot.player_lateral = g_player_lateral;
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 const float lookahead_offset = boonta_rival_route_lookahead_sample(
                     0.0f, g_rival_route_distance[rival_index], 4.0f, 0);
-                const float lookahead_curvature = rival_route_curvature_at(
-                    rival_index, lookahead_offset);
-                const float signed_lookahead_curvature =
+                rival_snapshot.rival_z[rival_index] = g_rival_z[rival_index];
+                rival_snapshot.rival_lateral[rival_index] = g_rival_lateral[rival_index];
+                rival_snapshot.lookahead_curvature[rival_index] =
+                    rival_route_curvature_at(rival_index, lookahead_offset);
+                rival_snapshot.signed_lookahead_curvature[rival_index] =
                     rival_route_signed_curvature_at(rival_index, lookahead_offset);
-                const float lookahead_half_width = rival_route_half_width_at(
-                    rival_index, lookahead_offset);
-                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral_with_rivalry(
-                    rival_index, g_rival_z[rival_index],
-                    g_rival_lateral[rival_index], g_player_lateral,
-                    g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
-                    signed_lookahead_curvature, lookahead_half_width,
-                    g_race_state.rival_rivalry[rival_index]);
-                rival_target_speed[rival_index] = boonta_rival_ai_target_speed_with_rivalry(
-                    rival_index, lookahead_curvature,
-                    g_race_state.rival_rivalry[rival_index]);
+                rival_snapshot.road_half_width[rival_index] =
+                    rival_route_half_width_at(rival_index, lookahead_offset);
+                rival_snapshot.rivalry_score[rival_index] =
+                    g_race_state.rival_rivalry[rival_index];
+            }
+            if (!boonta_rival_ai_prepare_frame_snapshot(
+                    &rival_snapshot, &rival_targets)) {
+                memset(&rival_targets, 0, sizeof(rival_targets));
             }
 
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 int rival_event;
+                BoontaRivalAIFrameStep step;
                 const float previous_rival_z = g_rival_z[rival_index];
                 if ((g_race_state.rival_finished_mask & (1U << rival_index)) != 0U) {
                     g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
                         g_distance, g_rival_progress[rival_index]);
                     continue;
                 }
-                g_rival_lateral[rival_index] = boonta_rival_ai_after_frame(
-                    g_rival_lateral[rival_index],
-                    rival_target_lateral[rival_index], frame_scale);
-                g_rival_speed[rival_index] = boonta_rival_ai_speed_after_frame(
-                    g_rival_speed[rival_index], rival_target_speed[rival_index], frame_scale);
-                {
-                    const float next_progress = boonta_rival_progress_after_frame(
-                        g_rival_progress[rival_index], g_rival_speed[rival_index], frame_scale);
-                    const float distance_delta = next_progress - g_rival_progress[rival_index];
-                    if (!advance_rival_route_cursor(rival_index, distance_delta,
-                            rival_target_lateral[rival_index] - g_rival_lateral[rival_index])) {
-                        continue;
-                    }
+                if (!boonta_rival_ai_step_from_snapshot(
+                        &rival_targets, rival_index, g_rival_lateral[rival_index],
+                        g_rival_speed[rival_index], g_rival_progress[rival_index],
+                        frame_scale, &step)) {
+                    continue;
+                }
+                g_rival_lateral[rival_index] = step.next_lateral;
+                g_rival_speed[rival_index] = step.next_speed;
+                if (!advance_rival_route_cursor(rival_index, step.distance_delta,
+                        rival_targets.target_lateral[rival_index] -
+                            g_rival_lateral[rival_index])) {
+                    continue;
                 }
                 g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
                     g_distance, g_rival_progress[rival_index]);
