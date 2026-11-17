@@ -130,13 +130,13 @@ if (
     or not set(rival_allowed_paths).issubset(set(rival_read_paths))
     or "gamecube-demo/source/route_graph_sampling.h" not in rival_read_paths
     or "gamecube-demo/source/generated_route_graph.h" not in rival_read_paths
-    or len(rival_task_fixture.get("read_ranges", [])) != 10
+    or len(rival_task_fixture.get("read_ranges", [])) != 13
     or sum(
         item["end_line"] - item["start_line"] + 1
         for item in rival_task_fixture.get("read_ranges", [])
-    ) > 240
+    ) > 432
 ):
-    fail("the canonical rival task does not match its six-path/ten-range owner-approved read contract")
+    fail("the canonical rival task does not match its six-path/thirteen-range owner-approved read contract")
 
 cases = [
     {
