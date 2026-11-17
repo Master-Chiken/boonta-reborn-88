@@ -87,6 +87,52 @@ static const BoontaRouteCursorGraph g_rival_route_cursor_graph = {
     BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
 };
 
+
+/* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
+#define POD_TEXTURE_WIDTH BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH
+#define POD_TEXTURE_HEIGHT BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_HEIGHT
+static GXTexObj g_pod_texture;
+static u16 g_pod_texture_pixels[POD_TEXTURE_WIDTH * POD_TEXTURE_HEIGHT] ATTRIBUTE_ALIGN(32);
+
+static void initialise_pod_texture(void)
+{
+    memcpy(g_pod_texture_pixels,
+           boonta_generated_texture_original_twin_engine_panel_pixels,
+           sizeof(g_pod_texture_pixels));
+    DCFlushRange(g_pod_texture_pixels, sizeof(g_pod_texture_pixels));
+    GX_InitTexObj(&g_pod_texture, g_pod_texture_pixels,
+                  POD_TEXTURE_WIDTH, POD_TEXTURE_HEIGHT, GX_TF_RGB565,
+                  GX_CLAMP, GX_CLAMP, GX_FALSE);
+}
+
+/*
+ * Keep the established runtime expressions readable while placing all state
+ * cleared by reset into one host-testable object.
+ */
+#define g_distance          (g_race_state.distance)
+#define g_lap_count         (g_race_state.lap_count)
+#define g_race_seconds      (g_race_state.race_seconds)
+#define g_lap_seconds       (g_race_state.lap_seconds)
+#define g_last_lap_seconds  (g_race_state.last_lap_seconds)
+#define g_best_lap_seconds  (g_race_state.best_lap_seconds)
+#define g_speed             (g_race_state.speed)
+#define g_pitch_down        (g_race_state.pitch_down)
+#define g_player_lateral    (g_race_state.player_lateral)
+#define g_lateral_velocity  (g_race_state.lateral_velocity)
+#define g_boost             (g_race_state.boost)
+#define g_engine_heat       (g_race_state.engine_heat)
+#define g_boost_overheated  (g_race_state.boost_overheated)
+#define g_boost_active      (g_race_state.boost_active)
+#define g_slide_active      (g_race_state.slide_active)
+#define g_rival_z           (g_race_state.rival_z)
+#define g_rival_progress    (g_race_state.rival_progress)
+#define g_rival_lateral     (g_race_state.rival_lateral)
+#define g_rival_speed       (g_race_state.rival_speed)
+#define g_overtake_count    (g_race_state.overtake_count)
+#define g_paused            (g_race_state.session_phase == BOONTA_RACE_SESSION_PAUSED)
+#define g_race_finished     (g_race_state.session_phase == BOONTA_RACE_SESSION_RESULTS)
+
+
 static int reset_rival_route_cursors(void)
 {
     unsigned int start_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
@@ -235,49 +281,6 @@ static float rival_route_half_width_at(unsigned int rival_index, float travelled
     return width;
 }
 
-/* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
-#define POD_TEXTURE_WIDTH BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH
-#define POD_TEXTURE_HEIGHT BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_HEIGHT
-static GXTexObj g_pod_texture;
-static u16 g_pod_texture_pixels[POD_TEXTURE_WIDTH * POD_TEXTURE_HEIGHT] ATTRIBUTE_ALIGN(32);
-
-static void initialise_pod_texture(void)
-{
-    memcpy(g_pod_texture_pixels,
-           boonta_generated_texture_original_twin_engine_panel_pixels,
-           sizeof(g_pod_texture_pixels));
-    DCFlushRange(g_pod_texture_pixels, sizeof(g_pod_texture_pixels));
-    GX_InitTexObj(&g_pod_texture, g_pod_texture_pixels,
-                  POD_TEXTURE_WIDTH, POD_TEXTURE_HEIGHT, GX_TF_RGB565,
-                  GX_CLAMP, GX_CLAMP, GX_FALSE);
-}
-
-/*
- * Keep the established runtime expressions readable while placing all state
- * cleared by reset into one host-testable object.
- */
-#define g_distance          (g_race_state.distance)
-#define g_lap_count         (g_race_state.lap_count)
-#define g_race_seconds      (g_race_state.race_seconds)
-#define g_lap_seconds       (g_race_state.lap_seconds)
-#define g_last_lap_seconds  (g_race_state.last_lap_seconds)
-#define g_best_lap_seconds  (g_race_state.best_lap_seconds)
-#define g_speed             (g_race_state.speed)
-#define g_pitch_down        (g_race_state.pitch_down)
-#define g_player_lateral    (g_race_state.player_lateral)
-#define g_lateral_velocity  (g_race_state.lateral_velocity)
-#define g_boost             (g_race_state.boost)
-#define g_engine_heat       (g_race_state.engine_heat)
-#define g_boost_overheated  (g_race_state.boost_overheated)
-#define g_boost_active      (g_race_state.boost_active)
-#define g_slide_active      (g_race_state.slide_active)
-#define g_rival_z           (g_race_state.rival_z)
-#define g_rival_progress    (g_race_state.rival_progress)
-#define g_rival_lateral     (g_race_state.rival_lateral)
-#define g_rival_speed       (g_race_state.rival_speed)
-#define g_overtake_count    (g_race_state.overtake_count)
-#define g_paused            (g_race_state.session_phase == BOONTA_RACE_SESSION_PAUSED)
-#define g_race_finished     (g_race_state.session_phase == BOONTA_RACE_SESSION_RESULTS)
 
 static const GXColor C_SKY = { 105, 170, 225, 255 };
 static const GXColor C_GROUND = { 133, 98, 60, 255 };
