@@ -379,11 +379,6 @@ static float track_signed_curvature_at(float travelled)
         before_x, before_z, middle_x, middle_z, after_x, after_z);
 }
 
-static float track_curvature_at(float travelled)
-{
-    return fabsf(track_signed_curvature_at(travelled));
-}
-
 static float track_center_x_at(float travelled)
 {
     float x = 0.0f;
