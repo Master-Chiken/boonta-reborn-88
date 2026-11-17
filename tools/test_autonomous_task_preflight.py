@@ -248,7 +248,7 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
-        "expected_resume_candidate": False,
+        "expected_resume_candidate": True,
         "expected_resume_ready": False,
     },
     {
@@ -277,7 +277,7 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
-        "expected_resume_candidate": False,
+        "expected_resume_candidate": True,
         "expected_resume_ready": False,
     },
     {
