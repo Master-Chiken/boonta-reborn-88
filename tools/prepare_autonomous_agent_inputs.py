@@ -20,9 +20,9 @@ TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 REPO_PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
 MAX_READ_PATHS = 6
-MAX_READ_RANGES = 10
+MAX_READ_RANGES = 13
 MAX_RANGE_LINES = 80
-MAX_TOTAL_LINES = 240
+MAX_TOTAL_LINES = 432
 MAX_SOURCE_FILE_BYTES = 96 * 1024
 
 
@@ -217,7 +217,7 @@ def _validate_read_contract(
     read_paths = [_safe_repo_path(item) for item in read_paths]
 
     if not isinstance(read_ranges, list) or not 1 <= len(read_ranges) <= MAX_READ_RANGES:
-        raise AgentInputError("Selected task must have 1-10 exact read_ranges")
+        raise AgentInputError("Selected task must have 1-13 exact read_ranges")
 
     clean_ranges: list[dict[str, int | str]] = []
     total_lines = 0
@@ -248,7 +248,7 @@ def _validate_read_contract(
     if covered != set(read_paths):
         raise AgentInputError("Every read path must have at least one exact read range")
     if total_lines > MAX_TOTAL_LINES:
-        raise AgentInputError("Selected task source ranges exceed the 240-line aggregate cap")
+        raise AgentInputError("Selected task source ranges exceed the 432-line aggregate cap")
 
     for item in read_paths:
         target = source_root / item
