@@ -12,6 +12,7 @@ from check_task_ledger_summary import build_summary
 from prepare_autonomous_agent_inputs import (
     AgentInputError,
     _compact_c_source_lines,
+    _validate_read_contract,
     prepare_agent_inputs,
 )
 
@@ -207,6 +208,33 @@ class AgentInputTests(AgentInputFixture):
                 "return 1;",
             ],
         )
+
+    def test_accepts_six_unique_read_paths(self):
+        paths = [SOURCE_PATH]
+        for index in range(5):
+            path = f"src/extra{index}.c"
+            (self.source / path).write_text(f"int extra{index}(void) {{ return {index}; }}\n", encoding="utf-8")
+            paths.append(path)
+        task = {
+            "read_paths": paths,
+            "read_ranges": [{"path": path, "start_line": 1, "end_line": 1} for path in paths],
+        }
+        validated_paths, validated_ranges = _validate_read_contract(self.source, task)
+        self.assertEqual(validated_paths, paths)
+        self.assertEqual(len(validated_ranges), 6)
+
+    def test_rejects_seven_read_paths(self):
+        paths = [SOURCE_PATH]
+        for index in range(6):
+            path = f"src/extra{index}.c"
+            (self.source / path).write_text(f"int extra{index}(void) {{ return {index}; }}\n", encoding="utf-8")
+            paths.append(path)
+        task = {
+            "read_paths": paths,
+            "read_ranges": [{"path": path, "start_line": 1, "end_line": 1} for path in paths],
+        }
+        with self.assertRaisesRegex(AgentInputError, "1-6 unique exact read_paths"):
+            _validate_read_contract(self.source, task)
 
     def test_stale_target_sha_is_rejected(self):
         with self.assertRaisesRegex(AgentInputError, "selected task base SHA"):
