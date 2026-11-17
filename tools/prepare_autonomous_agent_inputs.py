@@ -19,7 +19,7 @@ from validate_trusted_main_checkout import TrustedMainCheckoutError, validate_tr
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 REPO_PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
-MAX_READ_PATHS = 5
+MAX_READ_PATHS = 6
 MAX_READ_RANGES = 10
 MAX_RANGE_LINES = 80
 MAX_TOTAL_LINES = 240
@@ -213,7 +213,7 @@ def _validate_read_contract(
         or any(not isinstance(item, str) for item in read_paths)
         or len(set(read_paths)) != len(read_paths)
     ):
-        raise AgentInputError("Selected task must have 1-5 unique exact read_paths")
+        raise AgentInputError("Selected task must have 1-6 unique exact read_paths")
     read_paths = [_safe_repo_path(item) for item in read_paths]
 
     if not isinstance(read_ranges, list) or not 1 <= len(read_ranges) <= MAX_READ_RANGES:
