@@ -369,7 +369,40 @@ resume_pr = {
         "BOONTA_TASK_TARGET_BRANCH: main"
     ),
 }
+queued_resume_task = task("GC-RIVAL-ROUTE-PROGRESSION", "queued", "dev")
+queued_resume_pr = {
+    **resume_pr,
+    "number": 389,
+    "draft": True,
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "gameplay/rival-route-cursors-20261117",
+        "sha": "0123456789abcdef0123456789abcdef01234567",
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "dev",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/389",
+    "body": (
+        "BOONTA_TASK_ID: GC-RIVAL-ROUTE-PROGRESSION\\n"
+        "BOONTA_TASK_TARGET_BRANCH: dev"
+    ),
+}
 resume_cases = [
+    {
+        "name": "owner-approved queued Draft PR is accepted for continuation without changing Draft state",
+        "task_id": queued_resume_task["task_id"],
+        "task_title": queued_resume_task["title"],
+        "target_branch": "dev",
+        "pr_number": 389,
+        "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/389",
+        "branch": "gameplay/rival-route-cursors-20261117",
+        "head_sha": "0123456789abcdef0123456789abcdef01234567",
+        "ledger": summary([queued_resume_task]),
+        "open_prs": [queued_resume_pr],
+        "expected_allowed": True,
+    },
     {
         "name": "trusted owner PR with exact task/target markers and head is accepted",
         "ledger": summary([resume_task]),
@@ -427,16 +460,22 @@ async function runCase(testCase) {{
     rest: {{
       repos: {{
         getContent: async (options) => {{
-          if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
+          if (options.ref !== "main") throw new Error("unexpected canonical ledger ref");
+          let payload;
+          if (options.path === "docs/automation/task-ledger-summary.json") {{
+            payload = testCase.ledger;
+          }} else if (options.path === "docs/automation/task-ledger.json") {{
+            payload = {{ schema_version: 1, tasks: testCase.ledger.tasks }};
+          }} else {{
             throw new Error("unexpected canonical ledger request");
           }}
           return {{
             data: {{
               encoding: "base64",
-              content: Buffer.from(JSON.stringify(testCase.ledger), "utf8").toString("base64")
+              content: Buffer.from(JSON.stringify(payload), "utf8").toString("base64")
             }}
           }};
-        }}
+        }}}
       }},
       pulls: {{
         list: async (options) => {{
@@ -455,14 +494,14 @@ async function runCase(testCase) {{
   }};
   const context = {{ repo: {{ owner: "Master-Chiken", repo: "boonta-reborn-88" }} }};
   const process = {{ env: {{
-    RESUME_TASK_ID: "AUTOMATION-LEDGER-ACTIVATION",
-    RESUME_TASK_TITLE: "Activate and validate persistent autonomous task tracking",
-    RESUME_TASK_TARGET_BRANCH: "main",
+    RESUME_TASK_ID: testCase.task_id || "AUTOMATION-LEDGER-ACTIVATION",
+    RESUME_TASK_TITLE: testCase.task_title || "Activate and validate persistent autonomous task tracking",
+    RESUME_TASK_TARGET_BRANCH: testCase.target_branch || "main",
     ISSUE_NUMBER: "226",
-    RESUME_PR_NUMBER: "388",
-    RESUME_PR_URL: "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
-    RESUME_BRANCH: "AUTOMATION-LEDGER-ACTIVATION",
-    RESUME_HEAD_SHA: "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"
+    RESUME_PR_NUMBER: String(testCase.pr_number || 388),
+    RESUME_PR_URL: testCase.pr_url || "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
+    RESUME_BRANCH: testCase.branch || "AUTOMATION-LEDGER-ACTIVATION",
+    RESUME_HEAD_SHA: testCase.head_sha || "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"
   }}}};
   await new AsyncFunction("github", "context", "core", "process", script)(github, context, core, process);
   return {{ outputs, failure }};
