@@ -119,11 +119,15 @@ rival_policy_fixture = [
 if not isinstance(rival_task_fixture, dict) or len(rival_policy_fixture) != 1:
     fail("the canonical rival task or its unique owner-approved write-path entry is missing")
 rival_allowed_paths = rival_policy_fixture[0].get("allowed_paths", [])
+rival_read_paths = rival_task_fixture.get("read_paths", [])
 if (
     rival_task_fixture.get("status") != "queued"
     or rival_task_fixture.get("owner_approved") is not True
     or rival_task_fixture.get("target_branch") != "dev"
-    or rival_task_fixture.get("read_paths") != rival_allowed_paths
+    or len(rival_read_paths) != 5
+    or len(set(rival_read_paths)) != 5
+    or not set(rival_allowed_paths).issubset(set(rival_read_paths))
+    or "gamecube-demo/source/route_graph_sampling.h" not in rival_read_paths
     or len(rival_task_fixture.get("read_ranges", [])) != 10
     or sum(
         item["end_line"] - item["start_line"] + 1
