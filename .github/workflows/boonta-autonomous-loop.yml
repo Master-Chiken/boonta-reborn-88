@@ -153,8 +153,10 @@ jobs:
               const bodyLines = (pull.body || '').split(/\r?\n/).map((line) => line.trim());
               const taskMarker = 'BOONTA_TASK_ID: ' + task.task_id;
               const targetMarker = 'BOONTA_TASK_TARGET_BRANCH: ' + task.target_branch;
+              const draftStateAllowed = pull.draft === false ||
+                (pull.draft === true && task.status === 'queued' && task.owner_approved === true);
               return (
-                pull.state === 'open' && pull.draft === false &&
+                pull.state === 'open' && draftStateAllowed &&
                 pull.user?.login === context.repo.owner &&
                 pull.head?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
                 pull.base?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
@@ -249,7 +251,7 @@ jobs:
              * A queued task with an existing PR is not new work. It may be resumed
              * only when it is the sole queued PR, its dependencies are complete,
              * its task is owner-approved, and the PR passes the full trusted,
-             * same-repository, non-draft identity checks below.
+             * same-repository identity checks below; approved queued drafts remain drafts while being resumed.
              */
             const resumeCandidateTask = activeTasks.length === 1
               ? activeTasks[0]
@@ -388,7 +390,7 @@ jobs:
                   : queuedPr.pull.unsafe_duplicate_markers
                     ? 'queued task ' + queuedPr.task.task_id + ' has duplicate open PR markers; owner reconciliation is required'
                     : 'queued task ' + queuedPr.task.task_id + ' already has open PR #' + queuedPr.pull.number +
-                      ' but it is not eligible for unattended resume; check owner approval, dependencies, PR draft status and repository identity';
+                      ' but it is not eligible for unattended resume; check owner approval, dependencies and repository identity; only owner-approved queued drafts may resume and they remain drafts';
             } else if (activeTasks.length === 0 && eligibleQueuedTask) {
               selectedTask = eligibleQueuedTask;
               taskReason = 'first owner-approved queued task whose complete dependency set is completed and whose bounded execution scope is valid';
@@ -588,7 +590,7 @@ jobs:
                 ['Queued task PR reconciliation', queuedTaskPrEntries.length === 0 ? 'none' : queuedTaskPrEntries.map((entry) => entry.task.task_id + ' → ' + (entry.pull?.number ? '#' + entry.pull.number : 'recorded PR/head')).join('; ')],
                 ['Trusted existing PR resume', resumeReady ? 'PR #' + resumeCandidatePr.number + ' (eligible provider selected by cooldown order)' : 'none'],
               ])
-              .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, open-PR reconciliation, active-task reconciliation and READY. A queued task with an existing PR owns the single writer slot: a trusted, non-draft, owner-approved PR with completed dependencies may resume on its exact branch; otherwise all provider invocation is blocked pending owner reconciliation.')
+              .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, open-PR reconciliation, active-task reconciliation and READY. A queued task with an existing PR owns the single writer slot: a trusted owner-approved queued PR with completed dependencies may resume on its exact branch; draft status is preserved; otherwise all provider invocation is blocked pending owner reconciliation.')
               .write();
 
   autonomous-cycle:
