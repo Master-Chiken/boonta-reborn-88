@@ -359,6 +359,47 @@ function cleanup(fx) {
   }
 
   {
+    const fx = fixture();
+    try {
+      const extraPaths = ['src/extra-0.h', 'src/extra-1.h', 'src/extra-2.h', 'src/extra-3.h'];
+      for (const filePath of extraPaths) fs.writeFileSync(path.join(fx.root, filePath), 'int extra(void) { return 0; }\\n', 'utf8');
+      git(fx.root, 'add', 'src');
+      git(fx.root, 'commit', '-qm', 'six-path read fixture');
+      fx.env.BOONTA_BASE_SHA = git(fx.root, 'rev-parse', 'HEAD');
+      const paths = [SOURCE_A, SOURCE_B, ...extraPaths];
+      fx.env.BOONTA_READ_PATHS = JSON.stringify(paths);
+      fx.env.BOONTA_READ_RANGES = JSON.stringify(paths.map((filePath) => ({
+        path: filePath, start_line: 1, end_line: 1
+      })));
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.equal(result.status, 0, 'server must accept six exact approved read paths');
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      const extraPaths = ['src/extra-0.h', 'src/extra-1.h', 'src/extra-2.h', 'src/extra-3.h', 'src/extra-4.h'];
+      for (const filePath of extraPaths) fs.writeFileSync(path.join(fx.root, filePath), 'int extra(void) { return 0; }\\n', 'utf8');
+      git(fx.root, 'add', 'src');
+      git(fx.root, 'commit', '-qm', 'seven-path read fixture');
+      fx.env.BOONTA_BASE_SHA = git(fx.root, 'rev-parse', 'HEAD');
+      const paths = [SOURCE_A, SOURCE_B, ...extraPaths];
+      fx.env.BOONTA_READ_PATHS = JSON.stringify(paths);
+      fx.env.BOONTA_READ_RANGES = JSON.stringify(paths.map((filePath) => ({
+        path: filePath, start_line: 1, end_line: 1
+      })));
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0, 'server must reject seven exact read paths');
+      assert.match(result.stderr, /1-6 unique safe repository paths/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
     const fx = fixture({ BOONTA_READ_PATHS: JSON.stringify(['../outside.txt']) });
     try {
       const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
