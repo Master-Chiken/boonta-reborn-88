@@ -215,7 +215,7 @@ class TaskReadPathTests(unittest.TestCase):
             root = Path(temp)
             (root / "source").mkdir()
             paths = []
-            for index in range(7):
+            for index in range(6):
                 path = f"source/file{index}.c"
                 (root / path).write_text("x", encoding="utf-8")
                 paths.append(path)
