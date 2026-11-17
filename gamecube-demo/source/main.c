@@ -196,41 +196,51 @@ static int advance_rival_route_cursor(unsigned int rival_index,
                                       float distance_delta, float steering)
 {
     BoontaRouteCursor *cursor;
+    BoontaRouteCursor candidate;
     float lap_progress = 0.0f;
+    float next_route_distance;
+    float next_progress;
     int branch_direction = 0;
+
     if (rival_index >= BOONTA_RIVAL_COUNT ||
         !g_rival_route_cursor_ready[rival_index] ||
-        !isfinite(distance_delta) || distance_delta < 0.0f) return 0;
+        !isfinite(distance_delta) || distance_delta < 0.0f ||
+        g_current_course == NULL ||
+        !isfinite(g_rival_route_distance[rival_index])) return 0;
+
     cursor = &g_rival_route_cursors[rival_index];
+    next_route_distance = g_rival_route_distance[rival_index] + distance_delta;
+    if (!isfinite(next_route_distance) ||
+        !isfinite(g_current_course->lap_distance) ||
+        g_current_course->lap_distance <= 0.0f) return 0;
+
+    /*
+     * Stage branch selection and movement on a private copy. If any cursor or
+     * progress validation fails, the live cursor and race coordinates stay in
+     * sync instead of leaving a half-committed rival update behind.
+     */
+    candidate = *cursor;
     if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
         branch_direction = steering < -ROUTE_BRANCH_STEERING_DEADZONE ? -1 :
             steering > ROUTE_BRANCH_STEERING_DEADZONE ? 1 : 0;
         if (boonta_route_graph_sampler_prime_lookahead(
-                &g_rival_route_sampler, cursor, branch_direction,
+                &g_rival_route_sampler, &candidate, branch_direction,
                 ROUTE_BRANCH_SELECTION_DISTANCE,
                 ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
             return 0;
         }
     }
-    {
-        float next_route_distance;
-        float next_progress;
-        if (g_current_course == NULL ||
-            !isfinite(g_rival_route_distance[rival_index])) return 0;
-        next_route_distance = g_rival_route_distance[rival_index] + distance_delta;
-        if (!isfinite(next_route_distance) ||
-            !isfinite(g_current_course->lap_distance) ||
-            g_current_course->lap_distance <= 0.0f) return 0;
-        if (boonta_route_cursor_move(cursor, distance_delta, NULL, 0U) !=
-                BOONTA_ROUTE_CURSOR_OK ||
-            boonta_route_cursor_lap_progress(cursor, &lap_progress) !=
-                BOONTA_ROUTE_CURSOR_OK ||
-            !boonta_rival_progress_from_cursor_state(
-                cursor->completed_laps, lap_progress,
-                g_current_course->lap_distance, &next_progress)) return 0;
-        g_rival_route_distance[rival_index] = next_route_distance;
-        g_rival_progress[rival_index] = next_progress;
-    }
+    if (boonta_route_cursor_move(&candidate, distance_delta, NULL, 0U) !=
+            BOONTA_ROUTE_CURSOR_OK ||
+        boonta_route_cursor_lap_progress(&candidate, &lap_progress) !=
+            BOONTA_ROUTE_CURSOR_OK ||
+        !boonta_rival_progress_from_cursor_state(
+            candidate.completed_laps, lap_progress,
+            g_current_course->lap_distance, &next_progress)) return 0;
+
+    *cursor = candidate;
+    g_rival_route_distance[rival_index] = next_route_distance;
+    g_rival_progress[rival_index] = next_progress;
     return 1;
 }
 
