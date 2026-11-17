@@ -253,6 +253,8 @@ static float rival_route_curvature_at(unsigned int rival_index, float travelled)
         before_x, before_z, middle_x, middle_z, after_x, after_z));
 }
 
+static float track_signed_curvature_at(float travelled);
+
 static float rival_route_signed_curvature_at(unsigned int rival_index, float travelled)
 {
     float before_x = 0.0f, before_z = 0.0f;
@@ -265,8 +267,11 @@ static float rival_route_signed_curvature_at(unsigned int rival_index, float tra
             &middle_x, NULL, &middle_z, NULL) != BOONTA_ROUTE_CURSOR_OK ||
         rival_route_sample_at(rival_index, travelled + 2.0f,
             &after_x, NULL, &after_z, NULL) != BOONTA_ROUTE_CURSOR_OK) return 0.0f;
-    return boonta_rival_ai_signed_curvature_from_samples(
-        before_x, before_z, middle_x, middle_z, after_x, after_z);
+    {
+        const float curvature = boonta_rival_ai_signed_curvature_from_samples(
+            before_x, before_z, middle_x, middle_z, after_x, after_z);
+        return isfinite(curvature) ? curvature : track_signed_curvature_at(travelled);
+    }
 }
 
 static float rival_route_half_width_at(unsigned int rival_index, float travelled)
@@ -360,6 +365,24 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
     }
     g_current_course->sample(g_current_course->runtime_context, g_distance, travelled,
         g_current_course->road_half_width, x_out, y_out, z_out, width_out);
+}
+
+/*
+ * Defensive fallback for a non-finite route-curvature estimate. Normal rival
+ * sampling uses each rival's own cursor; this player-route fallback is only
+ * used if the curvature math itself becomes invalid.
+ */
+static float track_signed_curvature_at(float travelled)
+{
+    float before_x = 0.0f, before_z = 0.0f;
+    float middle_x = 0.0f, middle_z = 0.0f;
+    float after_x = 0.0f, after_z = 0.0f;
+    if (!isfinite(travelled)) return 0.0f;
+    track_sample_at(travelled - 2.0f, &before_x, NULL, &before_z, NULL);
+    track_sample_at(travelled, &middle_x, NULL, &middle_z, NULL);
+    track_sample_at(travelled + 2.0f, &after_x, NULL, &after_z, NULL);
+    return boonta_rival_ai_signed_curvature_from_samples(
+        before_x, before_z, middle_x, middle_z, after_x, after_z);
 }
 
 static float track_center_x_at(float travelled)
