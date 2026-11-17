@@ -356,6 +356,7 @@ jobs:
               !activationTask.head_sha &&
               taskBackoffAllowsSelection &&
               canStartNewTask &&
+              queuedTaskPrEntries.length === 0 &&
               !activationTaskOpenPr
             ) {
               selectedTask = activationTask;
