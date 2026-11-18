@@ -122,45 +122,31 @@
       "status": "in_review",
       "target_branch": "dev",
       "read_paths": [
+        "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h"
       ],
       "read_ranges": [
         {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 91,
-          "end_line": 145
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 136,
+          "end_line": 185
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 203,
-          "end_line": 223
+          "start_line": 382,
+          "end_line": 440
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 56,
-          "end_line": 67
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 228,
+          "start_line": 232,
           "end_line": 275
         },
         {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 400,
-          "end_line": 419
-        },
-        {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 14,
-          "end_line": 35
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 435,
-          "end_line": 484
+          "start_line": 743,
+          "end_line": 780
         }
       ],
       "question_excerpt": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
@@ -173,7 +159,7 @@
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
       "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664",
-      "next_action_excerpt": "GC-RACE-FRONTEND-FLOW."
+      "next_action_excerpt": "OpenRouter run #44281586837 validated BLOCKED because main.c is absent from read_paths. PR #446 proposes a bounded owner-reviewed main.c read scope before another inference."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
