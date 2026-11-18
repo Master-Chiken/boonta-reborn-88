@@ -359,6 +359,9 @@ for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs
         "writePolicy.policy?.path_mode !== 'exact'",
         "writeEntry.allowed_paths.some((path) => !safeWritePath(path) || !Array.isArray(sourceTask.read_paths) || !sourceTask.read_paths.includes(path))",
         "JSON.stringify(writeEntry.allowed_paths) !== JSON.stringify(expectedWritePaths)",
+        "sourceTask.target_branch !== task.target_branch",
+        "JSON.stringify(sourceTask.read_paths) !== JSON.stringify(task.read_paths)",
+        "compact and full task ledgers disagree on task status, approval, target branch or exact read scope",
         "current owner-reviewed write paths no longer exactly match the resumed task handoff",
     ):
         if required not in guard:
