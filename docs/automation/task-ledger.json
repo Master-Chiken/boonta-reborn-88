@@ -1066,7 +1066,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
       ],
-      "next_action": "Owner explicitly approved the bounded main.c read extension on 2026-11-18. #446 exact-head automation checks pass. #439 head 6c1e499 run #44288338915 passed host tests, native GC/Wii builds, artifacts, Dolphin null-video smoke and first-frame diagnostic only. It did NOT run full two-race RESULTS/Start-restart acceptance on this head; this remains unverified. Keep #446 Draft/unmerged and task in_review. Do not invoke a provider until #446 is merged and the exact task source/read/write scopes are freshly checked. Do not mark gameplay complete before #439 is merged and owner acceptance is recorded.",
+      "next_action": "Exact-head PR #439 6c1e499900afbfd3e8cc8f2a83087c0284ae1a45 passed run #44288338915: all host suites, native GameCube/Wii DOL+ELF builds, artifact validation, Dolphin null-video smoke, software-renderer first-frame checks, and the scripted two-race acceptance. Logs confirm first RESULTS, clean Start reset, second Start plus throttle, and second RESULTS on race two. This is scripted Dolphin evidence, not owner-operated controller or physical-console acceptance. PR #446's bounded read-scope/MCP/resume changes pass #44292347899, #44292347906 and #44292347986. Keep #446 Draft/unmerged pending owner review. Keep gameplay task in_review until #439 is merged and owner acceptance is recorded. Do not invoke provider until #446 is merged and exact read/write scopes are revalidated.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
