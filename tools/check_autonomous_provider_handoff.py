@@ -1259,6 +1259,13 @@ if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
     errors.append("Groq report validator must split machine-readable reports on actual line endings")
 
 for required in (
+    'export GITHUB_TOOLS="get_file_contents,push_files"',
+    '"command": [',
+    '"docker", "run", "-i", "--rm"',
+    '"ghcr.io/github/github-mcp-server:v0.27.0"',
+    '"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
+    '"enabled": true',
     'if [[ -z "${GITHUB_TOKEN:-}" || -z "${GITHUB_TOOLS:-}" ]]; then',
     "Docker CLI is unavailable; GitHub MCP cannot start; no model request was sent.",
     "Docker daemon is unavailable to the runner; GitHub MCP cannot start; no model request was sent.",
