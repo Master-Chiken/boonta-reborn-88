@@ -432,13 +432,17 @@ with tempfile.TemporaryDirectory() as temp:
         ), encoding="utf-8")
     ranges = [
         {"path": paths[0], "start_line": 4, "end_line": 8},
+        {"path": paths[0], "start_line": 9, "end_line": 10},
         {"path": paths[1], "start_line": 10, "end_line": 14},
+        {"path": paths[1], "start_line": 15, "end_line": 16},
         {"path": paths[2], "start_line": 16, "end_line": 20},
+        {"path": paths[2], "start_line": 21, "end_line": 22},
         {"path": paths[3], "start_line": 22, "end_line": 26},
+        {"path": paths[3], "start_line": 27, "end_line": 28},
     ]
     excerpt = MODULE._build_source_excerpt(source_root, paths, ranges, 1800)
     assert all(path in excerpt for path in paths)
-    assert "line 4" in excerpt and "line 26" in excerpt
+    assert "line 4" in excerpt and "line 28" in excerpt
     assert len(excerpt) <= 1800
 
     try:
@@ -516,6 +520,12 @@ with tempfile.TemporaryDirectory() as temp:
     assert "[tools/test_check_task_ledger.py:" in context
     assert all(path in context for path in paths)
     assert "line 3" in context and "line 11" in context
+
+
+# Resume mode must read the validated task PR branch, not just its base.
+workflow_text = (ROOT / ".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
+assert "inputs.resume_mode == true && inputs.resume_branch || inputs.resume_task_target_branch || inputs.task_target_branch" in workflow_text
+assert "--max-source-chars 1800" in workflow_text
 
 
 # Production smoke test: the real activation task must remain fail-closed
