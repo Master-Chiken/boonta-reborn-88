@@ -41,7 +41,14 @@ def response_lines(
     messages.append({"jsonrpc": "2.0", "id": 2, "result": {"tools": tools}})
     if read_error:
         messages.append(
-            {"jsonrpc": "2.0", "id": 3, "error": {"code": -32000, "message": "read denied"}}
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "result": {
+                    "isError": True,
+                    "content": [{"type": "text", "text": "permission denied for unit-test-token"}],
+                },
+            }
         )
     else:
         text = '{"schema_version": 2}' if marker else '{"wrong_schema": 2}'
@@ -170,7 +177,9 @@ class GitHubMcpPreflightTests(unittest.TestCase):
     def test_mcp_tool_error_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(read_error=True))
         self.assertEqual(code, 3)
-        self.assertIn("read-only get_file_contents call failed", errors)
+        self.assertIn("get_file_contents tool returned isError", errors)
+        self.assertIn("permission denied for [REDACTED]", errors)
+        self.assertNotIn("unit-test-token", errors)
 
     def test_unexpected_read_content_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(marker=False))
