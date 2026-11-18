@@ -432,13 +432,17 @@ with tempfile.TemporaryDirectory() as temp:
         ), encoding="utf-8")
     ranges = [
         {"path": paths[0], "start_line": 4, "end_line": 8},
+        {"path": paths[0], "start_line": 9, "end_line": 10},
         {"path": paths[1], "start_line": 10, "end_line": 14},
+        {"path": paths[1], "start_line": 15, "end_line": 16},
         {"path": paths[2], "start_line": 16, "end_line": 20},
+        {"path": paths[2], "start_line": 21, "end_line": 22},
         {"path": paths[3], "start_line": 22, "end_line": 26},
+        {"path": paths[3], "start_line": 27, "end_line": 28},
     ]
     excerpt = MODULE._build_source_excerpt(source_root, paths, ranges, 1800)
     assert all(path in excerpt for path in paths)
-    assert "line 4" in excerpt and "line 26" in excerpt
+    assert "line 4" in excerpt and "line 28" in excerpt
     assert len(excerpt) <= 1800
 
     try:
@@ -517,6 +521,11 @@ with tempfile.TemporaryDirectory() as temp:
     assert all(path in context for path in paths)
     assert "line 3" in context and "line 11" in context
 
+
+# The resume checkout must point at the validated PR branch, not merely its base.
+workflow_text = (ROOT / ".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
+assert "inputs.resume_mode == true && inputs.resume_branch || inputs.resume_task_target_branch || inputs.task_target_branch" in workflow_text
+assert "--max-source-chars 1800" in workflow_text
 
 # Production smoke test: the real activation task must remain fail-closed
 # until its single owner-reviewed policy entry is merged separately in PR #409.
@@ -612,11 +621,14 @@ rival_context = MODULE.build_context(
     max_criteria=4,
     max_next_action=100,
     source_root=ROOT,
-    max_source_chars=1350,
+    max_source_chars=0,
 )
 assert len(rival_context) <= 3100
 assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
-assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
+assert "Read-only source excerpts: disabled for this context build" in rival_context
+assert all(path in rival_context for path in rival["read_paths"])
+assert len(rival["read_ranges"]) == 8
+assert sum(item["end_line"] - item["start_line"] + 1 for item in rival["read_ranges"]) == 240
 assert "Exact owner-reviewed write paths (no others):" in rival_context
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
