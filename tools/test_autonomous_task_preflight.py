@@ -77,6 +77,31 @@ def task(
 
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
 valid_queued = task("AUTOMATION-TEST-QUEUED", "queued")
+in_review_task = task("AUTOMATION-TEST-IN-REVIEW", "in_review")
+in_review_task.update({
+    "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/460",
+    "head_sha": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0",
+})
+in_review_pr = {
+    "number": 460,
+    "state": "open",
+    "draft": False,
+    "user": {"login": "Master-Chiken"},
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "automation-test-in-review",
+        "sha": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0",
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "main",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/460",
+    "body": (
+        "BOONTA_TASK_ID: AUTOMATION-TEST-IN-REVIEW\\n"
+        "BOONTA_TASK_TARGET_BRANCH: main"
+    ),
+}
 queued_ready_pr = {
     "number": 457,
     "state": "open",
@@ -166,6 +191,19 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "EMPTY_QUEUE",
+    },
+    {
+        "name": "in-review task reserves the writer slot and blocks an unrelated queued task",
+        "tasks": [in_review_task, valid_queued],
+        "open_task_prs": [in_review_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_TASK_REVIEW",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
+        "reason_contains": "is in_review",
     },
     {
         "name": "queued task is visible but not silently promoted until its dependency is completed",
