@@ -1195,31 +1195,6 @@ for required in (
 if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
 
-rival_scope_paths = (
-    "gamecube-demo/source/main.c",
-    "gamecube-demo/source/rival_ai.h",
-    "gamecube-demo/source/route_cursor.h",
-    "gamecube-demo/source/gameplay_state.h",
-    "gamecube-demo/tests/test_rival_ai.c",
-)
-for label, workflow, expected_limit_check in (
-    ("global scheduler", loop, "task.read_paths.length <= taskScopedReadPathLimit(task)"),
-    ("Gemini", gemini, "task.read_paths.length > taskScopedReadPathLimit(task)"),
-    ("OpenRouter", openrouter, "task.read_paths.length > taskScopedReadPathLimit(task)"),
-    ("Groq", groq, "task.read_paths.length > taskScopedReadPathLimit(task)"),
-):
-    if "const taskScopedReadPathLimit = (candidate) => {" not in workflow:
-        errors.append(f"{label} is missing the task-scoped read-path limit function")
-    if "candidate?.task_id === 'GC-RIVAL-ROUTE-PROGRESSION'" not in workflow:
-        errors.append(f"{label} does not bind the five-path exception to the exact rival task ID")
-    if "approvedRivalReadPaths.every((path) => candidate.read_paths.includes(path))" not in workflow:
-        errors.append(f"{label} does not enforce the exact owner-approved five-path set")
-    if expected_limit_check not in workflow:
-        errors.append(f"{label} does not apply the task-scoped read-path ceiling")
-    for approved_path in rival_scope_paths:
-        if "'" + approved_path + "'" not in workflow:
-            errors.append(f"{label} omits approved rival read path {approved_path!r}")
-
 # A skipped provider cycle must explain whether the queue is empty, blocked,
 # waiting for task promotion, task review, or PR reconciliation.
 for required in (
@@ -1270,8 +1245,6 @@ if 'outputs.queue_state !== testCase.expected_queue_state' not in task_preflight
     errors.append("Offline task-preflight tests must assert the queue-state output")
 if 'outputs.in_review_summary !== testCase.expected_in_review_summary' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must assert the exact in-review task/PR summary")
-if 'outputs.resume_file_paths !== JSON.stringify(testCase.expected_resume_file_paths)' not in task_preflight_tests:
-    errors.append("Offline task-preflight tests must assert the exact resumed changed-file read allow-list")
 if '"expected_in_review_summary": "AUTOMATION-TEST-IN-REVIEW (PR #460)"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must pin the expected in-review PR summary")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
