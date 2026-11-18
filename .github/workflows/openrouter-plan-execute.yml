@@ -788,11 +788,11 @@ jobs:
           # Fail closed before paying for inference if OpenCode did not load the
           # scoped GitHub MCP server and its explicitly allow-listed tools.
           mcp_status="$(timeout 90s opencode mcp list 2>&1)" || {
-            printf '%s\\n' "$mcp_status"
+            printf '%s\n' "$mcp_status"
             echo "::error::OpenCode could not enumerate MCP servers; no model request was sent."
             exit 3
           }
-          printf '%s\\n' "$mcp_status"
+          printf '%s\n' "$mcp_status"
           if ! grep -Eiq 'github.*connected|connected.*github' <<<"$mcp_status"; then
             echo "::error::GitHub MCP server is not connected in OpenCode; no model request was sent."
             exit 3
