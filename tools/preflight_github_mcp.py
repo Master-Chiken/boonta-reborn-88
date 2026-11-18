@@ -19,7 +19,9 @@ OWNER = "Master-Chiken"
 REPOSITORY = "boonta-reborn-88"
 READ_PATH = "docs/automation/task-ledger-summary.json"
 READ_REF = "refs/heads/main"
-TIMEOUT_SECONDS = 75
+IMAGE_INSPECT_TIMEOUT_SECONDS = 10
+IMAGE_PULL_TIMEOUT_SECONDS = 180
+TIMEOUT_SECONDS = 120
 APPROVED_TOOL_MODES = {
     frozenset({"get_file_contents", "push_files"}),
     frozenset({"get_file_contents", "create_branch", "push_files", "create_pull_request"}),
@@ -221,9 +223,40 @@ def main() -> int:
     if docker_info.returncode != 0:
         return fail("Docker daemon is unavailable for GitHub MCP")
 
+    # Pull the pinned image in its own bounded step. On a fresh Actions runner,
+    # docker run would otherwise hide image-pull latency inside the MCP handshake
+    # deadline and provide no useful indication of which phase stalled.
+    try:
+        image_check = subprocess.run(
+            ["docker", "image", "inspect", IMAGE],
+            text=True,
+            capture_output=True,
+            timeout=IMAGE_INSPECT_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return fail("Docker MCP image-cache inspection timed out")
+    if image_check.returncode != 0:
+        try:
+            image_pull = subprocess.run(
+                ["docker", "pull", IMAGE],
+                text=True,
+                capture_output=True,
+                timeout=IMAGE_PULL_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return fail("Docker MCP image pull timed out")
+        if image_pull.returncode != 0:
+            detail = _safe_error_detail(
+                (image_pull.stdout or "") + "\\n" + (image_pull.stderr or ""), token, limit=300
+            )
+            return fail("Docker MCP image pull failed" + (": " + detail if detail else ""))
+
     command = [
         "docker",
         "run",
+        "--pull=never",
         "-i",
         "--rm",
         "-e",
@@ -238,6 +271,7 @@ def main() -> int:
     process: subprocess.Popen[str] | None = None
     reader: threading.Thread | None = None
     deadline = time.monotonic() + TIMEOUT_SECONDS
+    phase = "container startup / initialize handshake"
 
     try:
         process = subprocess.Popen(
@@ -275,6 +309,7 @@ def main() -> int:
         if "error" in initialize_response or not isinstance(initialize_response.get("result"), dict):
             raise RuntimeError("GitHub MCP initialize handshake failed")
 
+        phase = "tools/list handshake"
         _send(
             process,
             {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
@@ -314,6 +349,7 @@ def main() -> int:
         for tool_name in sorted(required_tools):
             _validate_tool_schema(tool_name, tool_by_name[tool_name])
 
+        phase = "read-only repository probe"
         _send(
             process,
             {
@@ -382,6 +418,7 @@ def main() -> int:
         # pinned Go SDK reports "server is closing: EOF" with exit 1 on normal
         # stdio EOF teardown; that shutdown result is safe only after id 1, 2
         # and 3 have all been received and validated above.
+        phase = "container shutdown"
         assert process.stdin is not None
         process.stdin.close()
         exit_code = process.wait(timeout=10)
@@ -408,9 +445,17 @@ def main() -> int:
         print("GitHub MCP direct protocol preflight passed; required tools are present and the read path works.")
         return 0
     except subprocess.TimeoutExpired:
-        return fail("GitHub MCP read-only tools preflight timed out")
+        safe_diagnostics = [line.replace(token, "[REDACTED]") for line in diagnostics[-8:]]
+        detail = " | ".join(safe_diagnostics)
+        return fail(
+            f"GitHub MCP {phase} timed out" + (": " + detail if detail else "")
+        )
     except TimeoutError:
-        return fail("GitHub MCP read-only tools preflight timed out")
+        safe_diagnostics = [line.replace(token, "[REDACTED]") for line in diagnostics[-8:]]
+        detail = " | ".join(safe_diagnostics)
+        return fail(
+            f"GitHub MCP {phase} timed out" + (": " + detail if detail else "")
+        )
     except (OSError, RuntimeError, ValueError) as exc:
         message = str(exc).replace(token, "[REDACTED]")
         safe_diagnostics = [line.replace(token, "[REDACTED]") for line in diagnostics]
