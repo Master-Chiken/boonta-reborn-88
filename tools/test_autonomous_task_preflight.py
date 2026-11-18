@@ -82,6 +82,16 @@ in_review_task.update({
     "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/460",
     "head_sha": "f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0",
 })
+
+in_review_bad_link = task("AUTOMATION-TEST-BAD-LINK", "in_review")
+in_review_bad_link["pr_url"] = "https://evil.example/Master-Chiken/boonta-reborn-88/pull/777"
+in_review_unsafe_id = task("REVIEW\\n::warning::", "in_review")
+in_review_unsafe_id["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/461"
+many_in_review = []
+for index in range(1, 13):
+    item = task(f"REVIEW-{index:02d}", "in_review")
+    item["pr_url"] = f"https://github.com/Master-Chiken/boonta-reborn-88/pull/{500 + index}"
+    many_in_review.append(item)
 in_review_pr = {
     "number": 460,
     "state": "open",
@@ -205,6 +215,38 @@ cases = [
         "expected_resume_candidate": False,
         "expected_resume_ready": False,
         "reason_contains": "is in_review",
+    },
+    {
+        "name": "external or malformed PR URLs are never rendered as verified pull requests",
+        "tasks": [in_review_bad_link],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_TASK_REVIEW",
+        "expected_in_review_summary": "AUTOMATION-TEST-BAD-LINK (PR URL unavailable)",
+    },
+    {
+        "name": "task IDs are sanitized before appearing in the cycle report",
+        "tasks": [in_review_unsafe_id],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_TASK_REVIEW",
+        "expected_in_review_summary": "REVIEW___warning__ (PR #461)",
+    },
+    {
+        "name": "review report is bounded to ten tasks and reports the remainder",
+        "tasks": many_in_review,
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_TASK_REVIEW",
+        "expected_in_review_summary": "; ".join(
+            f"REVIEW-{index:02d} (PR #{500 + index})" for index in range(1, 11)
+        ) + "; +2 more",
     },
     {
         "name": "queued task is visible but not silently promoted until its dependency is completed",
