@@ -279,6 +279,15 @@ for label, workflow, mint_marker, run_marker in task_guard_specs:
         "if (inReviewTasks.length > 0) {",
         "another task is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation",
         "const matches = ledgerSummary.tasks.filter((task) => task.task_id === taskId);",
+        "TASK_DESCRIPTION: ${{ inputs.task_description }}",
+        "const taskDescription = process.env.TASK_DESCRIPTION || '';",
+        "const writeScopePrefix = 'Exact owner-reviewed write paths (no others): ';",
+        "path: 'docs/automation/patch-path-allowlist.json'",
+        "writePolicy.policy?.owner_review_required !== true",
+        "writePolicy.policy?.path_mode !== 'exact'",
+        "writeEntry.allowed_paths.some((path) => !safeWritePath(path) || !task.read_paths.includes(path))",
+        "JSON.stringify(writeEntry.allowed_paths) !== JSON.stringify(expectedWritePaths)",
+        "current owner-reviewed write paths no longer exactly match the selected task handoff",
     ):
         if required not in task_guard:
             errors.append(f"{label} fresh-task preflight must reserve the writer slot during review: missing {required!r}")
@@ -300,6 +309,17 @@ for label, workflow, mint_marker, run_marker in task_guard_specs:
     ):
         if required not in task_guard:
             errors.append(f"{label} fresh-task guard is missing fail-closed ordering condition {required!r}")
+
+# The global scheduler must revalidate and include exact write authorization for resumed PR context.
+for required in (
+    "let resumeWritePaths = [];",
+    "resumeWritePolicy.policy?.owner_review_required !== true",
+    "resumeWritePolicy.policy?.path_mode !== 'exact'",
+    "resumeCandidateTask.read_paths.includes(path)",
+    "'Exact owner-reviewed write paths (no others): ' + resumeWritePaths.join(', ')",
+):
+    if required not in loop:
+        errors.append(f"Global resume preflight must validate and hand off exact owner-reviewed write paths: missing {required!r}")
 
 resume_guard_specs = (
     ("Gemini", gemini, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
@@ -331,6 +351,15 @@ for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs
         "const inReviewTasks = summary.tasks.filter((task) => task.status === 'in_review');",
         "if (inReviewTasks.length > 0) {",
         "another task is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation",
+        "RESUME_TASK_DESCRIPTION: ${{ inputs.resume_task_description }}",
+        "const resumeTaskDescription = process.env.RESUME_TASK_DESCRIPTION || '';",
+        "const writeScopePrefix = 'Exact owner-reviewed write paths (no others): ';",
+        "path: 'docs/automation/patch-path-allowlist.json'",
+        "writePolicy.policy?.owner_review_required !== true",
+        "writePolicy.policy?.path_mode !== 'exact'",
+        "writeEntry.allowed_paths.some((path) => !safeWritePath(path) || !Array.isArray(sourceTask.read_paths) || !sourceTask.read_paths.includes(path))",
+        "JSON.stringify(writeEntry.allowed_paths) !== JSON.stringify(expectedWritePaths)",
+        "current owner-reviewed write paths no longer exactly match the resumed task handoff",
     ):
         if required not in guard:
             errors.append(f"{label} resume preflight is missing {required!r}")
