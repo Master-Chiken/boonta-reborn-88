@@ -1305,6 +1305,8 @@ for required in (
     'not {"owner", "repo"}.issubset(schema_required)',
     'not {"path", "ref"}.issubset(properties)',
     'read_result.get("isError") is True',
+    'def _safe_error_detail(value: Any, token: str, limit: int = 400) -> str:',
+    'GitHub MCP get_file_contents tool returned isError',
     '"schema_version"',
     "GitHub MCP token-backed read-only get_file_contents call passed for",
     "GitHub MCP read-only tools preflight timed out",
