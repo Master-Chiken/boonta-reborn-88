@@ -75,6 +75,7 @@ jobs:
       active_count: ${{ steps.check.outputs.active_count }}
       blocked_count: ${{ steps.check.outputs.blocked_count }}
       in_review_count: ${{ steps.check.outputs.in_review_count }}
+      in_review_summary: ${{ steps.check.outputs.in_review_summary }}
       task_id: ${{ steps.check.outputs.task_id }}
       task_title: ${{ steps.check.outputs.task_title }}
       task_context: ${{ steps.check.outputs.task_context }}
@@ -211,6 +212,15 @@ jobs:
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
             const inReviewTasks = ledgerSummary.tasks.filter((task) => task.status === 'in_review');
             const hasInReviewTasks = inReviewTasks.length > 0;
+            const inReviewSummary = inReviewTasks.slice(0, 10).map((task) => {
+              const taskId = typeof task.task_id === 'string'
+                ? task.task_id.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 96)
+                : 'unknown-task';
+              const prMatch = typeof task.pr_url === 'string'
+                ? task.pr_url.match(/^https:\/\/github\\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*)$/)
+                : null;
+              return taskId + (prMatch ? ' (PR #' + prMatch[1] + ')' : ' (PR URL unavailable)');
+            }).join('; ') + (inReviewTasks.length > 10 ? '; +' + (inReviewTasks.length - 10) + ' more' : '');
             const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
@@ -590,6 +600,7 @@ jobs:
             core.setOutput('queued_count', String(queuedTasks.length));
             core.setOutput('active_count', String(activeTasks.length));
             core.setOutput('in_review_count', String(inReviewTasks.length));
+            core.setOutput('in_review_summary', inReviewSummary);
             core.setOutput('blocked_count', String(blockedTasks.length));
             core.setOutput('task_id', selectedTask?.task_id || '');
             core.setOutput('task_title', selectedTask?.title || '');
@@ -827,6 +838,7 @@ jobs:
           ACTIVE_COUNT: ${{ needs.provider-cooldowns.outputs.active_count }}
           BLOCKED_COUNT: ${{ needs.provider-cooldowns.outputs.blocked_count }}
           IN_REVIEW_COUNT: ${{ needs.provider-cooldowns.outputs.in_review_count }}
+          IN_REVIEW_SUMMARY: ${{ needs.provider-cooldowns.outputs.in_review_summary }}
           TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }}
           TASK_TITLE: ${{ needs.provider-cooldowns.outputs.task_title }}
           TASK_TARGET_BRANCH: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
@@ -925,6 +937,7 @@ jobs:
                 echo
                 echo "### WAITING_FOR_TASK_REVIEW — HUMAN_REVIEW_REQUIRED"
                 echo "- ${IN_REVIEW_COUNT:-unknown} task(s) are in review. Human PR review/merge and canonical ledger reconciliation are required before any provider invocation."
+                echo "- Tasks awaiting review: ${IN_REVIEW_SUMMARY:-details unavailable}."
                 echo "- Scheduled cycles will keep reporting this state, but no provider will be launched and no queued work will bypass the review lock."
                 ;;
               WAITING_FOR_OPEN_TASK_PR|ACTIVE_TASK_REQUIRES_RECONCILIATION)
