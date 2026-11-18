@@ -169,7 +169,7 @@
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
       "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664",
-      "next_action_excerpt": "OpenRouter run #44281586837 validated BLOCKED because main.c was absent from read_paths. PR #446 now proposes a dev-anchored main.c read path; await exact-head CI and owner review before retry."
+      "next_action_excerpt": "PR #446 proposes a dev-anchored main.c read path (4 files, 6 ranges, 239 lines). Exact-head self-test #44283799137 and all safety/provenance checks passed; awaiting owner review."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
