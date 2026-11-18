@@ -245,6 +245,51 @@ class GitHubMcpPreflightTests(unittest.TestCase):
             "docs/automation/task-ledger-summary.json",
         )
 
+    def test_cold_docker_cache_pulls_image_before_starting_mcp(self) -> None:
+        calls: list[tuple[list[str], dict]] = []
+        process = FakeProcess(response_lines())
+
+        def docker_run(command, **kwargs):
+            calls.append((command, kwargs))
+            if command == ["docker", "image", "inspect", probe.IMAGE]:
+                return subprocess.CompletedProcess(command, 1, stdout="", stderr="not present")
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+        output = io.StringIO()
+        errors = io.StringIO()
+        with patch.object(probe.shutil, "which", return_value="/usr/bin/docker"), patch.object(
+            probe.subprocess, "run", side_effect=docker_run
+        ), patch.object(probe.subprocess, "Popen", return_value=process) as popen, contextlib.redirect_stdout(
+            output
+        ), contextlib.redirect_stderr(errors):
+            code = probe.main()
+
+        self.assertEqual(code, 0, errors.getvalue())
+        self.assertIn((["docker", "pull", probe.IMAGE], {"text": True, "capture_output": True, "timeout": probe.IMAGE_PULL_TIMEOUT_SECONDS, "check": False}), calls)
+        self.assertIn("--pull=never", popen.call_args.args[0])
+        self.assertIn("read-only get_file_contents call passed", output.getvalue())
+
+    def test_timeout_reports_phase_and_redacts_token(self) -> None:
+        process = FakeProcess("")
+
+        def timeout_with_diagnostic(messages, expected_id, deadline, diagnostics):
+            diagnostics.append("MCP startup stalled with unit-test-token")
+            raise probe.TimeoutError
+
+        errors = io.StringIO()
+        with patch.object(probe.shutil, "which", return_value="/usr/bin/docker"), patch.object(
+            probe.subprocess, "run", return_value=subprocess.CompletedProcess(["docker"], 0, stdout="", stderr="")
+        ), patch.object(probe.subprocess, "Popen", return_value=process), patch.object(
+            probe, "_await_response", side_effect=timeout_with_diagnostic
+        ), contextlib.redirect_stderr(errors):
+            code = probe.main()
+
+        message = errors.getvalue()
+        self.assertEqual(code, 3)
+        self.assertIn("container startup / initialize handshake timed out", message)
+        self.assertIn("[REDACTED]", message)
+        self.assertNotIn("unit-test-token", message)
+
     def test_missing_required_tool_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(include_push=False))
         self.assertEqual(code, 3)
