@@ -1276,7 +1276,6 @@ if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
     errors.append("Groq report validator must split machine-readable reports on actual line endings")
 
 for required in (
-for required in (
     'export GITHUB_TOOLS="get_file_contents,push_files"',
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     '"command": [',
@@ -1303,7 +1302,6 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must call the shared GitHub MCP preflight before inference: missing {required!r}")
 
-for required in (
 for required in (
     'IMAGE = "ghcr.io/github/github-mcp-server:v0.27.0"',
     'READ_PATH = "docs/automation/task-ledger-summary.json"',
