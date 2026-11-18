@@ -208,6 +208,8 @@ jobs:
             }
             const completedTaskIds = new Set(ledgerSummary.completed_task_ids);
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
+            const inReviewTasks = ledgerSummary.tasks.filter((task) => task.status === 'in_review');
+            const hasInReviewTasks = inReviewTasks.length > 0;
             const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
@@ -271,7 +273,7 @@ jobs:
                   ? queuedTaskPrEntries[0].pull
                   : null;
             const resumeCandidateTrusted = isTrustedResumeCandidate(resumeCandidateTask, resumeCandidatePr) &&
-              !resumeCandidateTask?.pr_url && !resumeCandidateTask?.head_sha;
+              !resumeCandidateTask?.pr_url && !resumeCandidateTask?.head_sha && !hasInReviewTasks;
             const resumeSlotValid = activeTasks.length === 0
               ? (
                   (resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' &&
@@ -290,7 +292,7 @@ jobs:
             );
             // A queued PR owns the single writer slot: never start an unrelated task
             // while it awaits review or trust validation.
-            const eligibleQueuedTask = activeTasks.length === 0 &&
+            const eligibleQueuedTask = activeTasks.length === 0 && !hasInReviewTasks &&
               queuedTaskPrEntries.length === 0 && canStartNewTask
               ? queuedTasks.find((task) =>
                   task.owner_approved === true &&
@@ -354,13 +356,13 @@ jobs:
             let taskReason = '';
             if (activeTasks.length === 1 && (queuedTaskPrEntries.length > 0 || activationTaskOpenPr)) {
               taskReason = 'an active ledger task and a separate activation/queued task PR both reserve the single writer slot; reconcile the existing PR before any provider invocation';
-            } else if (canStartNewTask && activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
+            } else if (canStartNewTask && !hasInReviewTasks && activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
               selectedTask = activeTasks[0];
               taskReason = 'one complete active ledger task with no existing PR, head or open task PR';
             } else if (activeTasks.length === 1 && usableTask(activeTasks[0]) && activeTaskOpenPr) {
               taskReason = 'the active task already has open PR #' + activeTaskOpenPr.number + '; reconcile it before another provider invocation';
             } else if (
-              activeTasks.length === 0 &&
+              activeTasks.length === 0 && !hasInReviewTasks &&
               usableTask(activationTask) &&
               activationTask.status === 'blocked' &&
               !activationTask.pr_url &&
@@ -375,7 +377,7 @@ jobs:
                 ? 'owner-authorized re-evaluation of the blocked activation task despite its same-day task backoff'
                 : 'the single blocked activation task is eligible; no task-level daily backoff or open task PR is active';
             } else if (
-              activeTasks.length === 0 &&
+              activeTasks.length === 0 && !hasInReviewTasks &&
               usableTask(activationTask) &&
               activationTask.status === 'blocked' &&
               !activationTask.pr_url &&
@@ -384,6 +386,10 @@ jobs:
               activationTaskOpenPr
             ) {
               taskReason = 'the activation task already has open PR #' + activationTaskOpenPr.number + '; reconcile it before another provider invocation';
+            } else if (hasInReviewTasks) {
+              taskReason = inReviewTasks.length === 1
+                ? 'task ' + inReviewTasks[0].task_id + ' is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation'
+                : 'multiple tasks are in_review; human PR review and ledger reconciliation are required before another provider invocation';
             } else if (activeTasks.length === 0 && queuedTaskPrEntries.length > 0) {
               const queuedPr = queuedTaskPrEntries[0];
               taskReason = queuedTaskPrEntries.length > 1
@@ -408,7 +414,7 @@ jobs:
             } else if (activeTasks.length === 1) {
               taskReason = 'the active task already has a PR/head; reconcile it before another model invocation';
             } else if (
-              activeTasks.length === 0 &&
+              activeTasks.length === 0 && !hasInReviewTasks &&
               usableTask(activationTask) &&
               activationTask.status === 'blocked' &&
               !activationTask.pr_url &&
@@ -481,6 +487,8 @@ jobs:
               queueState = 'READY';
             } else if (waitingForOwnerApprovedPaths) {
               queueState = 'WAITING_FOR_OWNER_APPROVED_PATHS';
+            } else if (hasInReviewTasks) {
+              queueState = 'WAITING_FOR_TASK_REVIEW';
             } else if (activeTasks.length > 0) {
               queueState = 'ACTIVE_TASK_REQUIRES_RECONCILIATION';
             } else if (
@@ -521,6 +529,7 @@ jobs:
             core.setOutput('queue_state', queueState);
             core.setOutput('queued_count', String(queuedTasks.length));
             core.setOutput('active_count', String(activeTasks.length));
+            core.setOutput('in_review_count', String(inReviewTasks.length));
             core.setOutput('blocked_count', String(blockedTasks.length));
             core.setOutput('task_id', selectedTask?.task_id || '');
             core.setOutput('task_title', selectedTask?.title || '');
