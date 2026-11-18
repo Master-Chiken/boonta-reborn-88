@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-13",
+  "updated_at": "2026-11-18",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -1067,7 +1067,7 @@
       ],
       "evidence": [],
       "next_action": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps.",
-      "updated_at": "2026-11-11",
+      "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
