@@ -1066,7 +1066,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
       ],
-      "next_action": "Exact-head evidence: PR #439 `6c1e499900afbfd3e8cc8f2a83087c0284ae1a45` passed run #44288338915 (host regression suites, GameCube/Wii DOL+ELF builds, Dolphin null-video smoke and scripted two-race RESULTS/Start restart); this is emulator evidence, not physical-console or branched-course acceptance. PR #446 `3a41585aec72e36aa643d2f17a2a3ba4c7ede2a2` passed exact-head self-test #44405561039, AI free-tier safety #44405561054 and source-import provenance #44405561257. Both PRs remain Draft/open with no formal reviews. Approved read scope remains exactly 4 paths / 6 ranges / 239 lines. The existing write-only path `gamecube-demo/tests/test_rival_ai.c` remains outside `read_paths`; do not add it, widen scope, or invoke a provider. Next: Hold queued work and provider calls until normal owner review/merge, then revalidate exact read/write scopes.",
+      "next_action": "PR #439 current exact head is `c8f4d9fe88d6bcf8b577c17a54b3508329b029c8`. Scope correction removed the unapproved `.github/workflows/gamecube-demo-build.yml` edit; changed files are exactly `gamecube-demo/source/gameplay_state.h`, `gamecube-demo/source/main.c`, `gamecube-demo/source/rival_ai.h`, and `gamecube-demo/tests/test_rival_ai.c`, all within the task's existing write allow-list. Exact-head run #44407302584: host pause/resume tests passed; GameCube/Wii DOL+ELF builds and artifact validation passed; 12-second Dolphin headless process smoke passed. Optional Dolphin software-renderer capture was still in progress at ledger refresh; do not claim a new two-race RESULTS/Start-restart diagnostic on this head. Previous two-race evidence is from prior gameplay-source head `6c1e499900afbfd3e8cc8f2a83087c0284ae1a45` only. Keep task `in_review`; exact read scope remains 4 paths / 6 ranges / 239 lines. The test file is an existing write path but not a read path, so autonomous preflight must keep failing closed until owner explicitly resolves that mismatch. No path/range/write permission change is authorized. Next: normal review/merge sequence, owner scope decision, then rerun exact-head tests and revalidate.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
@@ -1075,7 +1075,7 @@
       ],
       "owner_approved": true,
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
-      "head_sha": "6c1e499900afbfd3e8cc8f2a83087c0284ae1a45"
+      "head_sha": "c8f4d9fe88d6bcf8b577c17a54b3508329b029c8"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
