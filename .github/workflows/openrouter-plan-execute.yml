@@ -882,10 +882,11 @@ jobs:
           - Preserve clean-room provenance; never upload ROMs, commercial binaries or extracted assets.
           
           TOOLS / WRITE
-          - Only github_get_file_contents and github_push_files are exposed. Read exactly one file from the verified changed-file allow-list below using the existing branch as the ref.
-          - Call github_push_files exactly once with one coherent patch, updating only that same file on the same existing branch.
-          - Do not create a branch or PR. Do not read another path, write the canonical ledger or alter repository settings.
-          - If one file is insufficient, stop and report BLOCKED rather than guessing.
+          - Only github_get_file_contents and github_push_files are exposed. Read up to four exact paths from the canonical task's "Read-only source paths" allow-list in AUTONOMOUS_CONTEXT, using the existing branch as the ref. These validated paths may include dependencies not changed in the existing PR; read the relevant cross-file definitions before editing.
+          - Do not read any path outside that task read allow-list. The "Verified changed files" list below identifies the existing PR's changed files; it is context, not the read allow-list.
+          - Call github_push_files exactly once with one coherent patch, updating only paths from "Exact owner-reviewed write paths (no others)" in AUTONOMOUS_CONTEXT, on the same existing branch.
+          - Do not create a branch or PR. Do not write the canonical ledger or alter repository settings.
+          - If the task read allow-list or owner-reviewed write paths are insufficient, stop and report the exact blocker rather than guessing.
           
           EVIDENCE
           - PROGRESS cites the existing PR URL and exact new head SHA returned by github_push_files. The shared validator re-fetches the PR and requires fresh content and exact-head CI.
@@ -900,7 +901,7 @@ jobs:
             PROMPT+=$'\nExisting PR: '"${RESUME_PR_URL}"
             PROMPT+=$'\nExisting branch: '"${RESUME_BRANCH}"
             PROMPT+=$'\nPrior exact HEAD: '"${RESUME_HEAD_SHA}"
-            PROMPT+=$'\nVerified changed files (read at most one):\n'"${RESUME_ALLOWED_PATHS}"
+            PROMPT+=$'\nExisting PR changed files (context only; task read allow-list is in AUTONOMOUS_CONTEXT):\n'"${RESUME_ALLOWED_PATHS}"
             PROMPT+=$'\nSame-run preflight and OpenRouter authentication succeeded; do not claim missing credentials or failed Free-tier authentication.'
           fi
           REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
