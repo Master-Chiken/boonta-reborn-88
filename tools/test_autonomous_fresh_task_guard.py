@@ -110,6 +110,16 @@ cases = [
         "expected_allowed": False,
     },
     {
+        "name": "owner-approved queued task is rejected when its current write scope is withdrawn",
+        "task_id": queued["task_id"],
+        "branch": "main",
+        "ledger": summary([queued], ["TASK-PREREQUISITE"]),
+        "open_prs": [],
+        "context_write_paths": ["gamecube-demo/source/rival_ai.h"],
+        "policy_write_paths": False,
+        "expected_allowed": False,
+    },
+    {
         "name": "queued task without owner approval is rejected",
         "task_id": queued["task_id"],
         "branch": "main",
@@ -267,15 +277,38 @@ async function runCase(testCase) {{
     rest: {{
       repos: {{
         getContent: async (options) => {{
-          if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
-            throw new Error("unexpected canonical ledger request");
+          if (options.ref !== "main") throw new Error("unexpected canonical ledger ref");
+          if (options.path === "docs/automation/task-ledger-summary.json") {{
+            return {{
+              data: {{
+                encoding: "base64",
+                content: Buffer.from(JSON.stringify(testCase.ledger), "utf8").toString("base64")
+              }}
+            }};
           }}
-          return {{
-            data: {{
-              encoding: "base64",
-              content: Buffer.from(JSON.stringify(testCase.ledger), "utf8").toString("base64")
-            }}
-          }};
+          if (options.path === "docs/automation/patch-path-allowlist.json") {{
+            const selected = testCase.ledger.tasks.find((item) => item.task_id === testCase.task_id);
+            const contextPaths = testCase.context_write_paths || selected?.read_paths?.slice(0, 1) || [];
+            const policyPaths = testCase.policy_write_paths === false ? null :
+              (testCase.policy_write_paths || contextPaths);
+            const policy = {{
+              schema_version: 1,
+              policy: {{ owner_review_required: true, path_mode: "exact", max_paths_per_task: 20 }},
+              tasks: policyPaths === null ? [] : [{{
+                task_id: testCase.task_id,
+                purpose: "Synthetic owner-reviewed exact write scope",
+                approval_ref: "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+                allowed_paths: policyPaths
+              }}]
+            }};
+            return {{
+              data: {{
+                encoding: "base64",
+                content: Buffer.from(JSON.stringify(policy), "utf8").toString("base64")
+              }}
+            }};
+          }}
+          throw new Error("unexpected canonical file path: " + options.path);
         }}
       }},
       pulls: {{
@@ -297,7 +330,9 @@ async function runCase(testCase) {{
   const process = {{ env: {{
     TASK_ID: testCase.task_id,
     TASK_TARGET_BRANCH: testCase.branch,
-    ISSUE_NUMBER: String(testCase.issue_number === undefined ? 226 : testCase.issue_number)
+    ISSUE_NUMBER: String(testCase.issue_number === undefined ? 226 : testCase.issue_number),
+    TASK_DESCRIPTION: "Exact owner-reviewed write paths (no others): " +
+      (testCase.context_write_paths || testCase.ledger.tasks.find((item) => item.task_id === testCase.task_id)?.read_paths?.slice(0, 1) || []).join(", ")
   }} }};
   await new AsyncFunction("github", "context", "core", "process", script)(github, context, core, process);
   return {{ outputs, failure }};
