@@ -21,6 +21,9 @@ FILES = {
     "context_builder": ROOT / "tools/build_autonomous_context.py",
     "context_builder_tests": ROOT / "tools/test_autonomous_context.py",
     "task_preflight_tests": ROOT / "tools/test_autonomous_task_preflight.py",
+    "mcp_preflight": ROOT / "tools/preflight_github_mcp.py",
+    "mcp_preflight_tests": ROOT / "tools/test_preflight_github_mcp.py",
+    "branch_selftest": ROOT / ".github/workflows/branch-automation-selftest.yml",
 }
 
 
@@ -46,6 +49,9 @@ cycle_validator_tests = read("cycle_validator_tests")
 context_builder = read("context_builder")
 context_builder_tests = read("context_builder_tests")
 task_preflight_tests = read("task_preflight_tests")
+mcp_preflight = read("mcp_preflight")
+mcp_preflight_tests = read("mcp_preflight_tests")
+branch_selftest = read("branch_selftest")
 errors: list[str] = []
 
 # Event-driven runs must wake when canonical queue, write-scope or execution
@@ -66,6 +72,7 @@ else:
         "tools/build_autonomous_context.py",
         "tools/validate_autonomous_cycle_report.js",
         "tools/test_autonomous_task_preflight.py",
+        "tools/preflight_github_mcp.py",
         "tools/test_autonomous_cycle_report.js",
     )
     for path in required_push_paths:
