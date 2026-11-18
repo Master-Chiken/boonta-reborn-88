@@ -1360,16 +1360,19 @@ for required in (
         errors.append(f"GitHub MCP helper regression suite is missing {required!r}")
 
 for required in (
-    "Exercise pinned GitHub MCP with a read-only repository token",
+    "Exercise resume-mode GitHub MCP allow-list with read-only credentials",
+    "Exercise normal-mode GitHub MCP allow-list with read-only credentials",
     "GITHUB_PERSONAL_ACCESS_TOKEN: ${{ github.token }}",
-    "GITHUB_TOOLS: get_file_contents",
-    "GITHUB_MCP_REQUIRED_TOOLS: get_file_contents",
+    "GITHUB_TOOLS: get_file_contents,push_files",
+    "GITHUB_MCP_REQUIRED_TOOLS: get_file_contents,push_files",
+    "GITHUB_TOOLS: create_branch,create_pull_request,get_file_contents,push_files",
+    "GITHUB_MCP_REQUIRED_TOOLS: create_branch,create_pull_request,get_file_contents,push_files",
     "run: python3 tools/preflight_github_mcp.py",
     "run: python3 tools/test_preflight_github_mcp.py",
     "contents: read",
 ):
     if required not in branch_selftest:
-        errors.append(f"Branch self-test must exercise the read-only GitHub MCP integration: missing {required!r}")
+        errors.append(f"Branch self-test must exercise both read-only GitHub MCP tool modes: missing {required!r}")
 
 for required in (
     "BOONTA_CYCLE_TASK_ID",
