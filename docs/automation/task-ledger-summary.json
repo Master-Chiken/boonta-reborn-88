@@ -168,8 +168,8 @@
         "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence."
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
-      "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664",
-      "next_action_excerpt": "PR #446 proposes a dev-anchored main.c read path (4 files, 6 ranges, 239 lines). Exact-head self-test #44283799137 and all safety/provenance checks passed; awaiting owner review."
+      "head_sha": "6c1e499900afbfd3e8cc8f2a83087c0284ae1a45",
+      "next_action_excerpt": "Owner approved bounded main.c read-scope extension; #446 remains Draft/unmerged. #439 current HEAD 6c1e499; host tests and GC/Wii builds passed, Dolphin visual race diagnostic still running. Rerun two-race RESULTS/restart on this exact head after read-scope proposal is merged."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
