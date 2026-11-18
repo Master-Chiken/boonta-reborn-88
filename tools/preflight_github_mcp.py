@@ -135,8 +135,6 @@ def main() -> int:
         if diagnostic:
             detail += ": " + diagnostic
         return fail("GitHub MCP container failed during direct protocol preflight" + detail)
-            detail += ": " + diagnostic
-        return fail("GitHub MCP container failed during direct protocol preflight" + detail)
 
     responses = _jsonrpc_responses(result.stdout)
     list_response = responses.get(2)
