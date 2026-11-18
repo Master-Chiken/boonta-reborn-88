@@ -1605,6 +1605,7 @@ int main(int argc, char **argv)
         if (!g_race_finished) {
             BoontaRivalAIFrameSnapshot rival_snapshot;
             BoontaRivalAITargetSnapshot rival_targets;
+            int rival_targets_ready;
 
             /*
              * Capture every rival and player decision input before moving any
@@ -1625,10 +1626,8 @@ int main(int argc, char **argv)
                 rival_snapshot.rivalry_score[rival_index] =
                     g_race_state.rival_rivalry[rival_index];
             }
-            if (!boonta_rival_ai_prepare_frame_snapshot(
-                    &rival_snapshot, &rival_targets)) {
-                memset(&rival_targets, 0, sizeof(rival_targets));
-            }
+            rival_targets_ready = boonta_rival_ai_prepare_frame_snapshot(
+                &rival_snapshot, &rival_targets);
 
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 int rival_event;
@@ -1639,6 +1638,8 @@ int main(int argc, char **argv)
                         g_distance, g_rival_progress[rival_index]);
                     continue;
                 }
+                /* A bad shared snapshot freezes every racing rival for this frame. */
+                if (!rival_targets_ready) continue;
                 if (!boonta_rival_ai_step_from_snapshot(
                         &rival_targets, rival_index, g_rival_lateral[rival_index],
                         g_rival_speed[rival_index], g_rival_progress[rival_index],
