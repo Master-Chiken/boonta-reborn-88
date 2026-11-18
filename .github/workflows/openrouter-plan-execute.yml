@@ -888,7 +888,8 @@ jobs:
           read_tool = next((item for item in tools if isinstance(item, dict) and item.get("name") == "get_file_contents"), None)
           schema = read_tool.get("inputSchema", {}) if isinstance(read_tool, dict) else {}
           properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
-          schema_required = set(schema.get("required", [])) if isinstance(schema, dict) else set()
+          required_fields = schema.get("required", []) if isinstance(schema, dict) else []
+          schema_required = set(required_fields) if isinstance(required_fields, list) else set()
           if not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):
               print("::error::GitHub MCP get_file_contents schema does not match the reviewed read-only preflight arguments; no model request was sent.")
               sys.exit(3)
@@ -897,7 +898,7 @@ jobs:
               sys.exit(3)
           read_result = read_response.get("result")
           read_content = read_result.get("content", []) if isinstance(read_result, dict) else []
-          read_text = "\\n".join(
+          read_text = "\n".join(
               item.get("text", "")
               for item in read_content
               if isinstance(item, dict) and item.get("type") == "text"
