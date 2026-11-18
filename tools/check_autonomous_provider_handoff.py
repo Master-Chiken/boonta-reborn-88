@@ -1291,7 +1291,9 @@ for required in (
     '"method": "tools/call"',
     '"name": "get_file_contents"',
     'GITHUB_MCP_REQUIRED_TOOLS',
-    '"docker",',"run",',"--rm"',
+    '"docker",',
+    '"run",',
+    '"--rm",',
     'schema_required = set(required_fields) if isinstance(required_fields, list) else set()',
     'not {"owner", "repo"}.issubset(schema_required)',
     'not {"path", "ref"}.issubset(properties)',
@@ -1326,7 +1328,6 @@ for required in (
 ):
     if required not in branch_selftest:
         errors.append(f"Branch self-test must exercise the read-only GitHub MCP integration: missing {required!r}")
-        errors.append(f"OpenRouter MCP preflight is missing fail-closed check {required!r}")
 
 for required in (
     "BOONTA_CYCLE_TASK_ID",
