@@ -256,6 +256,40 @@ for content, needle, message in (
     if needle not in content:
         errors.append(message)
 
+# Every provider entry point must honor the same single-writer review lock.
+# A manual dispatch can bypass the global queue, so both its fresh-task and
+# existing-PR post-queue guards must reject any unrelated in_review task.
+task_guard_specs = (
+    ("Gemini", gemini),
+    ("OpenRouter", openrouter),
+    ("Groq", groq),
+)
+for label, workflow in task_guard_specs:
+    task_guard_start = workflow.find("      - name: Revalidate selected task after acquiring the shared writer slot")
+    task_guard_end = workflow.find(
+        "      - name: Revalidate existing task PR after acquiring the shared writer slot",
+        task_guard_start,
+    )
+    task_guard = workflow[task_guard_start:task_guard_end] if task_guard_start >= 0 and task_guard_end > task_guard_start else ""
+    if not task_guard:
+        errors.append(f"{label} fresh-task preflight must be present before the resume guard")
+        continue
+    for required in (
+        "const inReviewTasks = ledgerSummary.tasks.filter((task) => task.status === 'in_review');",
+        "if (inReviewTasks.length > 0) {",
+        "another task is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation",
+        "const matches = ledgerSummary.tasks.filter((task) => task.task_id === taskId);",
+    ):
+        if required not in task_guard:
+            errors.append(f"{label} fresh-task preflight must reserve the writer slot during review: missing {required!r}")
+    if (
+        "const inReviewTasks = ledgerSummary.tasks.filter((task) => task.status === 'in_review');" in task_guard
+        and "const matches = ledgerSummary.tasks.filter((task) => task.task_id === taskId);" in task_guard
+        and task_guard.index("const inReviewTasks = ledgerSummary.tasks.filter((task) => task.status === 'in_review');")
+        > task_guard.index("const matches = ledgerSummary.tasks.filter((task) => task.task_id === taskId);")
+    ):
+        errors.append(f"{label} fresh-task review lock must run before selected-task eligibility")
+
 resume_guard_specs = (
     ("Gemini", gemini, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
     ("OpenRouter", openrouter, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: Mint scoped GitHub App token", "name: Run OpenCode through the OpenRouter Free route"),
@@ -283,6 +317,9 @@ for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs
         "!draftStateAllowed ||",
         "task.pr_url || task.head_sha",
         "bodyLines.filter((line) => line === targetMarker).length !== 1",
+        "const inReviewTasks = summary.tasks.filter((task) => task.status === 'in_review');",
+        "if (inReviewTasks.length > 0) {",
+        "another task is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation",
     ):
         if required not in guard:
             errors.append(f"{label} resume preflight is missing {required!r}")
