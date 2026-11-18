@@ -831,6 +831,20 @@ jobs:
               },
               {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
               {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+              {
+                  "jsonrpc": "2.0",
+                  "id": 3,
+                  "method": "tools/call",
+                  "params": {
+                      "name": "get_file_contents",
+                      "arguments": {
+                          "owner": "Master-Chiken",
+                          "repo": "boonta-reborn-88",
+                          "path": "docs/automation/task-ledger-summary.json",
+                          "ref": "refs/heads/main",
+                      },
+                  },
+              },
           ]
           payload = "".join(json.dumps(item) + "\n" for item in messages)
           try:
@@ -850,6 +864,7 @@ jobs:
               print("::error::GitHub MCP container failed during direct protocol preflight; no model request was sent.")
               sys.exit(3)
           response = None
+          read_response = None
           for line in result.stdout.splitlines():
               try:
                   candidate = json.loads(line)
@@ -857,7 +872,8 @@ jobs:
                   continue
               if candidate.get("id") == 2:
                   response = candidate
-                  break
+              elif candidate.get("id") == 3:
+                  read_response = candidate
           if not isinstance(response, dict) or "error" in response:
               print("::error::GitHub MCP did not return a valid tools/list response; no model request was sent.")
               sys.exit(3)
@@ -869,7 +885,28 @@ jobs:
           if missing:
               print("::error::GitHub MCP tool catalog is missing required allow-listed tools: " + ", ".join(sorted(missing)) + "; no model request was sent.")
               sys.exit(3)
-          print("GitHub MCP direct protocol preflight passed; required read/write tools are present.")
+          read_tool = next((item for item in tools if isinstance(item, dict) and item.get("name") == "get_file_contents"), None)
+          schema = read_tool.get("inputSchema", {}) if isinstance(read_tool, dict) else {}
+          properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
+          schema_required = set(schema.get("required", [])) if isinstance(schema, dict) else set()
+          if not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):
+              print("::error::GitHub MCP get_file_contents schema does not match the reviewed read-only preflight arguments; no model request was sent.")
+              sys.exit(3)
+          if not isinstance(read_response, dict) or "error" in read_response:
+              print("::error::GitHub MCP authenticated read-only get_file_contents call failed; no model request was sent.")
+              sys.exit(3)
+          read_result = read_response.get("result")
+          read_content = read_result.get("content", []) if isinstance(read_result, dict) else []
+          read_text = "\\n".join(
+              item.get("text", "")
+              for item in read_content
+              if isinstance(item, dict) and item.get("type") == "text"
+          )
+          if not isinstance(read_result, dict) or read_result.get("isError") is True or '"schema_version"' not in read_text:
+              print("::error::GitHub MCP read-only call did not return the expected task-ledger summary; no model request was sent.")
+              sys.exit(3)
+          print("GitHub MCP token-backed read-only get_file_contents call passed for the canonical task-ledger summary.")
+          print("GitHub MCP direct protocol preflight passed; required read/write tools are present and the read path works.")
           PY
 
           # Fail closed before paying for inference if OpenCode did not load the
