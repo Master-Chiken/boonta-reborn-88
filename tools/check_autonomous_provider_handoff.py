@@ -891,7 +891,8 @@ def actual_provider_prompt(label: str, workflow: str) -> str:
     return "\n".join(line[10:] if line.startswith("          ") else line for line in body.splitlines())
 
 def context_limits(label: str, workflow: str, expected_chars: int, expected_task: int) -> None:
-    match = re.search(r"--max-chars (\d+)\s+--max-task-context (\d+)", workflow)
+    normalized_workflow = re.sub(r"\\\s*\n\s*", " ", workflow)
+    match = re.search(r"--max-chars (\d+)\s+--max-task-context (\d+)", normalized_workflow)
     if not match or (int(match.group(1)), int(match.group(2))) != (expected_chars, expected_task):
         errors.append(f"{label} context builder must use the reviewed {expected_chars}/{expected_task}-character limits")
 
