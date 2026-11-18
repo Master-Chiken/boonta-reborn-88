@@ -1645,13 +1645,23 @@ int main(int argc, char **argv)
                         frame_scale, &step)) {
                     continue;
                 }
+                /*
+                 * Route choice and the route cursor must validate before any
+                 * per-rival movement state is committed. Use the pre-step
+                 * lateral error so steering direction is not reduced by this
+                 * frame's movement toward the target.
+                 */
+                {
+                    const float steering_to_target =
+                        rival_targets.target_lateral[rival_index] -
+                        g_rival_lateral[rival_index];
+                    if (!advance_rival_route_cursor(
+                            rival_index, step.distance_delta, steering_to_target)) {
+                        continue;
+                    }
+                }
                 g_rival_lateral[rival_index] = step.next_lateral;
                 g_rival_speed[rival_index] = step.next_speed;
-                if (!advance_rival_route_cursor(rival_index, step.distance_delta,
-                        rival_targets.target_lateral[rival_index] -
-                            g_rival_lateral[rival_index])) {
-                    continue;
-                }
                 g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
                     g_distance, g_rival_progress[rival_index]);
                 (void)boonta_rival_record_finish(
