@@ -858,7 +858,7 @@ jobs:
                   env=os.environ.copy(),
               )
           except subprocess.TimeoutExpired:
-              print("::error::GitHub MCP tools/list timed out; no model request was sent.")
+              print("::error::GitHub MCP read-only tools preflight timed out; no model request was sent.")
               sys.exit(3)
           if result.returncode != 0:
               print("::error::GitHub MCP container failed during direct protocol preflight; no model request was sent.")
@@ -890,7 +890,7 @@ jobs:
           properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
           required_fields = schema.get("required", []) if isinstance(schema, dict) else []
           schema_required = set(required_fields) if isinstance(required_fields, list) else set()
-          if not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):
+          if not isinstance(properties, dict) or not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):
               print("::error::GitHub MCP get_file_contents schema does not match the reviewed read-only preflight arguments; no model request was sent.")
               sys.exit(3)
           if not isinstance(read_response, dict) or "error" in read_response:
