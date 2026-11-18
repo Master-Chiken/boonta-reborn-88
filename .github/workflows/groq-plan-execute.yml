@@ -189,6 +189,7 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
+          TASK_DESCRIPTION: ${{ inputs.task_description }}
         with:
           script: |
             const taskId = process.env.TASK_ID || '';
@@ -415,6 +416,7 @@ jobs:
           RESUME_TASK_ID: ${{ inputs.resume_task_id }}
           RESUME_TASK_TITLE: ${{ inputs.resume_task_title }}
           RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
+          RESUME_TASK_DESCRIPTION: ${{ inputs.resume_task_description }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}
           RESUME_PR_URL: ${{ inputs.resume_pr_url }}
