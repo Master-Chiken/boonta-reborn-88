@@ -1319,6 +1319,8 @@ for required in (
     "test_missing_required_tool_fails_closed",
     "test_unexpected_input_schema_fails_closed",
     "test_mcp_tool_error_fails_closed",
+    "test_legacy_plain_text_content_is_supported",
+    "test_unexpected_container_exit_fails_closed_and_redacts_token",
     "test_unexpected_read_content_fails_closed",
     "test_mcp_closing_before_tools_list_fails_closed",
     "test_expected_eof_shutdown_after_valid_responses_is_accepted",
