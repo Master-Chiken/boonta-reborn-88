@@ -201,6 +201,7 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_TASK_REVIEW",
+        "expected_in_review_summary": "AUTOMATION-TEST-IN-REVIEW (PR #460)",
         "expected_resume_candidate": False,
         "expected_resume_ready": False,
         "reason_contains": "is in_review",
@@ -1175,6 +1176,9 @@ async function runCase(testCase) {{
     }}
     if (testCase.expected_blocked_count !== undefined && outputs.blocked_count !== String(testCase.expected_blocked_count)) {{
       throw new Error(testCase.name + ": expected blocked_count=" + testCase.expected_blocked_count + ", got " + outputs.blocked_count);
+    }}
+    if (testCase.expected_in_review_summary !== undefined && outputs.in_review_summary !== testCase.expected_in_review_summary) {{
+      throw new Error(testCase.name + ": expected in_review_summary=" + testCase.expected_in_review_summary + ", got " + outputs.in_review_summary);
     }}
     if (testCase.expected_queue_state === "EMPTY_QUEUE" && (
       outputs.task_ready !== "false" || outputs.task_id !== "" || outputs.task_context !== ""
