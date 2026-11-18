@@ -626,7 +626,12 @@ rival_context = MODULE.build_context(
 assert len(rival_context) <= 3100
 assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
 assert "Read-only source excerpts: disabled for this context build" in rival_context
-assert all(path in rival_context for path in rival["read_paths"])
+assert rival["read_paths"] == [
+    "gamecube-demo/source/rival_ai.h",
+    "gamecube-demo/source/route_cursor.h",
+    "gamecube-demo/source/gameplay_state.h",
+    "gamecube-demo/tests/test_route_cursor.c",
+]
 assert len(rival["read_ranges"]) == 8
 assert sum(item["end_line"] - item["start_line"] + 1 for item in rival["read_ranges"]) == 240
 assert "Exact owner-reviewed write paths (no others):" in rival_context
