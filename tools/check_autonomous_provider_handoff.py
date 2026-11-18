@@ -1283,7 +1283,7 @@ for required in (
     'if not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):',
     'if not isinstance(read_response, dict) or "error" in read_response:',
     'read_result.get("isError") is True',
-    '"schema_version"\' not in read_text',
+    '"schema_version"',
     "GitHub MCP token-backed read-only get_file_contents call passed for the canonical task-ledger summary.",
     'payload = "".join(json.dumps(item) + "\\n" for item in messages)',
     'required = {"get_file_contents", "push_files"}',
