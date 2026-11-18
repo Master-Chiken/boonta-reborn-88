@@ -338,6 +338,64 @@ jobs:
                 }
               }
             }
+            let resumeWritePaths = [];
+            if (resumeReady) {
+              const { data: resumeWritePolicyFile } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: 'docs/automation/patch-path-allowlist.json',
+                ref: 'main',
+              });
+              if (!resumeWritePolicyFile || Array.isArray(resumeWritePolicyFile) || resumeWritePolicyFile.encoding !== 'base64') {
+                resumeReady = false;
+                resumeUnavailableReason = 'the current owner-reviewed write-path policy is missing or malformed';
+              } else {
+                let resumeWritePolicy;
+                try {
+                  resumeWritePolicy = JSON.parse(Buffer.from(resumeWritePolicyFile.content, 'base64').toString('utf8'));
+                } catch (_error) {
+                  resumeReady = false;
+                  resumeUnavailableReason = 'the current owner-reviewed write-path policy is not valid JSON';
+                }
+                if (resumeReady && (
+                  resumeWritePolicy.schema_version !== 1 ||
+                  resumeWritePolicy.policy?.owner_review_required !== true ||
+                  resumeWritePolicy.policy?.path_mode !== 'exact' ||
+                  resumeWritePolicy.policy?.max_paths_per_task !== 20 ||
+                  !Array.isArray(resumeWritePolicy.tasks)
+                )) {
+                  resumeReady = false;
+                  resumeUnavailableReason = 'the current owner-reviewed write-path policy schema is invalid';
+                }
+                if (resumeReady) {
+                  const resumeWriteEntries = resumeWritePolicy.tasks.filter((entry) => entry?.task_id === resumeCandidateTask.task_id);
+                  const resumeWriteEntry = resumeWriteEntries.length === 1 ? resumeWriteEntries[0] : null;
+                  const safeResumeWritePath = (value) => {
+                    if (typeof value !== 'string' || value.length < 1 || value.length > 120 ||
+                        !/^[A-Za-z0-9._/-]+$/.test(value) || value.startsWith('/') ||
+                        value.startsWith('.github/') || value.startsWith('.git/') ||
+                        value.startsWith('docs/automation/') ||
+                        value.split('/').some((part) => !part || part === '.' || part === '..')) return false;
+                    return /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i.test(value);
+                  };
+                  if (
+                    !resumeWriteEntry ||
+                    typeof resumeWriteEntry.purpose !== 'string' || !resumeWriteEntry.purpose.trim() || resumeWriteEntry.purpose.length > 240 ||
+                    typeof resumeWriteEntry.approval_ref !== 'string' ||
+                    !/^https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/[1-9][0-9]*$/.test(resumeWriteEntry.approval_ref) ||
+                    !Array.isArray(resumeWriteEntry.allowed_paths) ||
+                    resumeWriteEntry.allowed_paths.length < 1 || resumeWriteEntry.allowed_paths.length > 20 ||
+                    resumeWriteEntry.allowed_paths.some((path) => !safeResumeWritePath(path) || !resumeCandidateTask.read_paths.includes(path)) ||
+                    new Set(resumeWriteEntry.allowed_paths).size !== resumeWriteEntry.allowed_paths.length
+                  ) {
+                    resumeReady = false;
+                    resumeUnavailableReason = 'the existing task PR has no unique current owner-reviewed exact write scope within its read allow-list';
+                  } else {
+                    resumeWritePaths = resumeWriteEntry.allowed_paths;
+                  }
+                }
+              }
+            }
             const resumeTaskContext = resumeReady ? [
               'Task ID: ' + resumeCandidateTask.task_id,
               'Title: ' + resumeCandidateTask.title,
@@ -347,6 +405,7 @@ jobs:
               'Acceptance criteria (' + resumeCandidateTask.acceptance_criteria_total + '; first 5):',
               ...resumeCandidateTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
               'Next: ' + resumeCandidateTask.next_action_excerpt,
+              'Exact owner-reviewed write paths (no others): ' + resumeWritePaths.join(', '),
               'Resume only the already-open PR identified by verified preflight metadata; do not create a branch or PR.',
             ].join('\n') : '';
             if (resumeReady && resumeTaskContext.length > 2500) {
