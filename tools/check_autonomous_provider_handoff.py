@@ -1285,11 +1285,12 @@ for required in (
     'read_result.get("isError") is True',
     '"schema_version"',
     "GitHub MCP token-backed read-only get_file_contents call passed for the canonical task-ledger summary.",
+    'if not isinstance(properties, dict) or not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):',
     'payload = "".join(json.dumps(item) + "\\n" for item in messages)',
     'required = {"get_file_contents", "push_files"}',
     "GitHub MCP tools/list returned:",
     "GitHub MCP direct protocol preflight passed; required read/write tools are present.",
-    "GitHub MCP tools/list timed out; no model request was sent.",
+    "GitHub MCP read-only tools preflight timed out; no model request was sent.",
     "GitHub MCP did not return a valid tools/list response; no model request was sent.",
 ):
     if required not in openrouter:
