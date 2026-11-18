@@ -620,7 +620,7 @@ jobs:
               --task-title "$TASK_TITLE" \
               --target-branch "$TASK_TARGET_BRANCH" \
               --task-context "$TASK_DESCRIPTION" \
-              --max-chars 3600 \
+              --max-chars 3000 \
               --max-task-context 1600 \
               --max-criteria 5 \
               --max-next-action 180 \
