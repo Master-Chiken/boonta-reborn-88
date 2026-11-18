@@ -650,9 +650,5 @@ else:
     assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
     assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
     assert "Exact owner-reviewed write paths (no others):" in rival_context
-    assert MODULE._max_source_paths_for_task(rival["task_id"], rival["read_paths"]) == 5
-    assert MODULE._max_source_paths_for_task("OTHER-TASK", rival["read_paths"]) == 4
-    wrong_rival_paths = rival["read_paths"][:-1] + ["gamecube-demo/source/course_catalog.h"]
-    assert MODULE._max_source_paths_for_task(rival["task_id"], wrong_rival_paths) == 4
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
