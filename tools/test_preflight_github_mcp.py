@@ -24,19 +24,80 @@ def response_lines(
     shutdown_error: bool = False,
     resource_response: bool = True,
     extra_tools: tuple[str, ...] = (),
+    schema_overrides: dict[str, dict] | None = None,
 ) -> str:
-    properties = {"owner": {}, "repo": {}, "path": {}, "ref": {}} if schema_ok else {"owner": {}, "repo": {}}
-    required = ["owner", "repo"] if schema_ok else ["owner"]
-    tools = [
-        {
-            "name": "get_file_contents",
-            "inputSchema": {"type": "object", "properties": properties, "required": required},
+    schemas = {
+        "get_file_contents": {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string"},
+                "repo": {"type": "string"},
+                "path": {"type": "string"},
+                "ref": {"type": "string"},
+            },
+            "required": ["owner", "repo"],
+        },
+        "push_files": {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string"},
+                "repo": {"type": "string"},
+                "branch": {"type": "string"},
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "path": {"type": "string"},
+                            "content": {"type": "string"},
+                        },
+                        "required": ["path", "content"],
+                    },
+                },
+                "message": {"type": "string"},
+            },
+            "required": ["owner", "repo", "branch", "files", "message"],
+        },
+        "create_branch": {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string"},
+                "repo": {"type": "string"},
+                "branch": {"type": "string"},
+                "from_branch": {"type": "string"},
+            },
+            "required": ["owner", "repo", "branch"],
+        },
+        "create_pull_request": {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string"},
+                "repo": {"type": "string"},
+                "title": {"type": "string"},
+                "head": {"type": "string"},
+                "base": {"type": "string"},
+                "body": {"type": "string"},
+                "draft": {"type": "boolean"},
+            },
+            "required": ["owner", "repo", "title", "head", "base"],
+        },
+    }
+    if not schema_ok:
+        schemas["get_file_contents"] = {
+            "type": "object",
+            "properties": {"owner": {"type": "string"}, "repo": {"type": "string"}},
+            "required": ["owner"],
         }
-    ]
+    for name, schema in (schema_overrides or {}).items():
+        schemas[name] = schema
+    tool_names = ["get_file_contents"]
     if include_push:
-        tools.append({"name": "push_files", "inputSchema": {"type": "object"}})
-    for name in extra_tools:
-        tools.append({"name": name, "inputSchema": {"type": "object"}})
+        tool_names.append("push_files")
+    tool_names.extend(extra_tools)
+    tools = [
+        {"name": name, "inputSchema": schemas.get(name, {"type": "object"})}
+        for name in tool_names
+    ]
     messages = []
     if include_initialize:
         messages.append(
@@ -211,6 +272,49 @@ class GitHubMcpPreflightTests(unittest.TestCase):
         )
         self.assertEqual(code, 3)
         self.assertIn("outside configured allow-list: delete_branch", errors)
+
+    def test_push_files_schema_requires_commit_and_nested_file_fields(self) -> None:
+        malformed = {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string"},
+                "repo": {"type": "string"},
+                "branch": {"type": "string"},
+                "files": {"type": "array"},
+                "message": {"type": "string"},
+            },
+            "required": ["owner", "repo", "branch", "message"],
+        }
+        code, _, errors, _ = self.invoke(
+            stdout=response_lines(schema_overrides={"push_files": malformed})
+        )
+        self.assertEqual(code, 3)
+        self.assertIn("push_files schema is missing required fields: files", errors)
+
+    def test_create_pull_request_schema_requires_head_and_base(self) -> None:
+        malformed = {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string"},
+                "repo": {"type": "string"},
+                "title": {"type": "string"},
+                "base": {"type": "string"},
+            },
+            "required": ["owner", "repo", "title", "base"],
+        }
+        tools = "get_file_contents,create_branch,push_files,create_pull_request"
+        with patch.dict(
+            os.environ,
+            {"GITHUB_TOOLS": tools, "GITHUB_MCP_REQUIRED_TOOLS": tools},
+        ):
+            code, _, errors, _ = self.invoke(
+                stdout=response_lines(
+                    extra_tools=("create_branch", "create_pull_request"),
+                    schema_overrides={"create_pull_request": malformed},
+                )
+            )
+        self.assertEqual(code, 3)
+        self.assertIn("create_pull_request schema is missing required fields: head", errors)
 
     def test_unexpected_input_schema_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(schema_ok=False))
