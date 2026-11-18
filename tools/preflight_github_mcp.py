@@ -265,13 +265,17 @@ def main() -> int:
         read_content = read_result.get("content", []) if isinstance(read_result, dict) else []
         if not isinstance(read_content, list):
             raise RuntimeError("GitHub MCP read-only call returned an invalid content envelope")
-        read_text = "\n".join(
-            item.get("text", "")
-            for item in read_content
-            if isinstance(item, dict)
-            and item.get("type") == "text"
-            and isinstance(item.get("text"), str)
-        )
+        text_parts: list[str] = []
+        for item in read_content:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") == "text" and isinstance(item.get("text"), str):
+                text_parts.append(item["text"])
+            elif item.get("type") == "resource":
+                resource = item.get("resource")
+                if isinstance(resource, dict) and isinstance(resource.get("text"), str):
+                    text_parts.append(resource["text"])
+        read_text = "\\n".join(text_parts)
         if not isinstance(read_result, dict):
             raise RuntimeError("GitHub MCP read-only call returned an invalid result envelope")
         if read_result.get("isError") is True:
