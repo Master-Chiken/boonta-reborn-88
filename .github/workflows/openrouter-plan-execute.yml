@@ -832,7 +832,7 @@ jobs:
               {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
               {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
           ]
-          payload = "".join(json.dumps(item) + "\\n" for item in messages)
+          payload = "".join(json.dumps(item) + "\n" for item in messages)
           try:
               result = subprocess.run(
                   command,
