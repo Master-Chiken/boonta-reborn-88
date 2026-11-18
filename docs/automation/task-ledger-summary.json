@@ -173,7 +173,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap…"
+      "next_action_excerpt": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
