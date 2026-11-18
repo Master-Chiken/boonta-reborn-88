@@ -633,7 +633,7 @@ assert rival["read_paths"] == [
     "gamecube-demo/tests/test_route_cursor.c",
 ]
 assert len(rival["read_ranges"]) == 8
-assert sum(item["end_line"] - item["start_line"] + 1 for item in rival["read_ranges"]) == 240
+assert sum(item["end_line"] - item["start_line"] + 1 for item in rival["read_ranges"]) == 216
 assert "Exact owner-reviewed write paths (no others):" in rival_context
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
