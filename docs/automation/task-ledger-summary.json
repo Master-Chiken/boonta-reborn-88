@@ -169,7 +169,7 @@
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
       "head_sha": "6c1e499900afbfd3e8cc8f2a83087c0284ae1a45",
-      "next_action_excerpt": "Exact-head PR #439 6c1e499900afbfd3e8cc8f2a83087c0284ae1a45 passed run #44288338915: all host suites, native GameCube/Wii DOL+ELF builds,…"
+      "next_action_excerpt": "Hold queued work and provider calls until normal owner review/merge, then revalidate exact read/write scopes."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
