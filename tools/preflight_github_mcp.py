@@ -339,6 +339,8 @@ def main() -> int:
         if not isinstance(read_content, list):
             raise RuntimeError("GitHub MCP read-only call returned an invalid content envelope")
         text_parts: list[str] = []
+        resource_text_parts: list[str] = []
+        json_resource_parts: list[str] = []
         for item in read_content:
             if not isinstance(item, dict):
                 continue
@@ -347,8 +349,12 @@ def main() -> int:
             elif item.get("type") == "resource":
                 resource = item.get("resource")
                 if isinstance(resource, dict) and isinstance(resource.get("text"), str):
-                    text_parts.append(resource["text"])
-        read_text = "\\n".join(text_parts)
+                    resource_text_parts.append(resource["text"])
+                    mime_type = resource.get("mimeType", "")
+                    if mime_type == "application/json" or (
+                        isinstance(mime_type, str) and mime_type.endswith("+json")
+                    ):
+                        json_resource_parts.append(resource["text"])
         if not isinstance(read_result, dict):
             raise RuntimeError("GitHub MCP read-only call returned an invalid result envelope")
         if read_result.get("isError") is True:
@@ -357,8 +363,16 @@ def main() -> int:
                 "GitHub MCP get_file_contents tool returned isError"
                 + (": " + detail if detail else "")
             )
-        if '"schema_version"' not in read_text:
-            raise RuntimeError("GitHub MCP read did not return the expected task-ledger summary")
+        # Prefer the actual JSON resource over any informational text emitted
+        # alongside it. Keep the legacy text-only response path for compatibility.
+        candidate_parts = json_resource_parts or resource_text_parts or text_parts
+        read_text = "\\n".join(candidate_parts)
+        try:
+            ledger_summary = json.loads(read_text)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("GitHub MCP read did not return valid task-ledger JSON") from exc
+        if not isinstance(ledger_summary, dict) or ledger_summary.get("schema_version") != 2:
+            raise RuntimeError("GitHub MCP read did not return task-ledger schema_version 2")
 
         # Only close stdin after all expected responses have been received. The
         # pinned Go SDK reports "server is closing: EOF" with exit 1 on normal
