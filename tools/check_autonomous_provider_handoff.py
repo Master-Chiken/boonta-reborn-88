@@ -1277,22 +1277,28 @@ if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
 
 for required in (
     'export GITHUB_TOOLS="get_file_contents,push_files"',
+    'export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"',
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     '"command": [',
     '"ghcr.io/github/github-mcp-server:v0.27.0"',
     '"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"',
     '"enabled": true',
     'export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"',
-    'export GITHUB_TOOLS="get_file_contents,push_files"',
-    'export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"',
     'export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"',
     'python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"',
     "timeout 90s opencode mcp list",
     "GitHub MCP server is not connected in OpenCode; no model request was sent.",
 ):
     if required not in openrouter:
+        errors.append(f"OpenRouter must call the shared GitHub MCP preflight before inference: missing {required!r}")
 
 for required in (
+    'export GITHUB_TOOLS="get_file_contents,push_files"',
+    'export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
+    '"command": [',
+    '"ghcr.io/github/github-mcp-server:v0.27.0"',
+    '"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"',
     'export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"',
     'export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"',
     'python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"',
@@ -1302,8 +1308,6 @@ for required in (
 ):
     if required not in groq:
         errors.append(f"Groq must call the shared GitHub MCP preflight before inference: missing {required!r}")
-
-        errors.append(f"OpenRouter must call the shared GitHub MCP preflight before inference: missing {required!r}")
 
 for required in (
     'IMAGE = "ghcr.io/github/github-mcp-server:v0.27.0"',
