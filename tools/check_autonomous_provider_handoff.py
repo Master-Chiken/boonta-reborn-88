@@ -1231,6 +1231,9 @@ for required_case in (
     '"name": "activation same-day backoff is reported separately from empty queue"',
     '"name": "open task PR is reported as waiting for reconciliation"',
     '"name": "in-review task reserves the writer slot and blocks an unrelated queued task"',
+    '"name": "external or malformed PR URLs are never rendered as verified pull requests"',
+    '"name": "task IDs are sanitized before appearing in the cycle report"',
+    '"name": "review report is bounded to ten tasks and reports the remainder"',
 ):
     if required_case not in task_preflight_tests:
         errors.append(f"Offline task-preflight tests are missing queue-state scenario {required_case!r}")
