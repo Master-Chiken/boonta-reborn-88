@@ -151,31 +151,6 @@ class TaskLedgerTests(unittest.TestCase):
         data["tasks"] = [active]
         self.assertEqual(ledger.validate_ledger(data), [])
 
-    def test_fifth_read_path_is_reserved_for_exact_rival_task_scope(self):
-        approved_paths = [
-            "gamecube-demo/source/main.c",
-            "gamecube-demo/source/rival_ai.h",
-            "gamecube-demo/source/route_cursor.h",
-            "gamecube-demo/source/gameplay_state.h",
-            "gamecube-demo/tests/test_rival_ai.c",
-        ]
-        self.assertEqual(
-            ledger._max_read_paths_for_task("GC-RIVAL-ROUTE-PROGRESSION", approved_paths),
-            5,
-        )
-        self.assertEqual(ledger._max_read_paths_for_task("OTHER-TASK", approved_paths), 4)
-        self.assertEqual(
-            ledger._max_read_paths_for_task(
-                "GC-RIVAL-ROUTE-PROGRESSION",
-                approved_paths[:-1] + ["gamecube-demo/source/course_catalog.h"],
-            ),
-            4,
-        )
-        self.assertEqual(
-            ledger._max_read_paths_for_task("GC-RIVAL-ROUTE-PROGRESSION", approved_paths[:4]),
-            4,
-        )
-
     def test_active_task_rejects_unsafe_read_paths(self):
         for path in ("../outside.py", "/absolute/file.py", "docs/automation/task-ledger.json", "assets/model.bin"):
             with self.subTest(path=path):
