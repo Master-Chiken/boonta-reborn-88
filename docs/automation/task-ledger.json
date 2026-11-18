@@ -1066,7 +1066,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
       ],
-      "next_action": "Exact-head CI #44279415458 passed native GameCube/Wii builds, host tests and the Dolphin two-race finish/reset/results scenario. OpenRouter run #44281586837 invoked the Free model but validated BLOCKED because main.c was absent from the read-path allow-list. PR #446 proposes adding main.c and re-anchoring all bounded excerpts to the target branch dev; first draft CI caught stale line ranges taken from PR #439, so await fresh exact-head self-test and owner review. Keep task in_review and PR #439 Draft.",
+      "next_action": "Run #44279415458 passed native GameCube/Wii builds, host tests and Dolphin two-race finish/reset/results acceptance. OpenRouter run #44281586837 invoked the Free model but returned a validated BLOCKED report because main.c was absent from read_paths; no code was pushed. PR #446 now proposes a dev-anchored fourth read path (4 files, 6 ranges, 239 lines; maximum 240). After main was integrated into the proposal branch, exact-head self-test #44283799137 and all three safety/provenance checks passed on b26ed85d2851a1e39461a4def949aa2979120f43. Keep PR #446 Draft awaiting owner review; only after approval and merge may the same task be retried.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
