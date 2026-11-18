@@ -20,6 +20,10 @@ REPOSITORY = "boonta-reborn-88"
 READ_PATH = "docs/automation/task-ledger-summary.json"
 READ_REF = "refs/heads/main"
 TIMEOUT_SECONDS = 75
+APPROVED_TOOL_MODES = {
+    frozenset({"get_file_contents", "push_files"}),
+    frozenset({"get_file_contents", "create_branch", "push_files", "create_pull_request"}),
+}
 
 
 def fail(message: str) -> int:
@@ -197,10 +201,10 @@ def main() -> int:
 
     if not token:
         return fail("GitHub MCP token environment is empty")
-    if not allowed_tools or "get_file_contents" not in allowed_tools:
-        return fail("GitHub MCP allow-list must include get_file_contents")
-    if not required_tools or not required_tools.issubset(allowed_tools):
-        return fail("GitHub MCP required tools are not a subset of its allow-list")
+    if frozenset(allowed_tools) not in APPROVED_TOOL_MODES:
+        return fail("GitHub MCP allow-list does not match a reviewed execution mode")
+    if not required_tools or required_tools != allowed_tools:
+        return fail("GitHub MCP required tools must exactly match the configured allow-list")
 
     if shutil.which("docker") is None:
         return fail("Docker CLI is unavailable for GitHub MCP")
