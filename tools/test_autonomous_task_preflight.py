@@ -108,6 +108,7 @@ rival_queued_task.update({
     "title": "Make rival racers progress through the native route and complete the race",
     "depends_on": ["GC-RACE-PROGRESSION"],
     "read_paths": [
+        "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h",
@@ -119,7 +120,7 @@ rival_draft_pr = {
     "head": {
         "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
         "ref": "gameplay/rival-route-cursors-20261117",
-        "sha": "194a323a8a822143c5c83737b8c966c2ee8db5ff",
+        "sha": "6c1e499900afbfd3e8cc8f2a83087c0284ae1a45",
     },
     "base": {
         "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
@@ -370,7 +371,7 @@ cases = [
         "expected_resume_target_branch": "dev",
         "expected_resume_pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
         "expected_resume_branch": "gameplay/rival-route-cursors-20261117",
-        "expected_resume_head_sha": "194a323a8a822143c5c83737b8c966c2ee8db5ff",
+        "expected_resume_head_sha": "6c1e499900afbfd3e8cc8f2a83087c0284ae1a45",
     },
     {
         "name": "multiple queued task PRs fail closed instead of selecting one writer",
@@ -414,6 +415,25 @@ cases = [
         "expected_blocked": False,
         "expected_queue_state": "BLOCKED_TASKS_ONLY",
         "expected_blocked_count": 1,
+    },
+    {
+        "name": "queued task is blocked when an exact write path is missing from its read allow-list",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "owner_paths": [{
+            "task_id": "AUTOMATION-TEST-QUEUED",
+            "purpose": "Synthetic owner-reviewed exact write scope",
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+            "allowed_paths": [
+                "tools/check_task_ledger.py",
+                "tools/not-in-read-scope.py"
+            ]
+        }],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OWNER_APPROVED_PATHS",
+        "reason_contains": "within its read allow-list",
     },
     {
         "name": "blocked activation without an owner-reviewed write scope is not sent to a provider",
