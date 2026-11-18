@@ -334,7 +334,7 @@ jobs:
               failClosed('the selected task status or active-task reservation changed while this run waited');
               return;
             }
-const taskScopedReadPathLimit = (candidate) => {
+            const taskScopedReadPathLimit = (candidate) => {
               const approvedRivalReadPaths = [
                 'gamecube-demo/source/main.c',
                 'gamecube-demo/source/rival_ai.h',

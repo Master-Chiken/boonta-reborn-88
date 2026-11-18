@@ -225,7 +225,7 @@ jobs:
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
             const activationTaskOpenPr = openTaskPullRequest(activationTask);
-const taskScopedReadPathLimit = (candidate) => {
+            const taskScopedReadPathLimit = (candidate) => {
               const approvedRivalReadPaths = [
                 'gamecube-demo/source/main.c',
                 'gamecube-demo/source/rival_ai.h',
