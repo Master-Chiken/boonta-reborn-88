@@ -59,6 +59,25 @@ def _await_response(
             return candidate
 
 
+def _safe_error_detail(value: Any, token: str, limit: int = 400) -> str:
+    """Return a bounded, single-line MCP error detail with the active token redacted."""
+    if isinstance(value, list):
+        parts = [
+            item.get("text", "")
+            for item in value
+            if isinstance(item, dict)
+            and item.get("type") == "text"
+            and isinstance(item.get("text"), str)
+        ]
+        detail = " | ".join(parts)
+    elif isinstance(value, str):
+        detail = value
+    else:
+        detail = json.dumps(value, ensure_ascii=True, sort_keys=True, default=str)
+    detail = detail.replace(token, "[REDACTED]") if token else detail
+    return " ".join(detail.split())[:limit]
+
+
 def _send(process: subprocess.Popen[str], message: dict[str, Any]) -> None:
     if process.stdin is None:
         raise RuntimeError("GitHub MCP stdin pipe is unavailable")
@@ -237,7 +256,11 @@ def main() -> int:
         )
         read_response = _await_response(messages, 3, deadline, diagnostics)
         if "error" in read_response:
-            raise RuntimeError("GitHub MCP read-only get_file_contents call failed")
+            detail = _safe_error_detail(read_response.get("error"), token)
+            raise RuntimeError(
+                "GitHub MCP read-only get_file_contents call failed"
+                + (": " + detail if detail else "")
+            )
         read_result = read_response.get("result")
         read_content = read_result.get("content", []) if isinstance(read_result, dict) else []
         if not isinstance(read_content, list):
@@ -249,11 +272,15 @@ def main() -> int:
             and item.get("type") == "text"
             and isinstance(item.get("text"), str)
         )
-        if (
-            not isinstance(read_result, dict)
-            or read_result.get("isError") is True
-            or '"schema_version"' not in read_text
-        ):
+        if not isinstance(read_result, dict):
+            raise RuntimeError("GitHub MCP read-only call returned an invalid result envelope")
+        if read_result.get("isError") is True:
+            detail = _safe_error_detail(read_content, token)
+            raise RuntimeError(
+                "GitHub MCP get_file_contents tool returned isError"
+                + (": " + detail if detail else "")
+            )
+        if '"schema_version"' not in read_text:
             raise RuntimeError("GitHub MCP read did not return the expected task-ledger summary")
 
         # Only close stdin after all expected responses have been received. The
