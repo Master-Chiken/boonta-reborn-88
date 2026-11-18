@@ -147,8 +147,15 @@ rival_queued_task.update({
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c",
     ],
 })
+other_five_path_task = task("AUTOMATION-TEST-OTHER-FIVE-PATHS", "queued", target_branch="dev")
+other_five_path_task["read_paths"] = list(rival_queued_task["read_paths"])
+rival_wrong_fifth_path_task = {
+    **rival_queued_task,
+    "read_paths": rival_queued_task["read_paths"][:-1] + ["gamecube-demo/source/course_catalog.h"],
+}
 rival_draft_pr = {
     **queued_draft_pr,
     "number": 439,
@@ -442,6 +449,25 @@ cases = [
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
         "expected_resume_candidate": False,
         "expected_resume_ready": False,
+    },
+    {
+        "name": "non-rival task cannot use the rival-only fifth read path",
+        "tasks": [other_five_path_task],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
+    },
+    {
+        "name": "rival task cannot substitute another fifth read path",
+        "tasks": [rival_wrong_fifth_path_task],
+        "marker_day_offset": None,
+        "completed_task_ids": ["GC-RACE-PROGRESSION"],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
     },
     {
         "name": "real owner-approved GC rival Draft PR resumes after its canonical dependency completes",

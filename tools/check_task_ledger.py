@@ -20,6 +20,28 @@ TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 REPO = "Master-Chiken/boonta-reborn-88"
 READ_PATH_EXTENSIONS = {".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".toml", ".md", ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh"}
 READ_PATH_BLOCKED = {"docs/automation/task-ledger.json", "docs/automation/task-ledger-summary.json"}
+RIVAL_TASK_ID = "GC-RIVAL-ROUTE-PROGRESSION"
+RIVAL_APPROVED_READ_PATHS = frozenset({
+    "gamecube-demo/source/main.c",
+    "gamecube-demo/source/rival_ai.h",
+    "gamecube-demo/source/route_cursor.h",
+    "gamecube-demo/source/gameplay_state.h",
+    "gamecube-demo/tests/test_rival_ai.c",
+})
+DEFAULT_MAX_READ_PATHS = 4
+
+
+def _max_read_paths_for_task(task_id: Any, read_paths: Any) -> int:
+    if (
+        task_id == RIVAL_TASK_ID
+        and isinstance(read_paths, list)
+        and len(read_paths) == len(RIVAL_APPROVED_READ_PATHS)
+        and all(isinstance(path, str) for path in read_paths)
+        and set(read_paths) == RIVAL_APPROVED_READ_PATHS
+    ):
+        return len(RIVAL_APPROVED_READ_PATHS)
+    return DEFAULT_MAX_READ_PATHS
+
 
 
 def _valid_read_path(value: Any) -> bool:
@@ -108,21 +130,22 @@ def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: 
         if status == "active":
             active += 1
         read_paths = task.get("read_paths")
+        max_read_paths = _max_read_paths_for_task(task_id, read_paths)
         requires_read_paths = status == "active" or (
             task_id == "AUTOMATION-LEDGER-ACTIVATION" and status == "blocked"
         )
         if requires_read_paths and not (
-            isinstance(read_paths, list) and 1 <= len(read_paths) <= 4
+            isinstance(read_paths, list) and 1 <= len(read_paths) <= max_read_paths
             and all(_valid_read_path(path) for path in read_paths)
             and len(set(read_paths)) == len(read_paths)
         ):
-            errors.append(f"{prefix}.read_paths must contain 1-4 unique safe repository text paths for executable tasks")
+            errors.append(f"{prefix}.read_paths must contain 1-{max_read_paths} unique safe repository text paths for executable tasks")
         elif read_paths is not None and not (
-            isinstance(read_paths, list) and len(read_paths) <= 4
+            isinstance(read_paths, list) and len(read_paths) <= max_read_paths
             and all(_valid_read_path(path) for path in read_paths)
             and len(set(read_paths)) == len(read_paths)
         ):
-            errors.append(f"{prefix}.read_paths must contain at most four unique safe repository text paths")
+            errors.append(f"{prefix}.read_paths must contain at most {max_read_paths} unique safe repository text paths")
         for field in ("question", "next_action"):
             if not isinstance(task.get(field), str) or not task[field].strip():
                 errors.append(f"{prefix}.{field} is required")

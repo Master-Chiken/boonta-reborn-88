@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from check_task_ledger import LEDGER_PATH, ROOT, _valid_read_path, validate_ledger
+from check_task_ledger import LEDGER_PATH, ROOT, _max_read_paths_for_task, _valid_read_path, validate_ledger
 
 MAX_READ_PATH_BYTES = 96 * 1024
 MAX_TOTAL_READ_BYTES = 256 * 1024
@@ -34,8 +34,9 @@ def validate_read_paths(
     for task_index, task in enumerate(data.get("tasks", [])):
         paths = task.get("read_paths") or []
         ranges = task.get("read_ranges") or []
-        if len(paths) > MAX_READ_PATH_COUNT:
-            errors.append(f"tasks[{task_index}].read_paths exceeds the {MAX_READ_PATH_COUNT}-file task limit")
+        max_path_count = _max_read_paths_for_task(task.get("task_id"), paths)
+        if len(paths) > max_path_count:
+            errors.append(f"tasks[{task_index}].read_paths exceeds the {max_path_count}-file task limit")
             continue
         if paths and not isinstance(ranges, list):
             errors.append(f"tasks[{task_index}].read_ranges must be an array for tasks with read_paths")
