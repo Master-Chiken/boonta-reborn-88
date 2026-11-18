@@ -280,6 +280,26 @@ cases = [
         "expected_resume_head_sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2",
     },
     {
+        "name": "queued task PR cannot resume after its current owner-reviewed write scope is withdrawn",
+        "tasks": [{**valid_queued, "depends_on": ["TASK-PREREQUISITE"]}],
+        "completed_task_ids": ["TASK-PREREQUISITE"],
+        "open_task_prs": [queued_ready_pr],
+        "pr_files": [
+            {"filename": "tools/check_task_ledger.py", "status": "modified"},
+            {"filename": "tools/test_check_task_ledger.py", "status": "modified"}
+        ],
+        "owner_paths": False,
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": False,
+        "expected_resume_pr_number": "457",
+        "reason_contains": "no unique current owner-reviewed exact write scope",
+    },
+    {
         "name": "queued task PR cannot resume until every dependency is completed",
         "tasks": [{**valid_queued, "depends_on": ["TASK-PREREQUISITE"]}],
         "completed_task_ids": [],
@@ -1079,16 +1099,18 @@ async function runCase(testCase) {{
             }};
           }}
           if (options.path === "docs/automation/patch-path-allowlist.json") {{
-            const entries = testCase.owner_paths === false ? [] :
-              (testCase.owner_paths || (testCase.expected_ready ? testCase.tasks.filter((item) =>
-                item.status === "active" || item.status === "queued" ||
-                item.task_id === "AUTOMATION-LEDGER-ACTIVATION"
-              ).map((item) => ({{
+            const defaultPolicyEntries = testCase.tasks.filter((item) =>
+              item.status === "active" || item.status === "queued" ||
+              item.task_id === "AUTOMATION-LEDGER-ACTIVATION"
+            ).filter((item) => Array.isArray(item.read_paths) && item.read_paths.length > 1)
+              .map((item) => ({{
                 task_id: item.task_id,
                 purpose: "Synthetic owner-reviewed exact write scope",
                 approval_ref: "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
                 allowed_paths: [item.read_paths[1]]
-              }})) : []));
+              }}));
+            const entries = testCase.owner_paths === false ? [] :
+              (testCase.owner_paths || defaultPolicyEntries);
             const policy = {{
               schema_version: 1,
               policy: {{ owner_review_required: true, path_mode: "exact", max_paths_per_task: 20 }},
@@ -1187,6 +1209,14 @@ async function runCase(testCase) {{
     }}
     if (outputs.resume_pr_candidate === "true" && outputs.task_ready !== "false") {{
       throw new Error(testCase.name + ": resume must remain separate from normal task readiness");
+    }}
+    if (outputs.resume_ready === "true") {{
+      const selectedResume = testCase.tasks.find((item) => item.task_id === outputs.resume_task_id);
+      const expectedResumeWritePath = selectedResume && selectedResume.read_paths[1];
+      if (!expectedResumeWritePath ||
+        !String(outputs.resume_task_context).includes("Exact owner-reviewed write paths (no others): " + expectedResumeWritePath)) {{
+        throw new Error(testCase.name + ": resumed task context omitted its exact current owner-reviewed write paths");
+      }}
     }}
     if (outputs.resume_ready === "true" && (
       outputs.task_ready !== "false" ||
