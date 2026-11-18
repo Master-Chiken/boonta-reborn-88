@@ -169,7 +169,7 @@
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
       "head_sha": "6c1e499900afbfd3e8cc8f2a83087c0284ae1a45",
-      "next_action_excerpt": "Owner approved bounded main.c read-scope extension; #446 remains Draft/unmerged. #439 current HEAD 6c1e499; host tests and GC/Wii builds passed, Dolphin visual race diagnostic still running. Rerun two-race RESULTS/restart on this exact head after read-scope proposal is merged."
+      "next_action_excerpt": "Exact-head PR #439 6c1e499 run #44288338915 passed all host suites, GameCube/Wii DOL+ELF builds, artifact validation and Dolphin…"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
