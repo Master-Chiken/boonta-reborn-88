@@ -1066,7 +1066,7 @@
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
       "evidence": [],
-      "next_action": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
+      "next_action": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps.",
       "updated_at": "2026-11-11",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
