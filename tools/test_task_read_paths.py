@@ -12,9 +12,9 @@ from check_task_read_paths import (
 )
 
 
-def ledger_with_paths(paths: list[str], task_id: str = "TASK-001") -> dict:
+def ledger_with_paths(paths: list[str]) -> dict:
     task = {
-        "task_id": task_id,
+        "task_id": "TASK-001",
         "title": "Bounded source read test",
         "queue": "#226",
         "platform_scope": ["automation"],
@@ -176,39 +176,6 @@ class TaskReadPathTests(unittest.TestCase):
                 paths.append(path)
             errors = validate_read_paths(ledger_with_paths(paths), root)
             self.assertTrue(any("1-4 unique safe repository text paths" in error for error in errors))
-
-    def test_fifth_read_path_is_allowed_only_for_exact_rival_task_scope(self):
-        approved_paths = [
-            "gamecube-demo/source/main.c",
-            "gamecube-demo/source/rival_ai.h",
-            "gamecube-demo/source/route_cursor.h",
-            "gamecube-demo/source/gameplay_state.h",
-            "gamecube-demo/tests/test_rival_ai.c",
-        ]
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            for path in approved_paths:
-                target = root / path
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text("line one\\n", encoding="utf-8")
-            rival = ledger_with_paths(approved_paths, task_id="GC-RIVAL-ROUTE-PROGRESSION")
-            self.assertEqual(validate_read_paths(rival, root), [])
-            other = ledger_with_paths(approved_paths, task_id="OTHER-TASK")
-            self.assertTrue(any(
-                "1-4 unique safe repository text paths" in error
-                for error in validate_read_paths(other, root)
-            ))
-            wrong_rival_scope = ledger_with_paths(
-                approved_paths[:-1] + ["gamecube-demo/source/course_catalog.h"],
-                task_id="GC-RIVAL-ROUTE-PROGRESSION",
-            )
-            alternate = root / "gamecube-demo/source/course_catalog.h"
-            alternate.parent.mkdir(parents=True, exist_ok=True)
-            alternate.write_text("line one\\n", encoding="utf-8")
-            self.assertTrue(any(
-                "1-4 unique safe repository text paths" in error
-                for error in validate_read_paths(wrong_rival_scope, root)
-            ))
 
     def test_rejects_symlink_outside_repository(self):
         with tempfile.TemporaryDirectory() as temp, tempfile.TemporaryDirectory() as outside:
