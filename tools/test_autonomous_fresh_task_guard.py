@@ -445,6 +445,14 @@ resume_cases = [
         "expected_allowed": True,
     },
     {
+        "name": "resume is rejected when compact and canonical read scopes diverge",
+        "ledger": summary([resume_task]),
+        "source_ledger_tasks": [{**resume_task, "read_paths": ["gamecube-demo/source/main.c"]}],
+        "open_prs": [resume_pr],
+        "context_write_paths": ["gamecube-demo/source/rival_ai.h"],
+        "expected_allowed": False,
+    },
+    {
         "name": "trusted owner PR is rejected after its current write scope is withdrawn",
         "ledger": summary([resume_task]),
         "open_prs": [resume_pr],
@@ -508,7 +516,7 @@ async function runCase(testCase) {{
           if (options.path === "docs/automation/task-ledger-summary.json") {{
             payload = testCase.ledger;
           }} else if (options.path === "docs/automation/task-ledger.json") {{
-            payload = {{ schema_version: 1, tasks: testCase.ledger.tasks }};
+            payload = {{ schema_version: 1, tasks: testCase.source_ledger_tasks || testCase.ledger.tasks }};
           }} else if (options.path === "docs/automation/patch-path-allowlist.json") {{
             const taskId = testCase.task_id || "AUTOMATION-LEDGER-ACTIVATION";
             const selected = testCase.ledger.tasks.find((item) => item.task_id === taskId);
