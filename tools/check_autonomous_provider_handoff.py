@@ -260,11 +260,11 @@ for content, needle, message in (
 # A manual dispatch can bypass the global queue, so both its fresh-task and
 # existing-PR post-queue guards must reject any unrelated in_review task.
 task_guard_specs = (
-    ("Gemini", gemini),
-    ("OpenRouter", openrouter),
-    ("Groq", groq),
+    ("Gemini", gemini, "      - name: 'Mint identity token'", "      - name: 'Run Gemini CLI'"),
+    ("OpenRouter", openrouter, "      - name: Mint scoped GitHub App token", "      - name: Run OpenCode through the OpenRouter Free route"),
+    ("Groq", groq, "      - name: Mint scoped GitHub App token", "      - name: Run OpenCode through the Groq Free route"),
 )
-for label, workflow in task_guard_specs:
+for label, workflow, mint_marker, run_marker in task_guard_specs:
     task_guard_start = workflow.find("      - name: Revalidate selected task after acquiring the shared writer slot")
     task_guard_end = workflow.find(
         "      - name: Revalidate existing task PR after acquiring the shared writer slot",
@@ -289,6 +289,17 @@ for label, workflow in task_guard_specs:
         > task_guard.index("const matches = ledgerSummary.tasks.filter((task) => task.task_id === taskId);")
     ):
         errors.append(f"{label} fresh-task review lock must run before selected-task eligibility")
+    mint_pos = workflow.find(mint_marker, task_guard_start)
+    run_pos = workflow.find(run_marker, task_guard_start)
+    if not (0 <= task_guard_start < task_guard_end < mint_pos < run_pos):
+        errors.append(f"{label} fresh-task review guard must fail before write-token minting and model invocation")
+    for required in (
+        "if: inputs.autonomous_mode == true",
+        "inputs.resume_mode != true",
+        "core.setFailed(",
+    ):
+        if required not in task_guard:
+            errors.append(f"{label} fresh-task guard is missing fail-closed ordering condition {required!r}")
 
 resume_guard_specs = (
     ("Gemini", gemini, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
