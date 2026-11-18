@@ -338,6 +338,13 @@ groq_gates = (
 for needle in groq_gates:
     if needle not in groq_job:
         errors.append(f"Groq next-cycle gate missing: {needle}")
+if not re.search(
+    r"needs\.provider-cooldowns\.outputs\.resume_ready == 'true'\s*&&\s*"
+    r"needs\.provider-cooldowns\.outputs\.gemini_active == 'true'\s*&&\s*"
+    r"needs\.provider-cooldowns\.outputs\.openrouter_active == 'true'",
+    groq_job,
+):
+    errors.append("Groq existing-PR resume must wait for both Gemini and OpenRouter cooldowns")
 if any(token in groq_job for token in ("needs.autonomous-cycle.result ==", "needs.openrouter-fallback.result ==", "needs.openrouter-fallback.outputs.invocation_outcome")):
     errors.append("Groq eligibility must rely on preflight cooldown markers, never post-invocation provider results")
 if re.search(r"openrouter_active == 'true'\s*&&\s*\)", groq_job):
