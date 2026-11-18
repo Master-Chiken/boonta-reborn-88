@@ -280,16 +280,26 @@ class GitHubMcpPreflightTests(unittest.TestCase):
                 "owner": {"type": "string"},
                 "repo": {"type": "string"},
                 "branch": {"type": "string"},
-                "files": {"type": "array"},
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "path": {"type": "string"},
+                            "content": {"type": "string"},
+                        },
+                        "required": ["path"],
+                    },
+                },
                 "message": {"type": "string"},
             },
-            "required": ["owner", "repo", "branch", "message"],
+            "required": ["owner", "repo", "branch", "files", "message"],
         }
         code, _, errors, _ = self.invoke(
             stdout=response_lines(schema_overrides={"push_files": malformed})
         )
         self.assertEqual(code, 3)
-        self.assertIn("push_files schema is missing required fields: files", errors)
+        self.assertIn("push_files file items schema is missing required fields: content", errors)
 
     def test_create_pull_request_schema_requires_head_and_base(self) -> None:
         malformed = {
@@ -319,7 +329,7 @@ class GitHubMcpPreflightTests(unittest.TestCase):
     def test_unexpected_input_schema_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(schema_ok=False))
         self.assertEqual(code, 3)
-        self.assertIn("schema differs", errors)
+        self.assertIn("get_file_contents schema is missing required fields: repo", errors)
 
     def test_mcp_tool_error_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(read_error=True))
