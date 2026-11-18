@@ -20,6 +20,7 @@ def response_lines(
     schema_ok: bool = True,
     read_error: bool = False,
     marker: bool = True,
+    malformed_json: bool = False,
     include_initialize: bool = True,
     shutdown_error: bool = False,
     resource_response: bool = True,
@@ -116,9 +117,14 @@ def response_lines(
             }
         )
     else:
-        text = '{"schema_version": 2}' if marker else '{"wrong_schema": 2}'
+        text = (
+            "not-json"
+            if malformed_json
+            else ('{"schema_version": 2}' if marker else '{"schema_version": 1}')
+        )
         content = (
             [
+                {"type": "text", "text": "successfully downloaded text file"},
                 {
                     "type": "resource",
                     "resource": {
@@ -126,7 +132,7 @@ def response_lines(
                         "mimeType": "application/json",
                         "text": text,
                     },
-                }
+                },
             ]
             if resource_response
             else [{"type": "text", "text": text}]
@@ -346,7 +352,12 @@ class GitHubMcpPreflightTests(unittest.TestCase):
     def test_unexpected_read_content_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(marker=False))
         self.assertEqual(code, 3)
-        self.assertIn("did not return the expected task-ledger summary", errors)
+        self.assertIn("did not return task-ledger schema_version 2", errors)
+
+    def test_malformed_task_ledger_json_fails_closed(self) -> None:
+        code, _, errors, _ = self.invoke(stdout=response_lines(malformed_json=True))
+        self.assertEqual(code, 3)
+        self.assertIn("did not return valid task-ledger JSON", errors)
 
     def test_mcp_closing_before_tools_list_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(
