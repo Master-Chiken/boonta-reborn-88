@@ -19,28 +19,6 @@ ALLOWED_SUFFIXES = {
     ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh",
 }
 MAX_SOURCE_PATHS = 4
-RIVAL_TASK_ID = "GC-RIVAL-ROUTE-PROGRESSION"
-RIVAL_APPROVED_READ_PATHS = frozenset({
-    "gamecube-demo/source/main.c",
-    "gamecube-demo/source/rival_ai.h",
-    "gamecube-demo/source/route_cursor.h",
-    "gamecube-demo/source/gameplay_state.h",
-    "gamecube-demo/tests/test_rival_ai.c",
-})
-
-
-def _max_source_paths_for_task(task_id: str, read_paths: Any) -> int:
-    if (
-        task_id == RIVAL_TASK_ID
-        and isinstance(read_paths, list)
-        and len(read_paths) == len(RIVAL_APPROVED_READ_PATHS)
-        and all(isinstance(path, str) for path in read_paths)
-        and set(read_paths) == RIVAL_APPROVED_READ_PATHS
-    ):
-        return len(RIVAL_APPROVED_READ_PATHS)
-    return MAX_SOURCE_PATHS
-
-
 MAX_SOURCE_RANGES = 8
 MAX_RANGE_LINES = 80
 MAX_TOTAL_RANGE_LINES = 240
@@ -407,15 +385,12 @@ def build_context(
     if not isinstance(criteria_total, int) or criteria_total < len(criteria):
         raise ContextBuildError("Selected task acceptance-criteria count is inconsistent")
     read_paths = task.get("read_paths")
-    max_source_paths = _max_source_paths_for_task(task_id, read_paths)
     if not (
-        isinstance(read_paths, list) and 1 <= len(read_paths) <= max_source_paths
+        isinstance(read_paths, list) and 1 <= len(read_paths) <= MAX_SOURCE_PATHS
         and all(_safe_source_path(path) for path in read_paths)
         and len(set(read_paths)) == len(read_paths)
     ):
-        raise ContextBuildError(
-            f"Selected task has no valid 1-{max_source_paths} path read allow-list"
-        )
+        raise ContextBuildError("Selected task has no valid 1-4 path read allow-list")
     handoff_paths_line = "Read-only source paths (select at most one): " + ", ".join(read_paths)
     required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5], handoff_paths_line]
     if not all(item in task_context for item in required_handoff_text):
