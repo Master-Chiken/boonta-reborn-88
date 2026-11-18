@@ -102,6 +102,84 @@ def _stop_process(process: subprocess.Popen[str]) -> None:
             process.wait(timeout=5)
 
 
+TOOL_SCHEMA_CONTRACTS: dict[str, dict[str, Any]] = {
+    "get_file_contents": {
+        "required": {"owner", "repo"},
+        "properties": {"owner": "string", "repo": "string", "path": "string", "ref": "string"},
+    },
+    "create_branch": {
+        "required": {"owner", "repo", "branch"},
+        "properties": {"owner": "string", "repo": "string", "branch": "string"},
+    },
+    "push_files": {
+        "required": {"owner", "repo", "branch", "files", "message"},
+        "properties": {
+            "owner": "string",
+            "repo": "string",
+            "branch": "string",
+            "files": "array",
+            "message": "string",
+        },
+    },
+    "create_pull_request": {
+        "required": {"owner", "repo", "title", "head", "base"},
+        "properties": {
+            "owner": "string",
+            "repo": "string",
+            "title": "string",
+            "head": "string",
+            "base": "string",
+        },
+    },
+}
+
+
+def _validate_tool_schema(name: str, tool: dict[str, Any]) -> None:
+    contract = TOOL_SCHEMA_CONTRACTS.get(name)
+    if contract is None:
+        return
+    schema = tool.get("inputSchema")
+    if not isinstance(schema, dict) or schema.get("type") != "object":
+        raise RuntimeError(f"GitHub MCP {name} schema must be an object")
+    properties = schema.get("properties")
+    required_fields = schema.get("required")
+    if not isinstance(properties, dict) or not isinstance(required_fields, list):
+        raise RuntimeError(f"GitHub MCP {name} schema is missing properties or required fields")
+    missing = contract["required"] - set(required_fields)
+    if missing:
+        raise RuntimeError(
+            f"GitHub MCP {name} schema is missing required fields: "
+            + ", ".join(sorted(missing))
+        )
+    for field, expected_type in contract["properties"].items():
+        field_schema = properties.get(field)
+        if not isinstance(field_schema, dict) or field_schema.get("type") != expected_type:
+            raise RuntimeError(
+                f"GitHub MCP {name} schema field {field!r} must have type {expected_type}"
+            )
+    if name == "push_files":
+        files_schema = properties["files"]
+        items_schema = files_schema.get("items")
+        if not isinstance(items_schema, dict) or items_schema.get("type") != "object":
+            raise RuntimeError("GitHub MCP push_files files items schema must be an object")
+        item_properties = items_schema.get("properties")
+        item_required = items_schema.get("required")
+        if not isinstance(item_properties, dict) or not isinstance(item_required, list):
+            raise RuntimeError("GitHub MCP push_files file items schema is incomplete")
+        missing_item_fields = {"path", "content"} - set(item_required)
+        if missing_item_fields:
+            raise RuntimeError(
+                "GitHub MCP push_files file items schema is missing required fields: "
+                + ", ".join(sorted(missing_item_fields))
+            )
+        for field in ("path", "content"):
+            field_schema = item_properties.get(field)
+            if not isinstance(field_schema, dict) or field_schema.get("type") != "string":
+                raise RuntimeError(
+                    f"GitHub MCP push_files file item field {field!r} must have type string"
+                )
+
+
 def main() -> int:
     token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
     allowed_tools = {
@@ -224,24 +302,13 @@ def main() -> int:
                 + ", ".join(sorted(unexpected))
             )
 
-        read_tool = next(
-            (
-                item
-                for item in tools
-                if isinstance(item, dict) and item.get("name") == "get_file_contents"
-            ),
-            None,
-        )
-        schema = read_tool.get("inputSchema", {}) if isinstance(read_tool, dict) else {}
-        properties = schema.get("properties", {}) if isinstance(schema, dict) else {}
-        required_fields = schema.get("required", []) if isinstance(schema, dict) else []
-        schema_required = set(required_fields) if isinstance(required_fields, list) else set()
-        if (
-            not isinstance(properties, dict)
-            or not {"owner", "repo"}.issubset(schema_required)
-            or not {"path", "ref"}.issubset(properties)
-        ):
-            raise RuntimeError("GitHub MCP get_file_contents schema differs from the reviewed probe")
+        tool_by_name = {
+            item["name"]: item
+            for item in tools
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
+        }
+        for tool_name in sorted(required_tools):
+            _validate_tool_schema(tool_name, tool_by_name[tool_name])
 
         _send(
             process,
