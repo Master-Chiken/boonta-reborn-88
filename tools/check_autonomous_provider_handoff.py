@@ -1291,6 +1291,18 @@ for required in (
     "GitHub MCP server is not connected in OpenCode; no model request was sent.",
 ):
     if required not in openrouter:
+
+for required in (
+    'export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"',
+    'export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"',
+    'python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"',
+    "timeout 90s opencode mcp list",
+    "OpenCode could not enumerate GitHub MCP for Groq; no model request was sent.",
+    "GitHub MCP server is not connected in OpenCode for Groq; no model request was sent.",
+):
+    if required not in groq:
+        errors.append(f"Groq must call the shared GitHub MCP preflight before inference: missing {required!r}")
+
         errors.append(f"OpenRouter must call the shared GitHub MCP preflight before inference: missing {required!r}")
 
 for required in (
