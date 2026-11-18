@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-13",
+  "updated_at": "2026-11-18",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -1011,7 +1011,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "in_review",
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
       "read_paths": [
@@ -1065,15 +1065,20 @@
         "Integrate rival progress into the current results/session data only where values are measured; do not invent finishing positions or claim retail AI parity.",
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
-      "evidence": [],
-      "next_action": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
-      "updated_at": "2026-11-11",
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458"
+      ],
+      "next_action": "Exact-head CI #44279415458 on b2006e43be729092307c1bf06b82ebcb0bd9a664: host tests and native GameCube/Wii builds passed; null-video smoke passed; two-race Dolphin finish/results/restart diagnostic is running. Await its result and owner review; do not mark completed until PR #439 is merged. Next: GC-RACE-FRONTEND-FLOW.",
+      "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
         "GC-RACE-PROGRESSION"
       ],
-      "owner_approved": true
+      "owner_approved": true,
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+      "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
