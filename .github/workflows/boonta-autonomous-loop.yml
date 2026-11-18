@@ -701,7 +701,7 @@ jobs:
           (
             github.event_name == 'schedule' ||
             (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
-            (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback')
+            (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback' && github.event.client_payload.failed_provider == 'openrouter')
           )
         )
       ) &&
