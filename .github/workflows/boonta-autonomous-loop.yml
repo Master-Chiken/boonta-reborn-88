@@ -356,12 +356,17 @@ jobs:
                     value !== 'docs/automation/task-ledger-summary.json' &&
                     !parts.some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()));
                 };
+                const approvedResumeReadPaths = new Set(resumeCandidateTask.read_paths);
                 resumeFilePaths = [...new Set(changedFiles
-                  .filter((file) => file && file.status !== 'removed' && safePath(file.filename))
+                  .filter((file) =>
+                    file && file.status !== 'removed' &&
+                    safePath(file.filename) &&
+                    approvedResumeReadPaths.has(file.filename)
+                  )
                   .map((file) => file.filename))].sort().slice(0, 4);
                 resumeReady = resumeFilePaths.length > 0;
                 if (!resumeReady) {
-                  resumeUnavailableReason = 'the existing PR has no eligible safe text file to read';
+                  resumeUnavailableReason = 'the existing PR has no eligible safe text file within the task exact approved read-path allow-list';
                 }
               }
             }
