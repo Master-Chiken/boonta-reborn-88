@@ -217,7 +217,7 @@ jobs:
                 ? task.task_id.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 96)
                 : 'unknown-task';
               const prMatch = typeof task.pr_url === 'string'
-                ? task.pr_url.match(/^https:\/\/github\\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*)$/)
+                ? task.pr_url.match(/^https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*)$/)
                 : null;
               return taskId + (prMatch ? ' (PR #' + prMatch[1] + ')' : ' (PR URL unavailable)');
             }).join('; ') + (inReviewTasks.length > 10 ? '; +' + (inReviewTasks.length - 10) + ' more' : '');
