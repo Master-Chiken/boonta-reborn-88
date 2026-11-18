@@ -58,11 +58,11 @@ class GitHubMcpPreflightTests(unittest.TestCase):
             ["docker", "run"], 0, stdout=stdout or response_lines(), stderr=""
         )
         docker = patch.object(probe.shutil, "which", return_value="/usr/bin/docker")
-        runner = patch.object(probe.subprocess, "run", side_effect=[success, result])
+        runner_patch = patch.object(probe.subprocess, "run", side_effect=[success, result])
         docker.start()
-        runner.start()
+        runner = runner_patch.start()
         self.addCleanup(docker.stop)
-        self.addCleanup(runner.stop)
+        self.addCleanup(runner_patch.stop)
         return runner
 
     def invoke(self, **kwargs):
