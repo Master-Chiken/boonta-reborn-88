@@ -85,7 +85,7 @@ in_review_task.update({
 
 in_review_bad_link = task("AUTOMATION-TEST-BAD-LINK", "in_review")
 in_review_bad_link["pr_url"] = "https://evil.example/Master-Chiken/boonta-reborn-88/pull/777"
-in_review_unsafe_id = task("REVIEW\\n::warning::", "in_review")
+in_review_unsafe_id = task("REVIEW\n::warning::", "in_review")
 in_review_unsafe_id["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/461"
 many_in_review = []
 for index in range(1, 13):
