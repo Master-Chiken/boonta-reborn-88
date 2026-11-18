@@ -1291,6 +1291,13 @@ for required in (
     '"method": "tools/call"',
     '"name": "get_file_contents"',
     'GITHUB_MCP_REQUIRED_TOOLS',
+    'subprocess.Popen(',
+    'process.stdin.flush()',
+    'initialize_response = _await_response(messages, 1, deadline, diagnostics)',
+    'list_response = _await_response(messages, 2, deadline, diagnostics)',
+    'read_response = _await_response(messages, 3, deadline, diagnostics)',
+    'process.stdin.close()',
+    'server is closing: EOF',
     '"docker",',
     '"run",',
     '"--rm",',
@@ -1306,13 +1313,13 @@ for required in (
         errors.append(f"GitHub MCP helper is missing fail-closed protocol/read checks: {required!r}")
 
 for required in (
-    "test_success_calls_only_read_only_repository_tool",
+    "test_success_keeps_stdio_open_and_calls_only_read_only_repository_tool",
     "test_missing_required_tool_fails_closed",
     "test_unexpected_input_schema_fails_closed",
     "test_mcp_tool_error_fails_closed",
     "test_unexpected_read_content_fails_closed",
-    "test_mcp_timeout_fails_closed",
-    "test_container_failure_fails_closed_and_redacts_token",
+    "test_mcp_closing_before_tools_list_fails_closed",
+    "test_expected_eof_shutdown_after_valid_responses_is_accepted",
     "test_missing_token_fails_before_docker",
 ):
     if required not in mcp_preflight_tests:
