@@ -788,7 +788,8 @@ jobs:
 
           # Run the shared fail-closed MCP protocol and read-only repository-access probe.
           export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
-          export GITHUB_MCP_REQUIRED_TOOLS="get_file_contents,push_files"
+          # Require every tool exposed to this execution mode, not just read/write basics.
+          export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"
           python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"
 
           # Fail closed before paying for inference if OpenCode did not load the
