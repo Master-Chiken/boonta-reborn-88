@@ -22,6 +22,7 @@ def response_lines(
     marker: bool = True,
     include_initialize: bool = True,
     shutdown_error: bool = False,
+    resource_response: bool = True,
 ) -> str:
     properties = {"owner": {}, "repo": {}, "path": {}, "ref": {}} if schema_ok else {"owner": {}, "repo": {}}
     required = ["owner", "repo"] if schema_ok else ["owner"]
@@ -52,23 +53,22 @@ def response_lines(
         )
     else:
         text = '{"schema_version": 2}' if marker else '{"wrong_schema": 2}'
+        content = (
+            [
+                {
+                    "type": "resource",
+                    "resource": {
+                        "uri": "repo://Master-Chiken/boonta-reborn-88/refs/heads/main/docs/automation/task-ledger-summary.json",
+                        "mimeType": "application/json",
+                        "text": text,
+                    },
+                }
+            ]
+            if resource_response
+            else [{"type": "text", "text": text}]
+        )
         messages.append(
-            {
-                "jsonrpc": "2.0",
-                "id": 3,
-                "result": {
-                    "content": [
-                        {
-                            "type": "resource",
-                            "resource": {
-                                "uri": "repo://Master-Chiken/boonta-reborn-88/refs/heads/main/docs/automation/task-ledger-summary.json",
-                                "mimeType": "application/json",
-                                "text": text,
-                            },
-                        }
-                    ]
-                },
-            }
+            {"jsonrpc": "2.0", "id": 3, "result": {"content": content}}
         )
     rendered = "\n".join(json.dumps(item) for item in messages) + "\n"
     if shutdown_error:
@@ -193,18 +193,7 @@ class GitHubMcpPreflightTests(unittest.TestCase):
         self.assertNotIn("unit-test-token", errors)
 
     def test_legacy_plain_text_content_is_supported(self) -> None:
-        payload = response_lines().replace(
-            '"type": "resource",',
-            '"type": "text",',
-        )
-        payload = payload.replace(
-            '"resource": {"uri": "repo://Master-Chiken/boonta-reborn-88/refs/heads/main/docs/automation/task-ledger-summary.json", "mimeType": "application/json", "text":',
-            '"text":',
-        ).replace(
-            '}}]}}',
-            '}]}}',
-        )
-        code, output, errors, _ = self.invoke(stdout=payload)
+        code, output, errors, _ = self.invoke(stdout=response_lines(resource_response=False))
         self.assertEqual(code, 0, errors)
         self.assertIn("read-only get_file_contents call passed", output)
 
