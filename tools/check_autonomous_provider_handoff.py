@@ -1196,10 +1196,11 @@ if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
 
 # A skipped provider cycle must explain whether the queue is empty, blocked,
-# waiting for task promotion, or waiting for PR reconciliation.
+# waiting for task promotion, task review, or PR reconciliation.
 for required in (
     "queue_state: ${{ steps.check.outputs.queue_state }}",
     "queued_count: ${{ steps.check.outputs.queued_count }}",
+    "in_review_count: ${{ steps.check.outputs.in_review_count }}",
     "const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');",
     "const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');",
     "queueState = 'EMPTY_QUEUE';",
@@ -1207,6 +1208,9 @@ for required in (
     "queueState = 'BLOCKED_TASKS_ONLY';",
     "core.setOutput('queue_state', queueState)",
     "QUEUE_STATE: ${{ needs.provider-cooldowns.outputs.queue_state }}",
+    "IN_REVIEW_COUNT: ${{ needs.provider-cooldowns.outputs.in_review_count }}",
+    "WAITING_FOR_TASK_REVIEW — HUMAN_REVIEW_REQUIRED",
+    "Human PR review/merge and canonical ledger reconciliation are required before any provider invocation.",
     "EMPTY_QUEUE — WAITING_FOR_OWNER_APPROVAL",
     "No AI provider was invoked, no provider cooldown was written",
 ):
