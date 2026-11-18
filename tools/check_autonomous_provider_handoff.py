@@ -1231,6 +1231,8 @@ for required in (
     r"task.pr_url.match(/^https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*)$/)",
     "core.setOutput('in_review_summary', inReviewSummary);",
     "const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');",
+    "const approvedResumeReadPaths = new Set(resumeCandidateTask.read_paths);",
+    "approvedResumeReadPaths.has(file.filename)",
     "const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');",
     "queueState = 'EMPTY_QUEUE';",
     "queueState = 'QUEUED_TASKS_WAITING_FOR_PROMOTION';",
@@ -1259,6 +1261,8 @@ for required_case in (
     '"name": "external or malformed PR URLs are never rendered as verified pull requests"',
     '"name": "task IDs are sanitized before appearing in the cycle report"',
     '"name": "review report is bounded to ten tasks and reports the remainder"',
+    '"name": "resume file handoff excludes changed files outside the exact task read-path allow-list"',
+    '"name": "resume is blocked when no changed file is within the exact task read-path allow-list"',
 ):
     if required_case not in task_preflight_tests:
         errors.append(f"Offline task-preflight tests are missing queue-state scenario {required_case!r}")
@@ -1266,6 +1270,8 @@ if 'outputs.queue_state !== testCase.expected_queue_state' not in task_preflight
     errors.append("Offline task-preflight tests must assert the queue-state output")
 if 'outputs.in_review_summary !== testCase.expected_in_review_summary' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must assert the exact in-review task/PR summary")
+if 'outputs.resume_file_paths !== JSON.stringify(testCase.expected_resume_file_paths)' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must assert the exact resumed changed-file read allow-list")
 if '"expected_in_review_summary": "AUTOMATION-TEST-IN-REVIEW (PR #460)"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must pin the expected in-review PR summary")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
