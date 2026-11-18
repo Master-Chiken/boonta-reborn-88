@@ -1267,40 +1267,65 @@ if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
 
 for required in (
     'export GITHUB_TOOLS="get_file_contents,push_files"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     '"command": [',
-    '"docker", "run", "-i", "--rm"',
     '"ghcr.io/github/github-mcp-server:v0.27.0"',
     '"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"',
-    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     '"enabled": true',
-    'if [[ -z "${GITHUB_TOKEN:-}" || -z "${GITHUB_TOOLS:-}" ]]; then',
-    "Docker CLI is unavailable; GitHub MCP cannot start; no model request was sent.",
-    "Docker daemon is unavailable to the runner; GitHub MCP cannot start; no model request was sent.",
+    'export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"',
+    'export GITHUB_MCP_REQUIRED_TOOLS="get_file_contents,push_files"',
+    'python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"',
     "timeout 90s opencode mcp list",
     "GitHub MCP server is not connected in OpenCode; no model request was sent.",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter must call the shared GitHub MCP preflight before inference: missing {required!r}")
+
+for required in (
+    'IMAGE = "ghcr.io/github/github-mcp-server:v0.27.0"',
+    'READ_PATH = "docs/automation/task-ledger-summary.json"',
+    'READ_REF = "refs/heads/main"',
     '"method": "initialize"',
     '"method": "notifications/initialized"',
     '"method": "tools/list"',
     '"method": "tools/call"',
-    '"id": 3',
     '"name": "get_file_contents"',
-    '"path": "docs/automation/task-ledger-summary.json"',
-    '"ref": "refs/heads/main"',
+    'GITHUB_MCP_REQUIRED_TOOLS',
+    '"docker",',"run",',"--rm"',
     'schema_required = set(required_fields) if isinstance(required_fields, list) else set()',
-    'if not isinstance(properties, dict) or not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):',
-    'if not isinstance(read_response, dict) or "error" in read_response:',
+    'not {"owner", "repo"}.issubset(schema_required)',
+    'not {"path", "ref"}.issubset(properties)',
     'read_result.get("isError") is True',
     '"schema_version"',
-    "GitHub MCP token-backed read-only get_file_contents call passed for the canonical task-ledger summary.",
-    'if not isinstance(properties, dict) or not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):',
-    'payload = "".join(json.dumps(item) + "\\n" for item in messages)',
-    'required = {"get_file_contents", "push_files"}',
-    "GitHub MCP tools/list returned:",
-    "GitHub MCP direct protocol preflight passed; required read/write tools are present and the read path works.",
-    "GitHub MCP read-only tools preflight timed out; no model request was sent.",
-    "GitHub MCP did not return a valid tools/list response; no model request was sent.",
+    "GitHub MCP token-backed read-only get_file_contents call passed for",
+    "GitHub MCP read-only tools preflight timed out",
 ):
-    if required not in openrouter:
+    if required not in mcp_preflight:
+        errors.append(f"GitHub MCP helper is missing fail-closed protocol/read checks: {required!r}")
+
+for required in (
+    "test_success_calls_only_read_only_repository_tool",
+    "test_missing_required_tool_fails_closed",
+    "test_unexpected_input_schema_fails_closed",
+    "test_mcp_tool_error_fails_closed",
+    "test_unexpected_read_content_fails_closed",
+    "test_mcp_timeout_fails_closed",
+    "test_missing_token_fails_before_docker",
+):
+    if required not in mcp_preflight_tests:
+        errors.append(f"GitHub MCP helper regression suite is missing {required!r}")
+
+for required in (
+    "Exercise pinned GitHub MCP with a read-only repository token",
+    "GITHUB_PERSONAL_ACCESS_TOKEN: ${{ github.token }}",
+    "GITHUB_TOOLS: get_file_contents",
+    "GITHUB_MCP_REQUIRED_TOOLS: get_file_contents",
+    "run: python3 tools/preflight_github_mcp.py",
+    "run: python3 tools/test_preflight_github_mcp.py",
+    "contents: read",
+):
+    if required not in branch_selftest:
+        errors.append(f"Branch self-test must exercise the read-only GitHub MCP integration: missing {required!r}")
         errors.append(f"OpenRouter MCP preflight is missing fail-closed check {required!r}")
 
 for required in (
