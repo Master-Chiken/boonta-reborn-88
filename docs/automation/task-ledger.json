@@ -1017,13 +1017,14 @@
       "read_paths": [
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
-        "gamecube-demo/source/gameplay_state.h"
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c"
       ],
       "read_ranges": [
         {
           "path": "gamecube-demo/source/rival_ai.h",
           "start_line": 91,
-          "end_line": 145
+          "end_line": 120
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
@@ -1038,7 +1039,7 @@
         {
           "path": "gamecube-demo/source/route_cursor.h",
           "start_line": 228,
-          "end_line": 275
+          "end_line": 257
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
@@ -1053,7 +1054,12 @@
         {
           "path": "gamecube-demo/source/gameplay_state.h",
           "start_line": 435,
-          "end_line": 484
+          "end_line": 459
+        },
+        {
+          "path": "gamecube-demo/tests/test_rival_ai.c",
+          "start_line": 400,
+          "end_line": 479
         }
       ],
       "acceptance_criteria": [
