@@ -1312,6 +1312,7 @@ for required in (
     "test_mcp_tool_error_fails_closed",
     "test_unexpected_read_content_fails_closed",
     "test_mcp_timeout_fails_closed",
+    "test_container_failure_fails_closed_and_redacts_token",
     "test_missing_token_fails_before_docker",
 ):
     if required not in mcp_preflight_tests:
