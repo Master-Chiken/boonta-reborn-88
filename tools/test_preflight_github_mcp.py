@@ -23,6 +23,7 @@ def response_lines(
     include_initialize: bool = True,
     shutdown_error: bool = False,
     resource_response: bool = True,
+    extra_tools: tuple[str, ...] = (),
 ) -> str:
     properties = {"owner": {}, "repo": {}, "path": {}, "ref": {}} if schema_ok else {"owner": {}, "repo": {}}
     required = ["owner", "repo"] if schema_ok else ["owner"]
@@ -34,6 +35,8 @@ def response_lines(
     ]
     if include_push:
         tools.append({"name": "push_files", "inputSchema": {"type": "object"}})
+    for name in extra_tools:
+        tools.append({"name": name, "inputSchema": {"type": "object"}})
     messages = []
     if include_initialize:
         messages.append(
@@ -179,6 +182,28 @@ class GitHubMcpPreflightTests(unittest.TestCase):
         code, _, errors, _ = self.invoke(stdout=response_lines(include_push=False))
         self.assertEqual(code, 3)
         self.assertIn("missing required tools", errors)
+
+    def test_new_task_allowlist_requires_branch_and_pr_tools(self) -> None:
+        required = "get_file_contents,create_branch,push_files,create_pull_request"
+        with patch.dict(
+            os.environ,
+            {"GITHUB_TOOLS": required, "GITHUB_MCP_REQUIRED_TOOLS": required},
+        ):
+            code, _, errors, _ = self.invoke(stdout=response_lines())
+        self.assertEqual(code, 3)
+        self.assertIn("missing required tools: create_branch, create_pull_request", errors)
+
+    def test_new_task_allowlist_accepts_all_exposed_tools(self) -> None:
+        required = "get_file_contents,create_branch,push_files,create_pull_request"
+        with patch.dict(
+            os.environ,
+            {"GITHUB_TOOLS": required, "GITHUB_MCP_REQUIRED_TOOLS": required},
+        ):
+            code, output, errors, _ = self.invoke(
+                stdout=response_lines(extra_tools=("create_branch", "create_pull_request"))
+            )
+        self.assertEqual(code, 0, errors)
+        self.assertIn("get_file_contents", output)
 
     def test_unexpected_input_schema_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(schema_ok=False))
