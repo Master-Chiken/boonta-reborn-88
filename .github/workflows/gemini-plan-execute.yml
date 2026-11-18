@@ -621,10 +621,10 @@ jobs:
               --target-branch "$TASK_TARGET_BRANCH" \
               --task-context "$TASK_DESCRIPTION" \
               --max-chars 3000 \
-              --max-task-context 1100 \
+              --max-task-context 1600 \
               --max-criteria 5 \
               --max-next-action 180 \
-              --max-source-chars 1600)"
+              --max-source-chars 1200)"
           fi
           jq -n \
             --arg title "${TITLE}" \
