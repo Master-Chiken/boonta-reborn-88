@@ -1023,8 +1023,8 @@
       "read_ranges": [
         {
           "path": "gamecube-demo/source/main.c",
-          "start_line": 136,
-          "end_line": 185
+          "start_line": 195,
+          "end_line": 235
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
