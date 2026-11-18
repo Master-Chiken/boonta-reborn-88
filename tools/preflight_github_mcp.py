@@ -126,11 +126,15 @@ def main() -> int:
         )
     except subprocess.TimeoutExpired:
         return fail("GitHub MCP read-only tools preflight timed out")
+    responses = _jsonrpc_responses(result.stdout)
     if result.returncode != 0:
-        diagnostic = "\\n".join(str(result.stderr or "").splitlines()[-8:])
+        diagnostic = "\n".join(str(result.stderr or "").splitlines()[-20:])
         diagnostic = diagnostic.replace(token, "[REDACTED]") if token else diagnostic
-        detail = f" (exit code {result.returncode})"
+        response_ids = ",".join(str(item) for item in sorted(responses)) or "none"
+        detail = f" (exit code {result.returncode}; JSON-RPC response ids: {response_ids})"
         if diagnostic:
+            detail += ": " + diagnostic
+        return fail("GitHub MCP container failed during direct protocol preflight" + detail)
             detail += ": " + diagnostic
         return fail("GitHub MCP container failed during direct protocol preflight" + detail)
 
