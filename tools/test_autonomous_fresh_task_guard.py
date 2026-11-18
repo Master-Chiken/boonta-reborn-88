@@ -445,6 +445,14 @@ resume_cases = [
         "expected_allowed": True,
     },
     {
+        "name": "trusted owner PR is rejected after its current write scope is withdrawn",
+        "ledger": summary([resume_task]),
+        "open_prs": [resume_pr],
+        "context_write_paths": ["gamecube-demo/source/rival_ai.h"],
+        "policy_write_paths": False,
+        "expected_allowed": False,
+    },
+    {
         "name": "changed PR head after preflight is rejected",
         "ledger": summary([resume_task]),
         "open_prs": [{**resume_pr, "head": {**resume_pr["head"], "sha": "a" * 40}}],
@@ -501,6 +509,22 @@ async function runCase(testCase) {{
             payload = testCase.ledger;
           }} else if (options.path === "docs/automation/task-ledger.json") {{
             payload = {{ schema_version: 1, tasks: testCase.ledger.tasks }};
+          }} else if (options.path === "docs/automation/patch-path-allowlist.json") {{
+            const taskId = testCase.task_id || "AUTOMATION-LEDGER-ACTIVATION";
+            const selected = testCase.ledger.tasks.find((item) => item.task_id === taskId);
+            const contextPaths = testCase.context_write_paths || selected?.read_paths?.slice(0, 1) || [];
+            const policyPaths = testCase.policy_write_paths === false ? null :
+              (testCase.policy_write_paths || contextPaths);
+            payload = {{
+              schema_version: 1,
+              policy: {{ owner_review_required: true, path_mode: "exact", max_paths_per_task: 20 }},
+              tasks: policyPaths === null ? [] : [{{
+                task_id: taskId,
+                purpose: "Synthetic owner-reviewed exact write scope",
+                approval_ref: "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+                allowed_paths: policyPaths
+              }}]
+            }};
           }} else {{
             throw new Error("unexpected canonical ledger request");
           }}
@@ -532,6 +556,8 @@ async function runCase(testCase) {{
     RESUME_TASK_ID: testCase.task_id || "AUTOMATION-LEDGER-ACTIVATION",
     RESUME_TASK_TITLE: testCase.task_title || "Activate and validate persistent autonomous task tracking",
     RESUME_TASK_TARGET_BRANCH: testCase.target_branch || "main",
+    RESUME_TASK_DESCRIPTION: "Exact owner-reviewed write paths (no others): " +
+      (testCase.context_write_paths || testCase.ledger.tasks.find((item) => item.task_id === (testCase.task_id || "AUTOMATION-LEDGER-ACTIVATION"))?.read_paths?.slice(0, 1) || []).join(", "),
     ISSUE_NUMBER: "226",
     RESUME_PR_NUMBER: String(testCase.pr_number || 388),
     RESUME_PR_URL: testCase.pr_url || "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
