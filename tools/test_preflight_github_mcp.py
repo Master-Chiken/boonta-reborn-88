@@ -250,6 +250,28 @@ class GitHubMcpPreflightTests(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertIn("missing required tools", errors)
 
+    def test_unreviewed_allowlist_mode_fails_before_docker(self) -> None:
+        tools = "get_file_contents,push_files,delete_branch"
+        with patch.dict(
+            os.environ,
+            {"GITHUB_TOOLS": tools, "GITHUB_MCP_REQUIRED_TOOLS": tools},
+        ), patch.object(probe.shutil, "which") as which, contextlib.redirect_stderr(io.StringIO()):
+            code = probe.main()
+        self.assertEqual(code, 3)
+        which.assert_not_called()
+
+    def test_required_tools_must_exactly_match_allowlist(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request",
+                "GITHUB_MCP_REQUIRED_TOOLS": "get_file_contents,push_files",
+            },
+        ), patch.object(probe.shutil, "which") as which, contextlib.redirect_stderr(io.StringIO()):
+            code = probe.main()
+        self.assertEqual(code, 3)
+        which.assert_not_called()
+
     def test_new_task_allowlist_requires_branch_and_pr_tools(self) -> None:
         required = "get_file_contents,create_branch,push_files,create_pull_request"
         with patch.dict(
