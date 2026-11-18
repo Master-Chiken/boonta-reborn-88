@@ -555,8 +555,13 @@ jobs:
               return;
             }
             const sourceTask = sourceMatches[0];
-            if (sourceTask.status !== task.status || sourceTask.owner_approved !== task.owner_approved) {
-              failClosed('compact and full task ledgers disagree on task status or owner approval');
+            if (
+              sourceTask.status !== task.status ||
+              sourceTask.owner_approved !== task.owner_approved ||
+              sourceTask.target_branch !== task.target_branch ||
+              JSON.stringify(sourceTask.read_paths) !== JSON.stringify(task.read_paths)
+            ) {
+              failClosed('compact and full task ledgers disagree on task status, approval, target branch or exact read scope');
               return;
             }
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
