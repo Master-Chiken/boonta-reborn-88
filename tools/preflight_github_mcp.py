@@ -217,6 +217,12 @@ def main() -> int:
                 "GitHub MCP tool catalog is missing required tools: "
                 + ", ".join(sorted(missing))
             )
+        unexpected = names - allowed_tools
+        if unexpected:
+            raise RuntimeError(
+                "GitHub MCP tool catalog includes tools outside configured allow-list: "
+                + ", ".join(sorted(unexpected))
+            )
 
         read_tool = next(
             (
