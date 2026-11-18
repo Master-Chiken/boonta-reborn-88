@@ -1313,6 +1313,9 @@ for required in (
     'IMAGE = "ghcr.io/github/github-mcp-server:v0.27.0"',
     'READ_PATH = "docs/automation/task-ledger-summary.json"',
     'READ_REF = "refs/heads/main"',
+    'IMAGE_PULL_TIMEOUT_SECONDS = 180',
+    '["docker", "pull", IMAGE]',
+    '"--pull=never"',
     '"method": "initialize"',
     '"method": "notifications/initialized"',
     '"method": "tools/list"',
@@ -1350,13 +1353,16 @@ for required in (
     'GitHub MCP get_file_contents tool returned isError',
     '"schema_version"',
     "GitHub MCP token-backed read-only get_file_contents call passed for",
-    "GitHub MCP read-only tools preflight timed out",
+    "GitHub MCP {phase} timed out",
+    "Docker MCP image pull failed",
 ):
     if required not in mcp_preflight:
         errors.append(f"GitHub MCP helper is missing fail-closed protocol/read checks: {required!r}")
 
 for required in (
     "test_success_keeps_stdio_open_and_calls_only_read_only_repository_tool",
+    "test_cold_docker_cache_pulls_image_before_starting_mcp",
+    "test_timeout_reports_phase_and_redacts_token",
     "test_unreviewed_allowlist_mode_fails_before_docker",
     "test_required_tools_must_exactly_match_allowlist",
     "test_missing_required_tool_fails_closed",
