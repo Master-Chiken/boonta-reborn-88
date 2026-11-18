@@ -912,7 +912,7 @@ if len(actual_groq_prompt) > 2100:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Gemini", gemini, 3600, 1600)
+context_limits("Gemini", gemini, 3000, 1600)
 context_limits("Groq", groq, 3100, 1600)
 if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
     errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
