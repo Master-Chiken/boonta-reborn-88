@@ -1023,13 +1023,18 @@
       "read_ranges": [
         {
           "path": "gamecube-demo/source/main.c",
-          "start_line": 195,
-          "end_line": 235
+          "start_line": 1430,
+          "end_line": 1485
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 382,
-          "end_line": 440
+          "start_line": 213,
+          "end_line": 272
+        },
+        {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 56,
+          "end_line": 67
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
@@ -1037,9 +1042,14 @@
           "end_line": 275
         },
         {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 400,
+          "end_line": 419
+        },
+        {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 743,
-          "end_line": 780
+          "start_line": 578,
+          "end_line": 625
         }
       ],
       "acceptance_criteria": [
@@ -1056,7 +1066,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
       ],
-      "next_action": "Run #44279415458 on b2006e43 passed GameCube/Wii builds, host tests and Dolphin two-race finish/reset/results acceptance. OpenRouter run #44281586837 invoked the Free model and validated BLOCKED because main.c was absent from read_paths. PR #446 proposes a bounded, owner-reviewed main.c read scope; keep this task in_review and PR #439 Draft until review and merge.",
+      "next_action": "Exact-head CI #44279415458 passed native GameCube/Wii builds, host tests and the Dolphin two-race finish/reset/results scenario. OpenRouter run #44281586837 invoked the Free model but validated BLOCKED because main.c was absent from the read-path allow-list. PR #446 proposes adding main.c and re-anchoring all bounded excerpts to the target branch dev; first draft CI caught stale line ranges taken from PR #439, so await fresh exact-head self-test and owner review. Keep task in_review and PR #439 Draft.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
