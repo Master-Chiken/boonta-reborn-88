@@ -22,6 +22,7 @@ on:
       - tools/build_autonomous_context.py
       - tools/validate_autonomous_cycle_report.js
       - tools/test_autonomous_task_preflight.py
+      - tools/preflight_github_mcp.py
       - tools/test_autonomous_cycle_report.js
   schedule:
     # Four bounded opportunities per day, including 00:17 UTC just after daily quota reset; runs without asking for another continue message.
