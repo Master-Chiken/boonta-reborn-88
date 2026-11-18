@@ -785,6 +785,26 @@ jobs:
 
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
+
+          # Run the shared fail-closed MCP protocol and read-only repository-access probe.
+          export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+          # Require every tool exposed to this execution mode, not just read/write basics.
+          export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"
+          python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"
+
+          # Fail closed before paying for inference if OpenCode did not load the
+          # scoped GitHub MCP server and its explicitly allow-listed tools.
+          mcp_status="$(timeout 90s opencode mcp list 2>&1)" || {
+            printf '%s\n' "$mcp_status"
+            echo "::error::OpenCode could not enumerate MCP servers; no model request was sent."
+            exit 3
+          }
+          printf '%s\n' "$mcp_status"
+          if ! grep -Eiq 'github.*connected|connected.*github' <<<"$mcp_status"; then
+            echo "::error::GitHub MCP server is not connected in OpenCode; no model request was sent."
+            exit 3
+          fi
+
           PROMPT="$(cat <<'PROMPT'
           You are the €0-only OpenRouter Free agent. Execute only the preflight-selected task.
           

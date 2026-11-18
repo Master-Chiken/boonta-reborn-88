@@ -750,6 +750,23 @@ jobs:
 
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
+          # Reuse the same token-backed MCP transport and read-only repository probe
+          # before Groq inference; require every model-visible tool in the selected mode.
+          export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+          export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"
+          python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"
+
+          mcp_status="$(timeout 90s opencode mcp list 2>&1)" || {
+            printf '%s\n' "$mcp_status"
+            echo "::error::OpenCode could not enumerate GitHub MCP for Groq; no model request was sent."
+            exit 3
+          }
+          printf '%s\n' "$mcp_status"
+          if ! grep -Eiq 'github.*connected|connected.*github' <<<"$mcp_status"; then
+            echo "::error::GitHub MCP server is not connected in OpenCode for Groq; no model request was sent."
+            exit 3
+          fi
+
           PROMPT="$(cat <<'PROMPT'
           Groq Free, €0 only. Execute exactly the preflight-reserved task.
 

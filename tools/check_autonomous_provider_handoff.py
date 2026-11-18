@@ -21,6 +21,9 @@ FILES = {
     "context_builder": ROOT / "tools/build_autonomous_context.py",
     "context_builder_tests": ROOT / "tools/test_autonomous_context.py",
     "task_preflight_tests": ROOT / "tools/test_autonomous_task_preflight.py",
+    "mcp_preflight": ROOT / "tools/preflight_github_mcp.py",
+    "mcp_preflight_tests": ROOT / "tools/test_preflight_github_mcp.py",
+    "branch_selftest": ROOT / ".github/workflows/branch-automation-selftest.yml",
 }
 
 
@@ -46,6 +49,9 @@ cycle_validator_tests = read("cycle_validator_tests")
 context_builder = read("context_builder")
 context_builder_tests = read("context_builder_tests")
 task_preflight_tests = read("task_preflight_tests")
+mcp_preflight = read("mcp_preflight")
+mcp_preflight_tests = read("mcp_preflight_tests")
+branch_selftest = read("branch_selftest")
 errors: list[str] = []
 
 # Event-driven runs must wake when canonical queue, write-scope or execution
@@ -66,6 +72,7 @@ else:
         "tools/build_autonomous_context.py",
         "tools/validate_autonomous_cycle_report.js",
         "tools/test_autonomous_task_preflight.py",
+        "tools/preflight_github_mcp.py",
         "tools/test_autonomous_cycle_report.js",
     )
     for path in required_push_paths:
@@ -331,6 +338,13 @@ groq_gates = (
 for needle in groq_gates:
     if needle not in groq_job:
         errors.append(f"Groq next-cycle gate missing: {needle}")
+if not re.search(
+    r"needs\.provider-cooldowns\.outputs\.resume_ready == 'true'\s*&&\s*"
+    r"needs\.provider-cooldowns\.outputs\.gemini_active == 'true'\s*&&\s*"
+    r"needs\.provider-cooldowns\.outputs\.openrouter_active == 'true'",
+    groq_job,
+):
+    errors.append("Groq existing-PR resume must wait for both Gemini and OpenRouter cooldowns")
 if any(token in groq_job for token in ("needs.autonomous-cycle.result ==", "needs.openrouter-fallback.result ==", "needs.openrouter-fallback.outputs.invocation_outcome")):
     errors.append("Groq eligibility must rely on preflight cooldown markers, never post-invocation provider results")
 if re.search(r"openrouter_active == 'true'\s*&&\s*\)", groq_job):
@@ -339,6 +353,7 @@ for required in (
     "needs.provider-cooldowns.outputs.task_ready == 'true'",
     "needs.provider-cooldowns.outputs.task_ready != 'true'",
     "needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "github.event.client_payload.failed_provider == 'openrouter'",
     "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
     "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}",
@@ -891,7 +906,8 @@ def actual_provider_prompt(label: str, workflow: str) -> str:
     return "\n".join(line[10:] if line.startswith("          ") else line for line in body.splitlines())
 
 def context_limits(label: str, workflow: str, expected_chars: int, expected_task: int) -> None:
-    match = re.search(r"--max-chars (\d+) --max-task-context (\d+)", workflow)
+    normalized_workflow = re.sub(r"\\\s*\n\s*", " ", workflow)
+    match = re.search(r"--max-chars (\d+)\s+--max-task-context (\d+)", normalized_workflow)
     if not match or (int(match.group(1)), int(match.group(2))) != (expected_chars, expected_task):
         errors.append(f"{label} context builder must use the reviewed {expected_chars}/{expected_task}-character limits")
 
@@ -912,6 +928,7 @@ if len(actual_groq_prompt) > 2100:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
+context_limits("Gemini", gemini, 3000, 1600)
 context_limits("Groq", groq, 3100, 1600)
 if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
     errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
@@ -1257,6 +1274,122 @@ if r"const lines = summary.split(/\\r?\\n/);" in groq_report_block:
     errors.append("Groq report validator contains a double-escaped line-splitting regex")
 if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
     errors.append("Groq report validator must split machine-readable reports on actual line endings")
+
+for required in (
+    'export GITHUB_TOOLS="get_file_contents,push_files"',
+    'export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
+    '"command": [',
+    '"ghcr.io/github/github-mcp-server:v0.27.0"',
+    '"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"',
+    '"enabled": true',
+    'export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"',
+    'export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"',
+    'python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"',
+    "timeout 90s opencode mcp list",
+    "GitHub MCP server is not connected in OpenCode; no model request was sent.",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter must call the shared GitHub MCP preflight before inference: missing {required!r}")
+
+for required in (
+    'export GITHUB_TOOLS="get_file_contents,push_files"',
+    'export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
+    '"command": [',
+    '"ghcr.io/github/github-mcp-server:v0.27.0"',
+    '"GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"',
+    'export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"',
+    'export GITHUB_MCP_REQUIRED_TOOLS="$GITHUB_TOOLS"',
+    'python3 "$GITHUB_WORKSPACE/tools/preflight_github_mcp.py"',
+    "timeout 90s opencode mcp list",
+    "OpenCode could not enumerate GitHub MCP for Groq; no model request was sent.",
+    "GitHub MCP server is not connected in OpenCode for Groq; no model request was sent.",
+):
+    if required not in groq:
+        errors.append(f"Groq must call the shared GitHub MCP preflight before inference: missing {required!r}")
+
+for required in (
+    'IMAGE = "ghcr.io/github/github-mcp-server:v0.27.0"',
+    'READ_PATH = "docs/automation/task-ledger-summary.json"',
+    'READ_REF = "refs/heads/main"',
+    '"method": "initialize"',
+    '"method": "notifications/initialized"',
+    '"method": "tools/list"',
+    '"method": "tools/call"',
+    '"name": "get_file_contents"',
+    'GITHUB_MCP_REQUIRED_TOOLS',
+    'subprocess.Popen(',
+    'process.stdin.flush()',
+    'initialize_response = _await_response(messages, 1, deadline, diagnostics)',
+    'list_response = _await_response(messages, 2, deadline, diagnostics)',
+    'read_response = _await_response(messages, 3, deadline, diagnostics)',
+    'process.stdin.close()',
+    'server is closing: EOF',
+    '"docker",',
+    '"run",',
+    '"--rm",',
+    'GitHub MCP tool catalog includes tools outside configured allow-list',
+    'APPROVED_TOOL_MODES = {',
+    'frozenset(allowed_tools) not in APPROVED_TOOL_MODES',
+    'required_tools != allowed_tools',
+    'tool_by_name = {',
+    'for tool_name in sorted(required_tools):',
+    'TOOL_SCHEMA_CONTRACTS: dict[str, dict[str, Any]]',
+    'def _validate_tool_schema(name: str, tool: dict[str, Any]) -> None:',
+    'GitHub MCP {name} schema is missing required fields: ',
+    'GitHub MCP push_files files items schema must be an object',
+    'GitHub MCP push_files file items schema is missing required fields: ',
+    'resource_text_parts: list[str] = []',
+    'json_resource_parts: list[str] = []',
+    'candidate_parts = json_resource_parts or resource_text_parts or text_parts',
+    'ledger_summary = json.loads(read_text)',
+    'ledger_summary.get("schema_version") != 2',
+    'read_result.get("isError") is True',
+    'def _safe_error_detail(value: Any, token: str, limit: int = 400) -> str:',
+    'GitHub MCP get_file_contents tool returned isError',
+    '"schema_version"',
+    "GitHub MCP token-backed read-only get_file_contents call passed for",
+    "GitHub MCP read-only tools preflight timed out",
+):
+    if required not in mcp_preflight:
+        errors.append(f"GitHub MCP helper is missing fail-closed protocol/read checks: {required!r}")
+
+for required in (
+    "test_success_keeps_stdio_open_and_calls_only_read_only_repository_tool",
+    "test_unreviewed_allowlist_mode_fails_before_docker",
+    "test_required_tools_must_exactly_match_allowlist",
+    "test_missing_required_tool_fails_closed",
+    "test_unexpected_input_schema_fails_closed",
+    "test_unexpected_tool_outside_allowlist_fails_closed",
+    "test_push_files_schema_requires_commit_and_nested_file_fields",
+    "test_create_pull_request_schema_requires_head_and_base",
+    "test_mcp_tool_error_fails_closed",
+    "test_legacy_plain_text_content_is_supported",
+    "test_unexpected_container_exit_fails_closed_and_redacts_token",
+    "test_unexpected_read_content_fails_closed",
+    "test_malformed_task_ledger_json_fails_closed",
+    "test_mcp_closing_before_tools_list_fails_closed",
+    "test_expected_eof_shutdown_after_valid_responses_is_accepted",
+    "test_missing_token_fails_before_docker",
+):
+    if required not in mcp_preflight_tests:
+        errors.append(f"GitHub MCP helper regression suite is missing {required!r}")
+
+for required in (
+    "Exercise resume-mode GitHub MCP allow-list with read-only credentials",
+    "Exercise normal-mode GitHub MCP allow-list with read-only credentials",
+    "GITHUB_PERSONAL_ACCESS_TOKEN: ${{ github.token }}",
+    "GITHUB_TOOLS: get_file_contents,push_files",
+    "GITHUB_MCP_REQUIRED_TOOLS: get_file_contents,push_files",
+    "GITHUB_TOOLS: create_branch,create_pull_request,get_file_contents,push_files",
+    "GITHUB_MCP_REQUIRED_TOOLS: create_branch,create_pull_request,get_file_contents,push_files",
+    "run: python3 tools/preflight_github_mcp.py",
+    "run: python3 tools/test_preflight_github_mcp.py",
+    "contents: read",
+):
+    if required not in branch_selftest:
+        errors.append(f"Branch self-test must exercise both read-only GitHub MCP tool modes: missing {required!r}")
 
 for required in (
     "BOONTA_CYCLE_TASK_ID",

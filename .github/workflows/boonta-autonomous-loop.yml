@@ -22,6 +22,7 @@ on:
       - tools/build_autonomous_context.py
       - tools/validate_autonomous_cycle_report.js
       - tools/test_autonomous_task_preflight.py
+      - tools/preflight_github_mcp.py
       - tools/test_autonomous_cycle_report.js
   schedule:
     # Four bounded opportunities per day, including 00:17 UTC just after daily quota reset; runs without asking for another continue message.
@@ -698,10 +699,12 @@ jobs:
         (
           needs.provider-cooldowns.outputs.task_ready != 'true' &&
           needs.provider-cooldowns.outputs.resume_ready == 'true' &&
+          needs.provider-cooldowns.outputs.gemini_active == 'true' &&
+          needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
           (
             github.event_name == 'schedule' ||
             (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
-            (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback')
+            (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback' && github.event.client_payload.failed_provider == 'openrouter')
           )
         )
       ) &&
