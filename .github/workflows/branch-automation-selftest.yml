@@ -17,12 +17,20 @@ jobs:
   validate:
     name: Validate workflow YAML and embedded Python
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Check out the exact tested commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
           persist-credentials: false
+
+      - name: Exercise pinned GitHub MCP with a read-only repository token
+        env:
+          GITHUB_PERSONAL_ACCESS_TOKEN: ${{ github.token }}
+          GITHUB_TOOLS: get_file_contents
+          GITHUB_MCP_REQUIRED_TOOLS: get_file_contents
+        shell: bash
+        run: python3 tools/preflight_github_mcp.py
 
       - name: Validate workflow YAML syntax
         shell: bash
@@ -80,6 +88,10 @@ jobs:
       - name: Validate autonomous provider handoff contract (offline)
         shell: bash
         run: python3 tools/check_autonomous_provider_handoff.py
+
+      - name: Test GitHub MCP preflight failure modes offline
+        shell: bash
+        run: python3 tools/test_preflight_github_mcp.py
 
       - name: Execute global task preflight with mocked GitHub data (offline)
         shell: bash
