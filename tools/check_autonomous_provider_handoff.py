@@ -1259,6 +1259,9 @@ if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
     errors.append("Groq report validator must split machine-readable reports on actual line endings")
 
 for required in (
+    'if [[ -z "${GITHUB_TOKEN:-}" || -z "${GITHUB_TOOLS:-}" ]]; then',
+    "Docker CLI is unavailable; GitHub MCP cannot start; no model request was sent.",
+    "Docker daemon is unavailable to the runner; GitHub MCP cannot start; no model request was sent.",
     "timeout 90s opencode mcp list",
     "GitHub MCP server is not connected in OpenCode; no model request was sent.",
 ):
