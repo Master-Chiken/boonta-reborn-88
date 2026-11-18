@@ -56,7 +56,18 @@ def response_lines(
             {
                 "jsonrpc": "2.0",
                 "id": 3,
-                "result": {"content": [{"type": "text", "text": text}]},
+                "result": {
+                    "content": [
+                        {
+                            "type": "resource",
+                            "resource": {
+                                "uri": "repo://Master-Chiken/boonta-reborn-88/refs/heads/main/docs/automation/task-ledger-summary.json",
+                                "mimeType": "application/json",
+                                "text": text,
+                            },
+                        }
+                    ]
+                },
             }
         )
     rendered = "\n".join(json.dumps(item) for item in messages) + "\n"
@@ -180,6 +191,22 @@ class GitHubMcpPreflightTests(unittest.TestCase):
         self.assertIn("get_file_contents tool returned isError", errors)
         self.assertIn("permission denied for [REDACTED]", errors)
         self.assertNotIn("unit-test-token", errors)
+
+    def test_legacy_plain_text_content_is_supported(self) -> None:
+        payload = response_lines().replace(
+            '"type": "resource",',
+            '"type": "text",',
+        )
+        payload = payload.replace(
+            '"resource": {"uri": "repo://Master-Chiken/boonta-reborn-88/refs/heads/main/docs/automation/task-ledger-summary.json", "mimeType": "application/json", "text":',
+            '"text":',
+        ).replace(
+            '}}]}}',
+            '}]}}',
+        )
+        code, output, errors, _ = self.invoke(stdout=payload)
+        self.assertEqual(code, 0, errors)
+        self.assertIn("read-only get_file_contents call passed", output)
 
     def test_unexpected_read_content_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(marker=False))
