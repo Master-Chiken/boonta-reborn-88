@@ -108,6 +108,15 @@ class GitHubMcpPreflightTests(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertIn("did not return the expected task-ledger summary", errors)
 
+    def test_container_failure_fails_closed_and_redacts_token(self) -> None:
+        failed = subprocess.CompletedProcess(
+            ["docker", "run"], 1, stdout="", stderr="startup failed with unit-test-token"
+        )
+        code, _, errors, _ = self.invoke(second_result=failed)
+        self.assertEqual(code, 3)
+        self.assertIn("[REDACTED]", errors)
+        self.assertNotIn("unit-test-token", errors)
+
     def test_mcp_timeout_fails_closed(self) -> None:
         timeout = subprocess.TimeoutExpired(["docker", "run"], probe.TIMEOUT_SECONDS)
         code, _, errors, _ = self.invoke(second_result=timeout)
