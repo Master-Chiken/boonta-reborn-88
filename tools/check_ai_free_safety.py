@@ -1709,8 +1709,8 @@ else:
             errors.append("Groq fallback must keep its provider allow-list fixed to Groq")
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
-if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 800" not in openrouter_fallback:
-    errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
+if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 1800" not in openrouter_fallback:
+    errors.append("OpenRouter must preload exact task-branch source ranges within its bounded excerpt budget")
 for required in (
     "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
     "No issue bodies/comments; exact source excerpts are preloaded.",
