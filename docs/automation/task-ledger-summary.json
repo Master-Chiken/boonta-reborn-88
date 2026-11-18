@@ -169,7 +169,7 @@
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
       "head_sha": "c8f4d9fe88d6bcf8b577c17a54b3508329b029c8",
-      "next_action_excerpt": "normal review/merge sequence, owner scope decision, then rerun exact-head tests and revalidate."
+      "next_action_excerpt": "normal owner review of PR #439 and an explicit decision on whether the test file may be added to read scope; do not invoke a provider or…"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
