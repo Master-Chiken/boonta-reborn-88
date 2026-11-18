@@ -205,6 +205,13 @@ class GitHubMcpPreflightTests(unittest.TestCase):
         self.assertEqual(code, 0, errors)
         self.assertIn("get_file_contents", output)
 
+    def test_unexpected_tool_outside_allowlist_fails_closed(self) -> None:
+        code, _, errors, _ = self.invoke(
+            stdout=response_lines(extra_tools=("delete_branch",))
+        )
+        self.assertEqual(code, 3)
+        self.assertIn("outside configured allow-list: delete_branch", errors)
+
     def test_unexpected_input_schema_fails_closed(self) -> None:
         code, _, errors, _ = self.invoke(stdout=response_lines(schema_ok=False))
         self.assertEqual(code, 3)
