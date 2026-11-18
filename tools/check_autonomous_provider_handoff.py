@@ -932,8 +932,8 @@ context_limits("Gemini", gemini, 3000, 1600)
 context_limits("Groq", groq, 3100, 1600)
 if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
     errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
-if "--max-source-chars 800" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
-    errors.append("OpenRouter must preload exact target-branch source ranges within its 800-character source excerpt budget")
+if "--max-source-chars 1800" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
+    errors.append("OpenRouter must preload exact task-branch source ranges within its 1,800-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in openrouter:
     errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
 if "Use preloaded excerpts from every exact task path before the one permitted full-file read" not in actual_openrouter_prompt:
