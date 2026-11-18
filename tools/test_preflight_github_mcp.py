@@ -274,7 +274,7 @@ class GitHubMcpPreflightTests(unittest.TestCase):
 
         def timeout_with_diagnostic(messages, expected_id, deadline, diagnostics):
             diagnostics.append("MCP startup stalled with unit-test-token")
-            raise probe.TimeoutError
+            raise TimeoutError
 
         errors = io.StringIO()
         with patch.object(probe.shutil, "which", return_value="/usr/bin/docker"), patch.object(
