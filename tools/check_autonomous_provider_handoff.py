@@ -1330,6 +1330,9 @@ for required in (
     '"run",',
     '"--rm",',
     'GitHub MCP tool catalog includes tools outside configured allow-list',
+    'APPROVED_TOOL_MODES = {',
+    'frozenset(allowed_tools) not in APPROVED_TOOL_MODES',
+    'required_tools != allowed_tools',
     'tool_by_name = {',
     'for tool_name in sorted(required_tools):',
     'TOOL_SCHEMA_CONTRACTS: dict[str, dict[str, Any]]',
@@ -1354,6 +1357,8 @@ for required in (
 
 for required in (
     "test_success_keeps_stdio_open_and_calls_only_read_only_repository_tool",
+    "test_unreviewed_allowlist_mode_fails_before_docker",
+    "test_required_tools_must_exactly_match_allowlist",
     "test_missing_required_tool_fails_closed",
     "test_unexpected_input_schema_fails_closed",
     "test_unexpected_tool_outside_allowlist_fails_closed",
