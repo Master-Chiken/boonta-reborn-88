@@ -1066,7 +1066,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
       ],
-      "next_action": "Run #44279415458 passed native GameCube/Wii builds, host tests and Dolphin two-race finish/reset/results acceptance. OpenRouter run #44281586837 invoked the Free model but returned a validated BLOCKED report because main.c was absent from read_paths; no code was pushed. PR #446 now proposes a dev-anchored fourth read path (4 files, 6 ranges, 239 lines; maximum 240). After main was integrated into the proposal branch, exact-head self-test #44283799137 and all three safety/provenance checks passed on b26ed85d2851a1e39461a4def949aa2979120f43. Keep PR #446 Draft awaiting owner review; only after approval and merge may the same task be retried.",
+      "next_action": "Owner approved the bounded main.c read-scope extension on 2026-11-18. PR #446 proposes 4 read paths / 6 ranges / 239 aggregate lines (max 240), but remains Draft and unmerged pending owner review/merge. Current PR #439 exact head is 6c1e499900afbfd3e8cc8f2a83087c0284ae1a45. Exact-head run #44288338915 passed host tests, GameCube/Wii DOL+ELF builds, artifact validation and Dolphin null-video process smoke; Dolphin software-renderer race diagnostic was still in progress at last check. Previous two-race RESULTS/Start-restart acceptance was on older head b2006e43 and must be rerun on current head. Do not invoke another provider until the read-scope proposal is merged and the exact task context/read allow-list is verified. Keep task in_review; do not mark completed until gameplay PR is merged and owner acceptance is recorded.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
@@ -1075,7 +1075,7 @@
       ],
       "owner_approved": true,
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
-      "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664"
+      "head_sha": "6c1e499900afbfd3e8cc8f2a83087c0284ae1a45"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
