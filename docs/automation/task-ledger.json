@@ -1015,45 +1015,31 @@
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
       "read_paths": [
+        "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h"
       ],
       "read_ranges": [
         {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 91,
-          "end_line": 145
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 136,
+          "end_line": 185
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 203,
-          "end_line": 223
+          "start_line": 382,
+          "end_line": 440
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 56,
-          "end_line": 67
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 228,
+          "start_line": 232,
           "end_line": 275
         },
         {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 400,
-          "end_line": 419
-        },
-        {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 14,
-          "end_line": 35
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 435,
-          "end_line": 484
+          "start_line": 743,
+          "end_line": 780
         }
       ],
       "acceptance_criteria": [
@@ -1067,9 +1053,10 @@
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
       ],
-      "next_action": "Exact-head CI #44279415458 on b2006e43be729092307c1bf06b82ebcb0bd9a664: host tests and native GameCube/Wii builds passed; null-video smoke passed; two-race Dolphin finish/results/restart diagnostic is running. Await its result and owner review; do not mark completed until PR #439 is merged. Next: GC-RACE-FRONTEND-FLOW.",
+      "next_action": "Run #44279415458 on b2006e43 passed GameCube/Wii builds, host tests and Dolphin two-race finish/reset/results acceptance. OpenRouter run #44281586837 invoked the Free model and validated BLOCKED because main.c was absent from read_paths. PR #446 proposes a bounded, owner-reviewed main.c read scope; keep this task in_review and PR #439 Draft until review and merge.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
