@@ -785,13 +785,6 @@ jobs:
 
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
-          # Diagnose the local MCP transport prerequisites without exposing the
-          # scoped token. OpenCode cannot start a Docker-backed MCP server if the
-          # runner has no usable Docker daemon or the token/tool allow-list is empty.
-          if [[ -z "${GITHUB_TOKEN:-}" || -z "${GITHUB_TOOLS:-}" ]]; then
-            echo "::error::GitHub MCP token or tool allow-list is empty; no model request was sent."
-            exit 3
-          fi
           if ! command -v docker >/dev/null 2>&1; then
             echo "::error::Docker CLI is unavailable; GitHub MCP cannot start; no model request was sent."
             exit 3
