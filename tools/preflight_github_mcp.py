@@ -366,7 +366,7 @@ def main() -> int:
         # Prefer the actual JSON resource over any informational text emitted
         # alongside it. Keep the legacy text-only response path for compatibility.
         candidate_parts = json_resource_parts or resource_text_parts or text_parts
-        read_text = "\\n".join(candidate_parts)
+        read_text = "\n".join(candidate_parts)
         try:
             ledger_summary = json.loads(read_text)
         except json.JSONDecodeError as exc:
