@@ -1230,11 +1230,16 @@ for required_case in (
     '"name": "blocked non-activation tasks are not auto-unblocked"',
     '"name": "activation same-day backoff is reported separately from empty queue"',
     '"name": "open task PR is reported as waiting for reconciliation"',
+    '"name": "in-review queue reports exact task ID and verified PR number"',
 ):
     if required_case not in task_preflight_tests:
         errors.append(f"Offline task-preflight tests are missing queue-state scenario {required_case!r}")
 if 'outputs.queue_state !== testCase.expected_queue_state' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must assert the queue-state output")
+if 'outputs.in_review_summary !== testCase.expected_in_review_summary' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must assert the exact in-review task/PR summary")
+if '"expected_in_review_summary": "AUTOMATION-TEST-IN-REVIEW (PR #460)"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must pin the expected in-review PR summary")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
 if '"name": "open PR for a different task does not block activation"' not in task_preflight_tests:
