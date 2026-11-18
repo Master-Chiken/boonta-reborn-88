@@ -1271,6 +1271,15 @@ for required in (
     "Docker daemon is unavailable to the runner; GitHub MCP cannot start; no model request was sent.",
     "timeout 90s opencode mcp list",
     "GitHub MCP server is not connected in OpenCode; no model request was sent.",
+    '"method": "initialize"',
+    '"method": "notifications/initialized"',
+    '"method": "tools/list"',
+    'payload = "".join(json.dumps(item) + "\\n" for item in messages)',
+    'required = {"get_file_contents", "push_files"}',
+    "GitHub MCP tools/list returned:",
+    "GitHub MCP direct protocol preflight passed; required read/write tools are present.",
+    "GitHub MCP tools/list timed out; no model request was sent.",
+    "GitHub MCP did not return a valid tools/list response; no model request was sent.",
 ):
     if required not in openrouter:
         errors.append(f"OpenRouter MCP preflight is missing fail-closed check {required!r}")
