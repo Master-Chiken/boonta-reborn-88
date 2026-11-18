@@ -1011,24 +1011,25 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "in_review",
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
       "read_paths": [
+        "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h"
       ],
       "read_ranges": [
         {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 91,
-          "end_line": 145
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1430,
+          "end_line": 1484
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 203,
-          "end_line": 223
+          "start_line": 213,
+          "end_line": 272
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
@@ -1037,7 +1038,7 @@
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 228,
+          "start_line": 232,
           "end_line": 275
         },
         {
@@ -1047,13 +1048,8 @@
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 14,
-          "end_line": 35
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 435,
-          "end_line": 484
+          "start_line": 578,
+          "end_line": 625
         }
       ],
       "acceptance_criteria": [
@@ -1065,15 +1061,21 @@
         "Integrate rival progress into the current results/session data only where values are measured; do not invent finishing positions or claim retail AI parity.",
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
-      "evidence": [],
-      "next_action": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps.",
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
+      ],
+      "next_action": "Exact-head CI #44279415458 passed native GameCube/Wii builds, host tests and the Dolphin two-race finish/reset/results scenario. OpenRouter run #44281586837 invoked the Free model but validated BLOCKED because main.c was absent from the read-path allow-list. PR #446 proposes adding main.c and re-anchoring all bounded excerpts to the target branch dev; first draft CI caught stale line ranges taken from PR #439, so await fresh exact-head self-test and owner review. Keep task in_review and PR #439 Draft.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
         "GC-RACE-PROGRESSION"
       ],
-      "owner_approved": true
+      "owner_approved": true,
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+      "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",

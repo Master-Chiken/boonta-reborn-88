@@ -119,23 +119,24 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "in_review",
       "target_branch": "dev",
       "read_paths": [
+        "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h"
       ],
       "read_ranges": [
         {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 91,
-          "end_line": 145
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1430,
+          "end_line": 1484
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 203,
-          "end_line": 223
+          "start_line": 213,
+          "end_line": 272
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
@@ -144,7 +145,7 @@
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 228,
+          "start_line": 232,
           "end_line": 275
         },
         {
@@ -154,13 +155,8 @@
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 14,
-          "end_line": 35
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 435,
-          "end_line": 484
+          "start_line": 578,
+          "end_line": 625
         }
       ],
       "question_excerpt": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
@@ -171,9 +167,9 @@
         "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing…",
         "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence."
       ],
-      "pr_url": null,
-      "head_sha": null,
-      "next_action_excerpt": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps."
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+      "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664",
+      "next_action_excerpt": "OpenRouter run #44281586837 validated BLOCKED because main.c was absent from read_paths. PR #446 now proposes a dev-anchored main.c read path; await exact-head CI and owner review before retry."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",

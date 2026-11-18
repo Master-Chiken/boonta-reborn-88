@@ -601,22 +601,44 @@ rival_handoff = "\n".join([
     *("- " + item for item in rival["acceptance_criteria_excerpt"][:5]),
     "Next: " + rival["next_action_excerpt"],
 ])
-rival_context = MODULE.build_context(
-    ROOT,
-    rival["task_id"],
-    rival["title"],
-    rival["target_branch"],
-    rival_handoff,
-    max_chars=3100,
-    max_task_context=1600,
-    max_criteria=4,
-    max_next_action=100,
-    source_root=ROOT,
-    max_source_chars=1350,
-)
-assert len(rival_context) <= 3100
-assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
-assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
-assert "Exact owner-reviewed write paths (no others):" in rival_context
+if rival.get("pr_url") or rival.get("head_sha"):
+    # Once the canonical ledger records an existing task PR/head, context
+    # generation must refuse to create a duplicate writer for that task.
+    try:
+        MODULE.build_context(
+            ROOT,
+            rival["task_id"],
+            rival["title"],
+            rival["target_branch"],
+            rival_handoff,
+            max_chars=3100,
+            max_task_context=1600,
+            max_criteria=4,
+            max_next_action=100,
+            source_root=ROOT,
+            max_source_chars=1350,
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "Selected task already has PR/head evidence" in str(exc)
+    else:
+        raise AssertionError("A task with recorded PR/head evidence must not receive a second writer")
+else:
+    rival_context = MODULE.build_context(
+        ROOT,
+        rival["task_id"],
+        rival["title"],
+        rival["target_branch"],
+        rival_handoff,
+        max_chars=3100,
+        max_task_context=1600,
+        max_criteria=4,
+        max_next_action=100,
+        source_root=ROOT,
+        max_source_chars=1350,
+    )
+    assert len(rival_context) <= 3100
+    assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
+    assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
+    assert "Exact owner-reviewed write paths (no others):" in rival_context
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
