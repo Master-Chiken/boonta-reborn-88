@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-13",
+  "updated_at": "2026-11-18",
   "completed_task_ids": [
     "RE002-SYSTEM-MATRIX",
     "RE001-SYSTEM-MATRIX",
@@ -119,7 +119,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "in_review",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/rival_ai.h",
@@ -171,9 +171,9 @@
         "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing…",
         "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence."
       ],
-      "pr_url": null,
-      "head_sha": null,
-      "next_action_excerpt": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap…"
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+      "head_sha": "b2006e43be729092307c1bf06b82ebcb0bd9a664",
+      "next_action_excerpt": "GC-RACE-FRONTEND-FLOW."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
