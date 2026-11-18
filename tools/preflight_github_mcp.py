@@ -249,7 +249,7 @@ def main() -> int:
             return fail("Docker MCP image pull timed out")
         if image_pull.returncode != 0:
             detail = _safe_error_detail(
-                (image_pull.stdout or "") + \n + (image_pull.stderr or ""), token, limit=300
+                (image_pull.stdout or "") + "\n" + (image_pull.stderr or ""), token, limit=300
             )
             return fail("Docker MCP image pull failed" + (": " + detail if detail else ""))
 
