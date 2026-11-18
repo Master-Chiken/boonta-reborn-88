@@ -1066,7 +1066,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837"
       ],
-      "next_action": "Current PR #439 head 6c1e499900afbfd3e8cc8f2a83087c0284ae1a45 passed exact-head run #44288338915: host tests, GameCube/Wii builds, Dolphin process smoke, and software-renderer two-race RESULTS/Start-reset/second-RESULTS acceptance. Visible finish detectors passed on both races and the reset detector confirmed clean lap/HUD state. The additional main.c read path in #446 remains a proposed authorization expansion: keep #446 Draft and do not invoke a provider on that expanded scope until the owner explicitly approves it. Keep this task in_review; do not mark completed until #439 is merged and owner acceptance is recorded.",
+      "next_action": "Owner explicitly approved the bounded main.c read extension on 2026-11-18. #446 exact-head automation checks pass. #439 head 6c1e499 run #44288338915 passed host tests, native GC/Wii builds, artifacts, Dolphin null-video smoke and first-frame diagnostic only. It did NOT run full two-race RESULTS/Start-restart acceptance on this head; this remains unverified. Keep #446 Draft/unmerged and task in_review. Do not invoke a provider until #446 is merged and the exact task source/read/write scopes are freshly checked. Do not mark gameplay complete before #439 is merged and owner acceptance is recorded.",
       "updated_at": "2026-11-18",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
