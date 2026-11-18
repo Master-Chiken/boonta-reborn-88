@@ -1280,7 +1280,7 @@ for required in (
     '"path": "docs/automation/task-ledger-summary.json"',
     '"ref": "refs/heads/main"',
     'schema_required = set(required_fields) if isinstance(required_fields, list) else set()',
-    'if not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):',
+    'if not isinstance(properties, dict) or not {"owner", "repo"}.issubset(schema_required) or not {"path", "ref"}.issubset(properties):',
     'if not isinstance(read_response, dict) or "error" in read_response:',
     'read_result.get("isError") is True',
     '"schema_version"',
@@ -1289,7 +1289,7 @@ for required in (
     'payload = "".join(json.dumps(item) + "\\n" for item in messages)',
     'required = {"get_file_contents", "push_files"}',
     "GitHub MCP tools/list returned:",
-    "GitHub MCP direct protocol preflight passed; required read/write tools are present.",
+    "GitHub MCP direct protocol preflight passed; required read/write tools are present and the read path works.",
     "GitHub MCP read-only tools preflight timed out; no model request was sent.",
     "GitHub MCP did not return a valid tools/list response; no model request was sent.",
 ):
