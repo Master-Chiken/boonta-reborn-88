@@ -802,6 +802,76 @@ jobs:
             exit 3
           fi
 
+          # Verify the GitHub MCP stdio server itself, including its tool catalog,
+          # before OpenCode or the model is invoked. A connected status alone is not
+          # sufficient: OpenCode can connect while exposing zero usable tools.
+          export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+          python3 <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          command = [
+              "docker", "run", "-i", "--rm",
+              "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+              "-e", "GITHUB_TOOLS",
+              "ghcr.io/github/github-mcp-server:v0.27.0",
+          ]
+          messages = [
+              {
+                  "jsonrpc": "2.0",
+                  "id": 1,
+                  "method": "initialize",
+                  "params": {
+                      "protocolVersion": "2024-11-05",
+                      "capabilities": {},
+                      "clientInfo": {"name": "boonta-mcp-preflight", "version": "1.0.0"},
+                  },
+              },
+              {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+              {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+          ]
+          payload = "".join(json.dumps(item) + "\\n" for item in messages)
+          try:
+              result = subprocess.run(
+                  command,
+                  input=payload,
+                  text=True,
+                  capture_output=True,
+                  timeout=75,
+                  check=False,
+                  env=os.environ.copy(),
+              )
+          except subprocess.TimeoutExpired:
+              print("::error::GitHub MCP tools/list timed out; no model request was sent.")
+              sys.exit(3)
+          if result.returncode != 0:
+              print("::error::GitHub MCP container failed during direct protocol preflight; no model request was sent.")
+              sys.exit(3)
+          response = None
+          for line in result.stdout.splitlines():
+              try:
+                  candidate = json.loads(line)
+              except json.JSONDecodeError:
+                  continue
+              if candidate.get("id") == 2:
+                  response = candidate
+                  break
+          if not isinstance(response, dict) or "error" in response:
+              print("::error::GitHub MCP did not return a valid tools/list response; no model request was sent.")
+              sys.exit(3)
+          tools = response.get("result", {}).get("tools", [])
+          names = {item.get("name") for item in tools if isinstance(item, dict)}
+          required = {"get_file_contents", "push_files"}
+          print("GitHub MCP tools/list returned: " + ", ".join(sorted(name for name in names if isinstance(name, str))))
+          missing = required - names
+          if missing:
+              print("::error::GitHub MCP tool catalog is missing required allow-listed tools: " + ", ".join(sorted(missing)) + "; no model request was sent.")
+              sys.exit(3)
+          print("GitHub MCP direct protocol preflight passed; required read/write tools are present.")
+          PY
+
           # Fail closed before paying for inference if OpenCode did not load the
           # scoped GitHub MCP server and its explicitly allow-listed tools.
           mcp_status="$(timeout 90s opencode mcp list 2>&1)" || {
