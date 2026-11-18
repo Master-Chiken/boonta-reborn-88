@@ -1259,8 +1259,13 @@ if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
     errors.append("Groq report validator must split machine-readable reports on actual line endings")
 
 for required in (
-    'timeout 90s opencode mcp list',
-    'GitHub MCP server is not connected in OpenCode; no model request was sent.',
+    "timeout 90s opencode mcp list",
+    "GitHub MCP server is not connected in OpenCode; no model request was sent.",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter MCP preflight is missing fail-closed check {required!r}")
+
+for required in (
     "BOONTA_CYCLE_TASK_ID",
     "taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId",
     "targetBranchMarker = 'BOONTA_TASK_TARGET_BRANCH: ' + expectedBase",
