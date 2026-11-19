@@ -200,6 +200,15 @@ class ProviderPatchFixture(unittest.TestCase):
             self.invoke()
         self.assertFalse(self.output_path.exists())
 
+    def test_per_tool_allow_is_rejected_even_with_wildcard_deny(self):
+        self.config_path.write_text(json.dumps({
+            "permission": {"*": "deny", "read": "allow"},
+        }), encoding="utf-8")
+        self.install_fake_opencode(self.event_stream())
+        with self.assertRaisesRegex(provider.ProviderPatchError, "without per-tool exceptions"):
+            self.invoke()
+        self.assertFalse(self.output_path.exists())
+
     def test_policy_sha_mismatch_stops_before_provider(self):
         self.install_fake_opencode(self.event_stream())
         with self.assertRaisesRegex(provider.ProposalError, "differs"):
