@@ -12,6 +12,7 @@ from pathlib import Path
 
 import run_autonomous_patch_tests
 from autonomous_patch_proposal import ProposalError
+from build_autonomous_path_allowlist import build_allowlist
 from verify_autonomous_patch import (
     MANDATORY_TEST_IDS,
     PipelineError,
@@ -193,6 +194,65 @@ class IsolatedPatchPipelineTests(PipelineFixture):
         self.assertEqual(expected_git_blob, file_entry["result_blob_sha"])
         self.assertIn(file_entry["mode"], {"100644", "100755"})
         self.assert_source_checkout_untouched()
+
+    def test_pipeline_uses_main_policy_and_tests_for_dev_target(self):
+        target = self.parent / "target-dev"
+        target.mkdir()
+        git(target, "init", "-q")
+        git(target, "config", "user.name", "Boonta Target")
+        git(target, "config", "user.email", "boonta-target@example.invalid")
+        target_source = target / SOURCE_PATH
+        target_source.parent.mkdir(parents=True)
+        target_source.write_text("int boonta(void) {\\n    return 0;\\n}\\n", encoding="utf-8")
+        git(target, "add", SOURCE_PATH)
+        git(target, "commit", "-qm", "dev target base")
+        target_sha = git(target, "rev-parse", "HEAD")
+
+        target_source.write_text("int boonta(void) {\\n    return 7;\\n}\\n", encoding="utf-8")
+        diff_result = subprocess.run(
+            ["git", "diff", "--", SOURCE_PATH], cwd=target,
+            text=True, capture_output=True, check=True,
+        )
+        target_source.write_text("int boonta(void) {\\n    return 0;\\n}\\n", encoding="utf-8")
+
+        scope = build_allowlist(
+            target,
+            expected_base_sha=target_sha,
+            requested_task_id=TASK_ID,
+            policy_root=self.root,
+            expected_policy_sha=self.base_sha,
+        )
+        self.assertEqual(scope["status"], "READY")
+        self.assertEqual(scope["base_sha"], target_sha)
+        self.assertEqual(scope["policy_base_sha"], self.base_sha)
+        self.allowlist_path.write_text(json.dumps(scope), encoding="utf-8")
+        self.proposal_path.write_text(json.dumps({
+            "schema_version": 1,
+            "task_id": TASK_ID,
+            "base_sha": target_sha,
+            "summary": "Verify a dev target using main-owned policy",
+            "unified_diff": diff_result.stdout,
+            "test_ids": ["automation.task_preflight"],
+            "limitations": ["Synthetic two-checkout fixture"],
+        }), encoding="utf-8")
+
+        report = verify_in_isolated_worktree(
+            target,
+            proposal_path=self.proposal_path,
+            allowlist_report_path=self.allowlist_path,
+            expected_task_id=TASK_ID,
+            expected_base_sha=target_sha,
+            policy_root=self.root,
+            expected_policy_sha=self.base_sha,
+        )
+        self.assertEqual(report["status"], "VERIFIED")
+        self.assertEqual(report["base_sha"], target_sha)
+        self.assertEqual(report["policy_base_sha"], self.base_sha)
+        self.assertFalse(report["source_checkout_modified"])
+        self.assertEqual(git(target, "rev-parse", "HEAD"), target_sha)
+        self.assertEqual(git(target, "status", "--porcelain"), "")
+        self.assertEqual(git(self.root, "rev-parse", "HEAD"), self.base_sha)
+        self.assertEqual(git(self.root, "status", "--porcelain"), "")
 
     def test_test_failure_stops_pipeline_and_removes_worktree(self):
         run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[0]] = ("tools/test_fail.py",)
