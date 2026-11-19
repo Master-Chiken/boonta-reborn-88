@@ -63,7 +63,6 @@ class PatchFixture(unittest.TestCase):
             "schema_version": 1,
             "task_id": TASK_ID,
             "base_sha": self.base_sha,
-            "policy_base_sha": self.base_sha,
             "summary": "Change the fixture return value",
             "unified_diff": self.diff,
             "test_ids": ["automation.task_preflight"],
