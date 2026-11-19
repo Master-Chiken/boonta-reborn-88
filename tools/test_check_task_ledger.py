@@ -147,9 +147,23 @@ class TaskLedgerTests(unittest.TestCase):
     def test_active_task_requires_bounded_read_paths(self):
         data = valid_ledger()
         active = valid_task(status="active")
-        active["read_paths"] = ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"]
+        active["read_paths"] = ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py", "tools/check_task_ledger_summary.py", "tools/build_autonomous_context.py", "tools/test_autonomous_context.py"]
         data["tasks"] = [active]
         self.assertEqual(ledger.validate_ledger(data), [])
+
+    def test_active_task_rejects_six_read_paths(self):
+        data = valid_ledger()
+        active = valid_task(status="active")
+        active["read_paths"] = [
+            "tools/check_task_ledger.py",
+            "tools/test_check_task_ledger.py",
+            "tools/check_task_ledger_summary.py",
+            "tools/build_autonomous_context.py",
+            "tools/test_autonomous_context.py",
+            "tools/test_autonomous_task_preflight.py",
+        ]
+        data["tasks"] = [active]
+        self.assertTrue(any("read_paths" in error for error in ledger.validate_ledger(data)))
 
     def test_active_task_rejects_unsafe_read_paths(self):
         for path in ("../outside.py", "/absolute/file.py", "docs/automation/task-ledger.json", "assets/model.bin"):

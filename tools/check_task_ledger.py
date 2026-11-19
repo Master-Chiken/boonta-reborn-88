@@ -112,17 +112,17 @@ def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: 
             task_id == "AUTOMATION-LEDGER-ACTIVATION" and status == "blocked"
         )
         if requires_read_paths and not (
-            isinstance(read_paths, list) and 1 <= len(read_paths) <= 4
+            isinstance(read_paths, list) and 1 <= len(read_paths) <= 5
             and all(_valid_read_path(path) for path in read_paths)
             and len(set(read_paths)) == len(read_paths)
         ):
-            errors.append(f"{prefix}.read_paths must contain 1-4 unique safe repository text paths for executable tasks")
+            errors.append(f"{prefix}.read_paths must contain 1-5 unique safe repository text paths for executable tasks")
         elif read_paths is not None and not (
-            isinstance(read_paths, list) and len(read_paths) <= 4
+            isinstance(read_paths, list) and len(read_paths) <= 5
             and all(_valid_read_path(path) for path in read_paths)
             and len(set(read_paths)) == len(read_paths)
         ):
-            errors.append(f"{prefix}.read_paths must contain at most four unique safe repository text paths")
+            errors.append(f"{prefix}.read_paths must contain at most five unique safe repository text paths")
         for field in ("question", "next_action"):
             if not isinstance(task.get(field), str) or not task[field].strip():
                 errors.append(f"{prefix}.{field} is required")

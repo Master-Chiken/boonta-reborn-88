@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-18",
+  "updated_at": "2026-11-19",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -1018,7 +1018,8 @@
         "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
-        "gamecube-demo/source/gameplay_state.h"
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c"
       ],
       "read_ranges": [
         {
@@ -1050,6 +1051,11 @@
           "path": "gamecube-demo/source/gameplay_state.h",
           "start_line": 578,
           "end_line": 625
+        },
+        {
+          "path": "gamecube-demo/tests/test_rival_ai.c",
+          "start_line": 200,
+          "end_line": 273
         }
       ],
       "acceptance_criteria": [
@@ -1067,8 +1073,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44407302584"
       ],
-      "next_action": "PR #439 current exact head is `c8f4d9fe88d6bcf8b577c17a54b3508329b029c8`. Scope correction removed the unapproved `.github/workflows/gamecube-demo-build.yml` edit; the PR changes exactly four files, all in the existing task write allow-list. Exact-head run #44407302584 completed successfully: all four jobs passed, including native GameCube/Wii DOL+ELF builds and artifact validation, host rival/route/gameplay/pause-resume regression suites, Dolphin software-renderer diagnostic-frame capture, and 12-second Dolphin null-video smoke. The diagnostic-frame capture on this head is not the scripted two-race RESULTS/Start-restart sequence; that evidence remains only on previous source head `6c1e499900afbfd3e8cc8f2a83087c0284ae1a45` (run #44288338915). Keep this task `in_review`; read scope remains exactly 4 paths / 6 ranges / 239 aggregate lines. The existing write allow-list remains 5 paths; `gamecube-demo/tests/test_rival_ai.c` is not yet in read_paths, so the autonomous preflight must keep failing closed. The 2026-11-18 owner approval covers only `gamecube-demo/source/main.c` as the fourth read path, not the test file, a fifth path, a range-budget increase, or any write-policy change. No scope expansion is authorized. Next: normal owner review of PR #439 and an explicit decision on whether the test file may be added to read scope; do not invoke a provider or weaken the subset guard before that decision.",
-      "updated_at": "2026-11-18",
+      "next_action": "On 2026-11-19 the owner explicitly authorized read-only access to gamecube-demo/tests/test_rival_ai.c. Scope is now 5 exact paths / 7 bounded ranges / 313 lines; the owner-reviewed write allow-list remains unchanged at five paths. Keep the task in_review; do not invoke a provider or bypass the human review/merge lock. After owner review and merge of PR #439 and canonical ledger reconciliation, revalidate the exact PR head, file list and CI before any provider resume.",
+      "updated_at": "2026-11-19",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
