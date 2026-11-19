@@ -328,7 +328,7 @@ with tempfile.TemporaryDirectory() as temp:
     fixture(root)
     summary_path = root / "docs/automation/task-ledger-summary.json"
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    task_id = "GC-RIVAL-ROUTE-PROGRESSION"
+    task_id = "GC-RIVAL-ROUTE-PROGRESSION-TEST"
     title = "Make rival racers progress through the native route and complete the race"
     queued = {
         "task_id": task_id,
