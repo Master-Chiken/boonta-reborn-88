@@ -314,7 +314,7 @@ def build_allowlist(
                 "task_id": requested_task_id,
                 "base_sha": expected_base_sha,
                     "policy_base_sha": policy_sha,
-                "allowed_paths": [],
+                    "allowed_paths": [],
                 "reason": "No active or dependency-complete owner-approved queued task is available.",
             }
         if not bootstrap_blocked:
@@ -330,7 +330,7 @@ def build_allowlist(
             "status": "WAITING_FOR_OWNER_APPROVED_PATHS",
             "task_id": requested_task_id,
             "base_sha": expected_base_sha,
-                    "policy_base_sha": policy_sha,
+            "policy_base_sha": policy_sha,
             "allowed_paths": [],
             "reason": "The active task has no owner-reviewed exact-path entry.",
         }
@@ -341,7 +341,7 @@ def build_allowlist(
         "status": "READY",
         "task_id": requested_task_id,
         "base_sha": expected_base_sha,
-                    "policy_base_sha": policy_sha,
+        "policy_base_sha": policy_sha,
         "approval_ref": owner_entry["approval_ref"],
         "purpose": owner_entry["purpose"],
         "allowed_paths": owner_entry["allowed_paths"],
