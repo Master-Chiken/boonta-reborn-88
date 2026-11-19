@@ -611,6 +611,37 @@ rival_handoff = "\n".join([
     *("- " + item for item in rival["acceptance_criteria_excerpt"][:5]),
     "Next: " + rival["next_action_excerpt"],
 ])
+
+# The five-path exception is bound to the exact task and fixed approved paths/ranges.
+original_rival_path = rival["read_paths"][-1]
+rival["read_paths"][-1] = "gamecube-demo/tests/test_gameplay_state.c"
+try:
+    MODULE.build_context(
+        ROOT, rival["task_id"], rival["title"], rival["target_branch"],
+        rival_handoff, max_chars=3100, max_task_context=1600,
+        max_criteria=4, max_next_action=100, source_root=ROOT,
+        max_source_chars=1350,
+    )
+except MODULE.ContextBuildError as exc:
+    assert "exact owner-approved five-path/seven-range" in str(exc)
+else:
+    raise AssertionError("The rival task must reject any fifth path outside its exact owner-approved set")
+rival["read_paths"][-1] = original_rival_path
+
+original_rival_range_end = rival["read_ranges"][-1]["end_line"]
+rival["read_ranges"][-1]["end_line"] -= 1
+try:
+    MODULE.build_context(
+        ROOT, rival["task_id"], rival["title"], rival["target_branch"],
+        rival_handoff, max_chars=3100, max_task_context=1600,
+        max_criteria=4, max_next_action=100, source_root=ROOT,
+        max_source_chars=1350,
+    )
+except MODULE.ContextBuildError as exc:
+    assert "exact owner-approved five-path/seven-range" in str(exc)
+else:
+    raise AssertionError("The rival task must reject a changed source range")
+rival["read_ranges"][-1]["end_line"] = original_rival_range_end
 if rival.get("pr_url") or rival.get("head_sha"):
     # Once the canonical ledger records an existing task PR/head, context
     # generation must refuse to create a duplicate writer for that task.
