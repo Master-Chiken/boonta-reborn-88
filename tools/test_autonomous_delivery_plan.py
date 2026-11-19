@@ -14,6 +14,7 @@ from build_autonomous_delivery_plan import (
     DeliveryPlanError,
     build_delivery_plan,
 )
+from build_autonomous_path_allowlist import build_allowlist
 from verify_autonomous_patch import MANDATORY_TEST_IDS
 
 TASK_ID = "AUTOMATION-DELIVERY-FIXTURE"
@@ -260,6 +261,92 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         self.assertTrue(write_plan["create_pull_request"]["draft"])
         self.assertFalse(write_plan["auto_merge"])
         self.assert_source_clean()
+
+    def test_plan_uses_main_policy_for_dev_target_checkout(self):
+        self.ledger["tasks"][0]["target_branch"] = "dev"
+        self.ledger_path.write_text(json.dumps(self.ledger), encoding="utf-8")
+        git(self.root, "add", "docs/automation/task-ledger-summary.json")
+        git(self.root, "commit", "-qm", "pin task target to dev")
+        policy_sha = git(self.root, "rev-parse", "HEAD")
+
+        target = self.parent / "target-dev"
+        target.mkdir()
+        git(target, "init", "-q")
+        git(target, "config", "user.name", "Boonta Target")
+        git(target, "config", "user.email", "boonta-target@example.invalid")
+        target_source = target / SOURCE_PATH
+        target_source.parent.mkdir(parents=True)
+        target_source.write_text("int boonta(void) { return 1; }\\n", encoding="utf-8")
+        git(target, "add", SOURCE_PATH)
+        git(target, "commit", "-qm", "dev target base")
+        target_sha = git(target, "rev-parse", "HEAD")
+
+        scope = build_allowlist(
+            target,
+            expected_base_sha=target_sha,
+            requested_task_id=TASK_ID,
+            policy_root=self.root,
+            expected_policy_sha=policy_sha,
+        )
+        allowlist_path = self.parent / "dev-allowlist.json"
+        allowlist_path.write_text(json.dumps(scope), encoding="utf-8")
+
+        result_bytes = b"int boonta(void) { return 7; }\\n"
+        base_blob_sha = git(target, "rev-parse", f"{target_sha}:{SOURCE_PATH}")
+        result_blob_sha = git_input(target, result_bytes, "hash-object", "--stdin")
+        mode = git(target, "ls-files", "-s", "--", SOURCE_PATH).split()[0]
+        verified_path = self.parent / "dev-verified.json"
+        verified_path.write_text(json.dumps({
+            "status": "VERIFIED",
+            "task_id": TASK_ID,
+            "base_sha": target_sha,
+            "policy_base_sha": policy_sha,
+            "summary": "Verified a dev patch using the main policy checkout",
+            "changed_paths": [SOURCE_PATH],
+            "requested_test_ids": [MANDATORY_TEST_IDS[0]],
+            "executed_test_ids": list(MANDATORY_TEST_IDS),
+            "test_report": {
+                "status": "PASSED",
+                "results": [{
+                    "test_id": test_id,
+                    "status": "PASSED",
+                    "exit_code": 0,
+                    "duration_seconds": 0.1,
+                    "stdout": "ok\\n",
+                    "stderr": "",
+                } for test_id in MANDATORY_TEST_IDS],
+                "stopped_after_first_failure": False,
+            },
+            "delivery_bundle": [{
+                "path": SOURCE_PATH,
+                "mode": mode,
+                "base_blob_sha": base_blob_sha,
+                "result_blob_sha": result_blob_sha,
+                "content_sha256": hashlib.sha256(result_bytes).hexdigest(),
+                "content_base64": base64.b64encode(result_bytes).decode("ascii"),
+            }],
+            "isolated_worktree": True,
+            "source_checkout_modified": False,
+            "commit_created": False,
+            "branch_created": False,
+            "network_accessed": False,
+        }), encoding="utf-8")
+
+        plan = build_delivery_plan(
+            target,
+            verified_report_path=verified_path,
+            allowlist_report_path=allowlist_path,
+            expected_task_id=TASK_ID,
+            expected_base_sha=target_sha,
+            policy_root=self.root,
+            expected_policy_sha=policy_sha,
+        )
+        self.assertEqual(plan["target_branch"], "dev")
+        self.assertEqual(plan["base_sha"], target_sha)
+        self.assertEqual(plan["policy_base_sha"], policy_sha)
+        self.assertIn("BOONTA_TASK_TARGET_BRANCH: dev", plan["pr_body"])
+        self.assertEqual(git(target, "status", "--porcelain"), "")
+        self.assertEqual(git(self.root, "status", "--porcelain"), "")
 
     def test_only_verified_status_can_create_delivery_plan(self):
         self.write_verified(status="FAILED")
