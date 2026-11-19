@@ -213,7 +213,7 @@ def build_delivery_plan(
         or report.get("base_sha") != expected_base_sha
         or report.get("policy_base_sha") != policy_sha
     ):
-        raise DeliveryPlanError("Verified report task ID or target/policy base SHA does not match preflight")
+        raise DeliveryPlanError("Verified report task ID/base SHA or policy SHA does not match preflight")
     if report.get("isolated_worktree") is not True or report.get("source_checkout_modified") is not False:
         raise DeliveryPlanError("Verified report does not prove isolated source-checkout safety")
     if report.get("commit_created") is not False or report.get("branch_created") is not False:
