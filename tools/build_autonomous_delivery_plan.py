@@ -164,7 +164,7 @@ def build_delivery_plan(
 ) -> dict[str, Any]:
     root = repo_root.resolve()
     trusted_root = (policy_root or root).resolve()
-    policy_sha = expected_policy_sha or expected_base_sha
+    policy_sha = expected_policy_sha if expected_policy_sha is not None else expected_base_sha
     if not isinstance(expected_task_id, str) or not TASK_ID_RE.fullmatch(expected_task_id):
         raise DeliveryPlanError("Expected task ID is invalid")
     if not isinstance(expected_base_sha, str) or not SHA_RE.fullmatch(expected_base_sha):
