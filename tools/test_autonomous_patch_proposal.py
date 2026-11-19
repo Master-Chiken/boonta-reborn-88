@@ -63,6 +63,7 @@ class PatchFixture(unittest.TestCase):
             "schema_version": 1,
             "task_id": TASK_ID,
             "base_sha": self.base_sha,
+            "policy_base_sha": self.base_sha,
             "summary": "Change the fixture return value",
             "unified_diff": self.diff,
             "test_ids": ["automation.task_preflight"],
@@ -239,6 +240,7 @@ class ProposalValidationTests(PatchFixture):
             "status": "READY",
             "task_id": TASK_ID,
             "base_sha": self.base_sha,
+            "policy_base_sha": self.base_sha,
             "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
             "purpose": "Fixture approved path",
             "allowed_paths": ["gamecube-demo/source/main.c"],
@@ -252,6 +254,11 @@ class ProposalValidationTests(PatchFixture):
             load_allowlist_report(report_path, expected_task_id="AUTOMATION-OTHER-TASK", expected_base_sha=self.base_sha)
         with self.assertRaisesRegex(ProposalError, "base SHA"):
             load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha="0" * 40)
+        with self.assertRaisesRegex(ProposalError, "policy base SHA"):
+            load_allowlist_report(
+                report_path, expected_task_id=TASK_ID,
+                expected_base_sha=self.base_sha, expected_policy_sha="0" * 40,
+            )
 
     def test_allowlist_report_requires_a_pull_request_review_reference(self):
         report_path = self.root / "allowlist-report.json"
@@ -259,6 +266,7 @@ class ProposalValidationTests(PatchFixture):
             "status": "READY",
             "task_id": TASK_ID,
             "base_sha": self.base_sha,
+            "policy_base_sha": self.base_sha,
             "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/issues/999",
             "purpose": "Fixture approved path",
             "allowed_paths": ["gamecube-demo/source/main.c"],
@@ -273,6 +281,7 @@ class ProposalValidationTests(PatchFixture):
             "status": "NO_ACTIVE_TASK",
             "task_id": TASK_ID,
             "base_sha": self.base_sha,
+            "policy_base_sha": self.base_sha,
             "approval_ref": "",
             "purpose": "No task active",
             "allowed_paths": [],
@@ -287,6 +296,7 @@ class ProposalValidationTests(PatchFixture):
             "status": "READY",
             "task_id": TASK_ID,
             "base_sha": self.base_sha,
+            "policy_base_sha": self.base_sha,
             "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
             "purpose": "Fixture approved path",
             "allowed_paths": [".github/workflows/unsafe.yml"],
