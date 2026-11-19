@@ -96,6 +96,8 @@ class DispatcherTests(unittest.TestCase):
         (target / "target.txt").write_text("target workspace\\n", encoding="utf-8")
         git(target, "add", "target.txt")
         git(target, "commit", "-qm", "target checkout")
+        git(self.root, "add", "tools")
+        git(self.root, "commit", "-qm", "trusted test registry")
         registry_sha = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=self.root,
             text=True, capture_output=True, check=True,
