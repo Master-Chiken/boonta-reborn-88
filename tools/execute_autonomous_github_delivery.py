@@ -3,7 +3,7 @@
 
 Dry-run is the default and performs no network access. Live execution requires
 --execute plus two exact-true environment gates and a GitHub token. It creates
-a commit/ref and a draft PR only; it never merges or enables auto-merge.
+a commit/ref and a reviewable PR only; it never approves, merges or enables auto-merge.
 """
 from __future__ import annotations
 
@@ -103,8 +103,8 @@ def validate_plan_against_sources(
         raise DeliveryExecutionError("Plan is missing the deterministic GitHub write payload")
     if write_plan.get("auto_merge") is not False:
         raise DeliveryExecutionError("Auto-merge must be disabled")
-    if write_plan.get("create_pull_request", {}).get("draft") is not True:
-        raise DeliveryExecutionError("Only draft pull requests are permitted by this prototype")
+    if write_plan.get("create_pull_request", {}).get("draft") is not False:
+        raise DeliveryExecutionError("New task PRs must be opened ready for independent human review")
     preconditions = write_plan.get("preconditions", {})
     if (
         preconditions.get("target_branch_head_must_equal") != expected_base_sha
@@ -347,7 +347,7 @@ def execute_delivery(
         or type(pr_number) is not int
         or pr_number < 1
         or pr_url != expected_pr_url
-        or pr.get("draft") is not True
+        or pr.get("draft") is not False
         or pr.get("state") != "open"
         or not isinstance(pr_head, dict)
         or pr_head.get("ref") != branch_name
@@ -361,11 +361,11 @@ def execute_delivery(
         or pr_base["repo"].get("full_name") != repository
     ):
         raise DeliveryExecutionError(
-            "GitHub did not confirm the exact draft PR head, base, repository and state"
+            "GitHub did not confirm the exact reviewable PR head, base, repository and state"
         )
 
     return {
-        "status": "DRAFT_PR_CREATED",
+        "status": "REVIEWABLE_PR_CREATED",
         "repository": repository,
         "task_id": task_id,
         "base_sha": base_sha,
@@ -374,7 +374,7 @@ def execute_delivery(
         "commit_sha": commit_sha,
         "pull_request_number": pr_number,
         "pull_request_url": pr_url,
-        "draft": True,
+        "draft": False,
         "auto_merge": False,
         "merge_performed": False,
         "remote_write_performed": True,
@@ -432,9 +432,9 @@ def main() -> int:
                 "task_id": args.expected_task_id,
                 "base_sha": args.expected_base_sha,
                 "branch_name": plan["branch_name"],
-                "draft": True,
+                "draft": False,
                 "remote_write_performed": False,
-                "reason": "Pass --execute and both explicit environment gates to create a draft PR.",
+                "reason": "Pass --execute and both explicit environment gates to create a PR ready for independent human review.",
             }, sort_keys=True))
             return 0
 
