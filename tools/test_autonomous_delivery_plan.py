@@ -258,7 +258,7 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
             write_plan["create_ref"]["sha"],
             "COMMIT_SHA_FROM_CREATE_COMMIT",
         )
-        self.assertTrue(write_plan["create_pull_request"]["draft"])
+        self.assertIs(write_plan["create_pull_request"]["draft"], False)
         self.assertFalse(write_plan["auto_merge"])
         self.assert_source_clean()
 
