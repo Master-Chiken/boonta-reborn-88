@@ -159,8 +159,12 @@ def build_delivery_plan(
     allowlist_report_path: Path,
     expected_task_id: str,
     expected_base_sha: str,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
 ) -> dict[str, Any]:
     root = repo_root.resolve()
+    trusted_root = (policy_root or root).resolve()
+    policy_sha = expected_policy_sha or expected_base_sha
     if not isinstance(expected_task_id, str) or not TASK_ID_RE.fullmatch(expected_task_id):
         raise DeliveryPlanError("Expected task ID is invalid")
     if not isinstance(expected_base_sha, str) or not SHA_RE.fullmatch(expected_base_sha):
@@ -171,11 +175,14 @@ def build_delivery_plan(
             allowlist_report_path,
             expected_task_id=expected_task_id,
             expected_base_sha=expected_base_sha,
+            expected_policy_sha=policy_sha,
         )
         current_scope = build_allowlist(
             root,
             expected_base_sha=expected_base_sha,
             requested_task_id=expected_task_id,
+            policy_root=trusted_root,
+            expected_policy_sha=policy_sha,
         )
     except (ProposalError, AllowlistError) as exc:
         raise DeliveryPlanError(str(exc)) from exc
@@ -192,7 +199,7 @@ def build_delivery_plan(
 
     report = _load_report(verified_report_path)
     expected_fields = {
-        "status", "task_id", "base_sha", "summary", "changed_paths",
+        "status", "task_id", "base_sha", "policy_base_sha", "summary", "changed_paths",
         "requested_test_ids", "executed_test_ids", "test_report", "delivery_bundle",
         "isolated_worktree", "source_checkout_modified", "commit_created",
         "branch_created", "network_accessed",
@@ -201,8 +208,12 @@ def build_delivery_plan(
         raise DeliveryPlanError("Verified report does not match the exact pipeline report contract")
     if report.get("status") != "VERIFIED":
         raise DeliveryPlanError("Only a VERIFIED patch can enter deterministic delivery planning")
-    if report.get("task_id") != expected_task_id or report.get("base_sha") != expected_base_sha:
-        raise DeliveryPlanError("Verified report task ID/base SHA does not match preflight")
+    if (
+        report.get("task_id") != expected_task_id
+        or report.get("base_sha") != expected_base_sha
+        or report.get("policy_base_sha") != policy_sha
+    ):
+        raise DeliveryPlanError("Verified report task ID or target/policy base SHA does not match preflight")
     if report.get("isolated_worktree") is not True or report.get("source_checkout_modified") is not False:
         raise DeliveryPlanError("Verified report does not prove isolated source-checkout safety")
     if report.get("commit_created") is not False or report.get("branch_created") is not False:
@@ -352,7 +363,7 @@ def build_delivery_plan(
     if bundle_paths != sorted(changed_paths) or len(set(bundle_paths)) != len(bundle_paths):
         raise DeliveryPlanError("Delivery bundle paths do not exactly match the sorted changed_paths list")
 
-    task = _load_canonical_task(root, expected_task_id)
+    task = _load_canonical_task(trusted_root, expected_task_id)
     target_branch = task["target_branch"]
     branch_name = f"autonomous/{expected_task_id.lower()}-{expected_base_sha[:12]}"
     commit_subject = f"chore(automation): deliver {expected_task_id}"
@@ -405,6 +416,7 @@ def build_delivery_plan(
         "status": "DELIVERY_PLAN_READY",
         "task_id": expected_task_id,
         "base_sha": expected_base_sha,
+        "policy_base_sha": policy_sha,
         "target_branch": target_branch,
         "branch_name": branch_name,
         "commit_subject": commit_subject,
@@ -459,6 +471,8 @@ def main() -> int:
     parser.add_argument("--allowlist-report", type=Path)
     parser.add_argument("--expected-task-id")
     parser.add_argument("--expected-base-sha")
+    parser.add_argument("--policy-root", type=Path)
+    parser.add_argument("--expected-policy-sha")
     args = parser.parse_args()
     if not all((args.repo_root, args.verified_report, args.allowlist_report, args.expected_task_id, args.expected_base_sha)):
         parser.error("repo root, verified report, allowlist report, expected task ID and expected base SHA are required")
@@ -469,6 +483,8 @@ def main() -> int:
             allowlist_report_path=args.allowlist_report,
             expected_task_id=args.expected_task_id,
             expected_base_sha=args.expected_base_sha,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
     except (DeliveryPlanError, ProposalError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
