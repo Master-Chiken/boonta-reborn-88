@@ -87,6 +87,36 @@ class DispatcherTests(unittest.TestCase):
         self.assertEqual(len(report["results"]), 1)
         self.assertFalse((self.root / "second-test-ran").exists())
 
+    def test_registered_test_can_come_from_pinned_policy_checkout(self):
+        target = Path(self.temp.name) / "target"
+        target.mkdir()
+        git(target, "init", "-q")
+        git(target, "config", "user.name", "Boonta Target")
+        git(target, "config", "user.email", "boonta-target@example.invalid")
+        (target / "target.txt").write_text("target workspace\\n", encoding="utf-8")
+        git(target, "add", "target.txt")
+        git(target, "commit", "-qm", "target checkout")
+        registry_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=self.root,
+            text=True, capture_output=True, check=True,
+        ).stdout.strip()
+
+        dispatcher.TEST_REGISTRY["test.ok"] = ("tools/ok.py",)
+        report = dispatcher.run_test_ids(
+            target,
+            ["test.ok"],
+            registry_root=self.root,
+            expected_registry_sha=registry_sha,
+        )
+        self.assertEqual(report["status"], "PASSED")
+        self.assertEqual(report["results"][0]["stdout"], "fixed test ran\\n")
+
+        with self.assertRaisesRegex(dispatcher.TestDispatchError, "pinned SHA"):
+            dispatcher.run_test_ids(
+                target, ["test.ok"], registry_root=self.root,
+                expected_registry_sha="0" * 40,
+            )
+
     def test_registered_test_runs_without_shell(self):
         dispatcher.TEST_REGISTRY["test.ok"] = ("tools/ok.py",)
         report = dispatcher.run_test_ids(self.root, ["test.ok"])
