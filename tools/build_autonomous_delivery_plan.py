@@ -454,7 +454,7 @@ def build_delivery_plan(
                 "head": branch_name,
                 "base": target_branch,
                 "body": pr_body,
-                "draft": True,
+                "draft": False,
             },
             "auto_merge": False,
         },
