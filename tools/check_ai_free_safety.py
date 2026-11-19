@@ -1531,8 +1531,15 @@ if "test_autonomous_cycle_report.js" not in selftest:
     errors.append("Branch self-test must watch the shared cycle validator and its regression suite")
 if "node tools/test_autonomous_cycle_report.js" not in selftest:
     errors.append("Branch self-test must execute the shared autonomous cycle report regression suite")
-if "on:\n  pull_request:\n    branches:\n      - main\n  workflow_dispatch:" not in selftest:
-    errors.append("Branch self-test must run on every main PR so exact-head progress can require its validator check")
+selftest_triggers = selftest.split("permissions:", 1)[0]
+selftest_pr_trigger = selftest_triggers.split("  workflow_dispatch:", 1)[0]
+if (
+    "on:\n  pull_request:\n    branches:\n      - main\n" not in selftest_pr_trigger
+    or "workflow_dispatch:" not in selftest_triggers
+    or "push:" in selftest_triggers
+    or "schedule:" in selftest_triggers
+):
+    errors.append("Branch self-test must run on every main PR and retain manual-only dispatch outside PR events")
 for required in (
     "missing PR target-branch marker",
     "duplicate PR target-branch markers",
