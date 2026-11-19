@@ -160,6 +160,8 @@ class TaskLedgerTests(unittest.TestCase):
         data = valid_ledger()
         rival = valid_task(ledger.RIVAL_ROUTE_TASK_ID, "in_review")
         rival["read_paths"] = list(ledger.RIVAL_ROUTE_READ_PATHS)
+        rival["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/439"
+        rival["head_sha"] = "7c49a97bc674f2b5ade8f950bec23944230535dc"
         data["tasks"] = [rival]
         self.assertEqual(ledger.validate_ledger(data), [])
         rival["read_paths"][-1] = "gamecube-demo/tests/test_gameplay_state.c"
