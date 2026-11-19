@@ -613,35 +613,47 @@ rival_handoff = "\n".join([
 ])
 
 # The five-path exception is bound to the exact task and fixed approved paths/ranges.
-original_rival_path = rival["read_paths"][-1]
-rival["read_paths"][-1] = "gamecube-demo/tests/test_gameplay_state.c"
-try:
-    MODULE.build_context(
-        ROOT, rival["task_id"], rival["title"], rival["target_branch"],
-        rival_handoff, max_chars=3100, max_task_context=1600,
-        max_criteria=4, max_next_action=100, source_root=ROOT,
-        max_source_chars=1350,
-    )
-except MODULE.ContextBuildError as exc:
-    assert "exact owner-approved five-path/seven-range" in str(exc)
-else:
-    raise AssertionError("The rival task must reject any fifth path outside its exact owner-approved set")
-rival["read_paths"][-1] = original_rival_path
+def assert_rejects_changed_rival_scope(mutator, expected_message: str) -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        test_root = Path(temp)
+        (test_root / "docs/automation").mkdir(parents=True)
+        for relative in (
+            "docs/REVERSE_ENGINEERING_FIRST.md",
+            "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
+        ):
+            target = test_root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text((ROOT / relative).read_text(encoding="utf-8"), encoding="utf-8")
+        altered_summary = json.loads(json.dumps(current_summary))
+        altered_rival = next(
+            task for task in altered_summary["tasks"]
+            if task["task_id"] == "GC-RIVAL-ROUTE-PROGRESSION"
+        )
+        mutator(altered_rival)
+        (test_root / "docs/automation/task-ledger-summary.json").write_text(
+            json.dumps(altered_summary), encoding="utf-8"
+        )
+        try:
+            MODULE.build_context(
+                test_root, rival["task_id"], rival["title"], rival["target_branch"],
+                rival_handoff, max_chars=3100, max_task_context=1600,
+                max_criteria=4, max_next_action=100, source_root=ROOT,
+                max_source_chars=1350,
+            )
+        except MODULE.ContextBuildError as exc:
+            assert expected_message in str(exc)
+        else:
+            raise AssertionError("The rival task must reject a changed owner-approved read scope")
 
-original_rival_range_end = rival["read_ranges"][-1]["end_line"]
-rival["read_ranges"][-1]["end_line"] -= 1
-try:
-    MODULE.build_context(
-        ROOT, rival["task_id"], rival["title"], rival["target_branch"],
-        rival_handoff, max_chars=3100, max_task_context=1600,
-        max_criteria=4, max_next_action=100, source_root=ROOT,
-        max_source_chars=1350,
-    )
-except MODULE.ContextBuildError as exc:
-    assert "exact owner-approved five-path/seven-range" in str(exc)
-else:
-    raise AssertionError("The rival task must reject a changed source range")
-rival["read_ranges"][-1]["end_line"] = original_rival_range_end
+
+assert_rejects_changed_rival_scope(
+    lambda task: task["read_paths"].__setitem__(-1, "gamecube-demo/tests/test_gameplay_state.c"),
+    "exact owner-approved five-path/seven-range",
+)
+assert_rejects_changed_rival_scope(
+    lambda task: task["read_ranges"][-1].__setitem__("end_line", task["read_ranges"][-1]["end_line"] - 1),
+    "exact owner-approved five-path/seven-range",
+)
 if rival.get("pr_url") or rival.get("head_sha"):
     # Once the canonical ledger records an existing task PR/head, context
     # generation must refuse to create a duplicate writer for that task.
