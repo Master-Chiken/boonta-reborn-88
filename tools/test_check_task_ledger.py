@@ -147,9 +147,36 @@ class TaskLedgerTests(unittest.TestCase):
     def test_active_task_requires_bounded_read_paths(self):
         data = valid_ledger()
         active = valid_task(status="active")
-        active["read_paths"] = ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py", "tools/check_task_ledger_summary.py", "tools/build_autonomous_context.py", "tools/test_autonomous_context.py"]
+        active["read_paths"] = [
+            "tools/check_task_ledger.py",
+            "tools/test_check_task_ledger.py",
+            "tools/check_task_ledger_summary.py",
+            "tools/build_autonomous_context.py",
+        ]
         data["tasks"] = [active]
         self.assertEqual(ledger.validate_ledger(data), [])
+
+    def test_rival_task_accepts_only_exact_owner_approved_five_path_scope(self):
+        data = valid_ledger()
+        rival = valid_task(ledger.RIVAL_ROUTE_TASK_ID, "in_review")
+        rival["read_paths"] = list(ledger.RIVAL_ROUTE_READ_PATHS)
+        data["tasks"] = [rival]
+        self.assertEqual(ledger.validate_ledger(data), [])
+        rival["read_paths"][-1] = "gamecube-demo/tests/test_gameplay_state.c"
+        self.assertTrue(any("read_paths" in error for error in ledger.validate_ledger(data)))
+
+    def test_other_tasks_cannot_receive_a_fifth_read_path(self):
+        data = valid_ledger()
+        active = valid_task(status="active")
+        active["read_paths"] = [
+            "tools/check_task_ledger.py",
+            "tools/test_check_task_ledger.py",
+            "tools/check_task_ledger_summary.py",
+            "tools/build_autonomous_context.py",
+            "tools/test_autonomous_context.py",
+        ]
+        data["tasks"] = [active]
+        self.assertTrue(any("read_paths" in error for error in ledger.validate_ledger(data)))
 
     def test_active_task_rejects_six_read_paths(self):
         data = valid_ledger()
