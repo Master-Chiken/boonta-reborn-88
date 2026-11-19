@@ -88,8 +88,9 @@ class DispatcherTests(unittest.TestCase):
         self.assertFalse((self.root / "second-test-ran").exists())
 
     def test_registered_test_can_come_from_pinned_policy_checkout(self):
-        target = Path(self.temp.name) / "target"
-        target.mkdir()
+        target_temp = tempfile.TemporaryDirectory(prefix="boonta-target-registry-test-")
+        self.addCleanup(target_temp.cleanup)
+        target = Path(target_temp.name).resolve()
         git(target, "init", "-q")
         git(target, "config", "user.name", "Boonta Target")
         git(target, "config", "user.email", "boonta-target@example.invalid")
