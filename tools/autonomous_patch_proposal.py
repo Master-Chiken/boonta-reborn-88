@@ -326,7 +326,7 @@ def load_allowlist_report(
         raise ProposalError("Allowlist report must be a JSON object")
     if report.get("status") != "READY":
         raise ProposalError("Allowlist report is not READY; no write paths are authorized")
-    policy_sha = expected_policy_sha or expected_base_sha
+    policy_sha = expected_policy_sha if expected_policy_sha is not None else expected_base_sha
     if not SHA_RE.fullmatch(policy_sha):
         raise ProposalError("Expected policy base SHA is invalid")
     required = {
