@@ -225,6 +225,19 @@ jobs:
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
             const activationTaskOpenPr = openTaskPullRequest(activationTask);
+            const rivalRouteReadPaths = [
+              'gamecube-demo/source/main.c',
+              'gamecube-demo/source/rival_ai.h',
+              'gamecube-demo/source/route_cursor.h',
+              'gamecube-demo/source/gameplay_state.h',
+              'gamecube-demo/tests/test_rival_ai.c',
+            ];
+            const hasExactRivalReadScope = (task) => Boolean(
+              task && task.task_id === 'GC-RIVAL-ROUTE-PROGRESSION' &&
+              Array.isArray(task.read_paths) &&
+              task.read_paths.length === rivalRouteReadPaths.length &&
+              task.read_paths.every((path, index) => path === rivalRouteReadPaths[index])
+            );
             const usableTask = (task) => Boolean(
               task && typeof task.task_id === 'string' && task.task_id.trim() &&
               typeof task.title === 'string' && task.title.trim() &&
@@ -232,7 +245,9 @@ jobs:
               Array.isArray(task.acceptance_criteria_excerpt) && task.acceptance_criteria_excerpt.length > 0 &&
               typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
               Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
-              Array.isArray(task.read_paths) && task.read_paths.length >= 1 && task.read_paths.length <= 4 &&
+              Array.isArray(task.read_paths) && task.read_paths.length >= 1 &&
+              (task.read_paths.length <= 4 || hasExactRivalReadScope(task)) &&
+              (task.task_id !== 'GC-RIVAL-ROUTE-PROGRESSION' || hasExactRivalReadScope(task)) &&
               task.read_paths.every((path) => typeof path === 'string' && path.length <= 120 &&
                 /^[A-Za-z0-9._/-]+$/.test(path) && !path.startsWith('/') &&
                 path.split('/').every((part) => part && part !== '.' && part !== '..') &&
@@ -347,7 +362,9 @@ jobs:
                     safePath(file.filename) &&
                     approvedResumeReadPaths.has(file.filename)
                   )
-                  .map((file) => file.filename))].sort().slice(0, 4);
+                  .map((file) => file.filename))].sort().slice(
+                    0, hasExactRivalReadScope(resumeCandidateTask) ? 5 : 4
+                  );
                 resumeReady = resumeFilePaths.length > 0;
                 if (!resumeReady) {
                   resumeUnavailableReason = 'the existing PR has no eligible safe text file within the task exact approved read-path allow-list';
