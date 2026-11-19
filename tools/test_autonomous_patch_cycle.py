@@ -99,7 +99,7 @@ class PatchCycleTests(unittest.TestCase):
         provider.assert_not_called()
         gates.assert_not_called()
 
-    def test_missing_github_writer_gate_blocks_before_provider(self):
+    def test_missing_independent_owner_gate_blocks_before_provider(self):
         with patch.dict(os.environ, self.env(), clear=True):
             with (
                 patch.object(cycle, "build_allowlist", side_effect=lambda root, **kwargs: {
@@ -111,7 +111,6 @@ class PatchCycleTests(unittest.TestCase):
                     "purpose": "Synthetic approved path",
                     "allowed_paths": ["target.txt"],
                 }),
-                patch.object(cycle, "require_execution_gates", side_effect=cycle.DeliveryExecutionError("GITHUB_TOKEN is missing")),
                 patch.object(cycle, "run_provider_patch") as provider,
             ):
                 result = cycle.run_cycle(
@@ -124,10 +123,10 @@ class PatchCycleTests(unittest.TestCase):
                     model="groq/openai/gpt-oss-20b",
                 )
         self.assertEqual(result["status"], "BLOCKED")
-        self.assertIn("before model use", self.report.read_text(encoding="utf-8"))
+        self.assertIn("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED", self.report.read_text(encoding="utf-8"))
         provider.assert_not_called()
 
-    def test_verified_patch_creates_only_reviewable_non_merged_pr(self):
+    def test_verified_patch_creates_only_draft_non_merged_pr(self):
         target_sha = git(self.target, "rev-parse", "HEAD")
         policy_sha = git(self.policy, "rev-parse", "HEAD")
         allowlist_report = {
@@ -146,10 +145,10 @@ class PatchCycleTests(unittest.TestCase):
             "branch_name": "autonomous/patch-cycle-test",
         }
         writer_result = {
-            "status": "REVIEWABLE_PR_CREATED",
+            "status": "DRAFT_PR_CREATED",
             "pull_request_url": PR_URL,
             "commit_sha": HEAD_SHA,
-            "draft": False,
+            "draft": True,
             "auto_merge": False,
             "merge_performed": False,
         }

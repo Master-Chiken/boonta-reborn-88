@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a guarded €0 patch cycle from owner policy to a reviewable PR.
+"""Run a guarded €0 patch cycle from owner policy to a draft PR.
 
 The model only proposes a JSON diff. Repository-owned code validates the exact
 task/path policy, tests the diff in a detached worktree, and opens a PR only
@@ -141,10 +141,8 @@ def run_cycle(
     if allowlist.get("task_id") != task_id or allowlist.get("base_sha") != target_sha or allowlist.get("policy_base_sha") != policy_sha:
         raise CycleError("Owner allow-list did not bind the exact task and checkout revisions")
 
-    # The second writer gate is derived only from a freshly generated READY
-    # report. A pre-set environment value cannot authorize an unapproved task.
-    os.environ.pop("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED", None)
-    os.environ["BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED"] = "true"
+    # The second gate must be supplied independently by the repository owner.
+    # A READY path allow-list is not itself approval to perform remote writes.
     try:
         token = require_execution_gates(CANONICAL_REPOSITORY)
     except DeliveryExecutionError as exc:
@@ -246,8 +244,8 @@ def run_cycle(
             }
 
         if (
-            result.get("status") != "REVIEWABLE_PR_CREATED"
-            or result.get("draft") is not False
+            result.get("status") != "DRAFT_PR_CREATED"
+            or result.get("draft") is not True
             or result.get("auto_merge") is not False
             or result.get("merge_performed") is not False
         ):
