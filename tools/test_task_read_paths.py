@@ -57,7 +57,7 @@ class TaskReadPathTests(unittest.TestCase):
             root = Path(temp)
             (root / "source").mkdir()
             paths = []
-            for index, size in enumerate((64000, 42000, 800, 30000, 10000)):
+            for index, size in enumerate((64000, 42000, 800, 30000)):
                 path = f"source/file{index}.c"
                 (root / path).write_text("x" * size, encoding="utf-8")
                 paths.append(path)
@@ -185,6 +185,8 @@ class TaskReadPathTests(unittest.TestCase):
             data = ledger_with_paths(list(RIVAL_ROUTE_READ_PATHS), task_id=RIVAL_ROUTE_TASK_ID)
             task = data["tasks"][0]
             task["status"] = "in_review"
+            task["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/439"
+            task["head_sha"] = "7c49a97bc674f2b5ade8f950bec23944230535dc"
             task["read_ranges"] = [
                 {"path": path, "start_line": start, "end_line": end}
                 for path, start, end in RIVAL_ROUTE_READ_RANGES
