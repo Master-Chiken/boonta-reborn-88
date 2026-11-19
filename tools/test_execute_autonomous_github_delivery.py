@@ -442,7 +442,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
     def test_writer_rejects_pr_response_with_wrong_head_sha(self):
         request, calls = self.fake_api(wrong_pr_head_sha=True)
         with patch.dict(os.environ, self.env, clear=False):
-            with self.assertRaisesRegex(DeliveryExecutionError, "exact reviewable PR head, base"):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
                 self.execute_with_fake(request)
         self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
@@ -450,7 +450,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
     def test_writer_rejects_pr_response_with_wrong_base_sha(self):
         request, calls = self.fake_api(wrong_pr_base_sha=True)
         with patch.dict(os.environ, self.env, clear=False):
-            with self.assertRaisesRegex(DeliveryExecutionError, "exact reviewable PR head, base"):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
                 self.execute_with_fake(request)
         self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
