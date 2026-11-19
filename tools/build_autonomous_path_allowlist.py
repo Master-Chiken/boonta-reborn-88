@@ -169,7 +169,7 @@ def build_allowlist(
     if not isinstance(requested_task_id, str) or not TASK_ID_RE.fullmatch(requested_task_id):
         raise AllowlistError("Requested task ID is invalid")
     root = _verify_checkout(root, expected_base_sha)
-    policy_sha = expected_policy_sha or expected_base_sha
+    policy_sha = expected_policy_sha if expected_policy_sha is not None else expected_base_sha
     trusted_root = _verify_checkout(policy_root or root, policy_sha)
     ledger_file = trusted_root / ledger_path
     policy_file = trusted_root / policy_path
