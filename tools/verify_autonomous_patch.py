@@ -168,7 +168,7 @@ def verify_in_isolated_worktree(
 ) -> dict[str, Any]:
     root = repo_root.resolve()
     trusted_root = (policy_root or root).resolve()
-    policy_sha = expected_policy_sha or expected_base_sha
+    policy_sha = expected_policy_sha if expected_policy_sha is not None else expected_base_sha
     if not root.is_dir() or not trusted_root.is_dir():
         raise PipelineError("Target or trusted policy checkout does not exist")
     validate_checkout(root, expected_base_sha)
