@@ -153,19 +153,31 @@ def build_allowlist(
     *,
     expected_base_sha: str,
     requested_task_id: str,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
     ledger_path: Path = DEFAULT_LEDGER,
     policy_path: Path = DEFAULT_POLICY,
 ) -> dict[str, Any]:
+    """Validate target files against task policy in a separate trusted checkout.
+
+    root is the target-branch checkout whose exact base SHA and writable files
+    are being validated. policy_root is the canonical automation checkout
+    (normally main), pinned independently by expected_policy_sha. Keeping
+    these roots separate lets agents safely target dev without copying or
+    downgrading trusted task policy into the target branch.
+    """
     if not isinstance(requested_task_id, str) or not TASK_ID_RE.fullmatch(requested_task_id):
         raise AllowlistError("Requested task ID is invalid")
     root = _verify_checkout(root, expected_base_sha)
-    ledger_file = root / ledger_path
-    policy_file = root / policy_path
+    policy_sha = expected_policy_sha or expected_base_sha
+    trusted_root = _verify_checkout(policy_root or root, policy_sha)
+    ledger_file = trusted_root / ledger_path
+    policy_file = trusted_root / policy_path
     if ledger_file.is_symlink() or policy_file.is_symlink():
         raise AllowlistError("Ledger and path policy must not be symlinks")
 
-    _validate_tracked_regular_file(root, ledger_path.as_posix())
-    _validate_tracked_regular_file(root, policy_path.as_posix())
+    _validate_tracked_regular_file(trusted_root, ledger_path.as_posix())
+    _validate_tracked_regular_file(trusted_root, policy_path.as_posix())
     ledger = load_json(ledger_file)
     policy = load_json(policy_file)
     if not isinstance(ledger, dict) or type(ledger.get("schema_version")) is not int or ledger["schema_version"] != 2:
@@ -261,6 +273,7 @@ def build_allowlist(
                     "status": "WAITING_FOR_DEPENDENCIES",
                     "task_id": requested_task_id,
                     "base_sha": expected_base_sha,
+                    "policy_base_sha": policy_sha,
                     "allowed_paths": [],
                     "reason": "Blocked activation bootstrap dependencies must be completed before a write path is available.",
                 }
@@ -271,6 +284,7 @@ def build_allowlist(
                     "status": "WAITING_FOR_OWNER_APPROVAL",
                     "task_id": requested_task_id,
                     "base_sha": expected_base_sha,
+                    "policy_base_sha": policy_sha,
                     "allowed_paths": [],
                     "reason": "Queued task has no explicit owner approval.",
                 }
@@ -280,6 +294,7 @@ def build_allowlist(
                     "status": "WAITING_FOR_DEPENDENCIES",
                     "task_id": requested_task_id,
                     "base_sha": expected_base_sha,
+                    "policy_base_sha": policy_sha,
                     "allowed_paths": [],
                     "reason": "Every queued-task dependency must be completed before a write path is available.",
                 }
@@ -298,6 +313,7 @@ def build_allowlist(
                 "status": "NO_ACTIVE_TASK",
                 "task_id": requested_task_id,
                 "base_sha": expected_base_sha,
+                    "policy_base_sha": policy_sha,
                 "allowed_paths": [],
                 "reason": "No active or dependency-complete owner-approved queued task is available.",
             }
@@ -314,6 +330,7 @@ def build_allowlist(
             "status": "WAITING_FOR_OWNER_APPROVED_PATHS",
             "task_id": requested_task_id,
             "base_sha": expected_base_sha,
+                    "policy_base_sha": policy_sha,
             "allowed_paths": [],
             "reason": "The active task has no owner-reviewed exact-path entry.",
         }
@@ -324,6 +341,7 @@ def build_allowlist(
         "status": "READY",
         "task_id": requested_task_id,
         "base_sha": expected_base_sha,
+                    "policy_base_sha": policy_sha,
         "approval_ref": owner_entry["approval_ref"],
         "purpose": owner_entry["purpose"],
         "allowed_paths": owner_entry["allowed_paths"],
@@ -335,12 +353,16 @@ def main() -> int:
     parser.add_argument("--repo-root", type=Path, default=ROOT)
     parser.add_argument("--expected-base-sha", required=True)
     parser.add_argument("--task-id", required=True)
+    parser.add_argument("--policy-root", type=Path)
+    parser.add_argument("--expected-policy-sha")
     args = parser.parse_args()
     try:
         report = build_allowlist(
             args.repo_root,
             expected_base_sha=args.expected_base_sha,
             requested_task_id=args.task_id,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
     except AllowlistError as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
