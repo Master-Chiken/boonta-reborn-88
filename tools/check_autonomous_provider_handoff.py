@@ -229,19 +229,18 @@ for label, content, tool_names in provider_model_visible_tools:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
 
 for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
-    marker = "          cat > \"$RUNNER_TEMP/opencode.json\" <<'JSON'\\n"
-    start = content.find(marker)
-    if start < 0:
-        errors.append(f"{label} OpenCode config heredoc is missing")
+    marker = 'cat > "$RUNNER_TEMP/opencode.json" <<\\'JSON\\''
+    parts = content.split(marker)
+    if len(parts) != 2:
+        errors.append(f"{label} OpenCode config heredoc is missing or duplicated")
         continue
-    start += len(marker)
-    end = content.find("\\n          JSON", start)
-    if end < 0:
+    config_tail = parts[1].strip()
+    config_parts = config_tail.split("          JSON", 1)
+    if len(config_parts) != 2:
         errors.append(f"{label} OpenCode config heredoc is unterminated")
         continue
-    config_text = "\\n".join(line[10:] for line in content[start:end].splitlines())
     try:
-        opencode_config = json.loads(config_text)
+        opencode_config = json.loads(config_parts[0])
     except json.JSONDecodeError as exc:
         errors.append(f"{label} OpenCode config JSON is invalid: {exc}")
         continue
