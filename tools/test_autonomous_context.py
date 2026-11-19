@@ -629,6 +629,10 @@ def assert_rejects_changed_rival_scope(mutator, expected_message: str) -> None:
             task for task in altered_summary["tasks"]
             if task["task_id"] == "GC-RIVAL-ROUTE-PROGRESSION"
         )
+        # Disable the pre-existing-PR writer lock only in this negative fixture
+        # so the exact path/range rejection is the first failing guard.
+        altered_rival["pr_url"] = None
+        altered_rival["head_sha"] = None
         mutator(altered_rival)
         (test_root / "docs/automation/task-ledger-summary.json").write_text(
             json.dumps(altered_summary), encoding="utf-8"
