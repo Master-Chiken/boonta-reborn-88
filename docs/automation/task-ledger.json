@@ -1054,8 +1054,8 @@
         },
         {
           "path": "gamecube-demo/tests/test_rival_ai.c",
-          "start_line": 200,
-          "end_line": 273
+          "start_line": 180,
+          "end_line": 220
         }
       ],
       "acceptance_criteria": [
@@ -1073,7 +1073,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44407302584"
       ],
-      "next_action": "On 2026-11-19 the owner explicitly authorized read-only access to gamecube-demo/tests/test_rival_ai.c. Scope is now 5 exact paths / 7 bounded ranges / 313 lines; the owner-reviewed write allow-list remains unchanged at five paths. Keep the task in_review; do not invoke a provider or bypass the human review/merge lock. After owner review and merge of PR #439 and canonical ledger reconciliation, revalidate the exact PR head, file list and CI before any provider resume.",
+      "next_action": "On 2026-11-19 the owner explicitly authorized read-only access to gamecube-demo/tests/test_rival_ai.c. Scope is now 5 exact paths / 7 bounded ranges / 280 lines; the owner-reviewed write allow-list remains unchanged at five paths. Keep the task in_review; do not invoke a provider or bypass the human review/merge lock. After owner review and merge of PR #439 and canonical ledger reconciliation, revalidate the exact PR head, file list and CI before any provider resume.",
       "updated_at": "2026-11-19",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",

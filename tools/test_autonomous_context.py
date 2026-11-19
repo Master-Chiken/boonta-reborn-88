@@ -650,7 +650,7 @@ else:
     assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
     assert len(rival["read_paths"]) == 5
     assert len(rival["read_ranges"]) == 7
-    assert sum(item["end_line"] - item["start_line"] + 1 for item in rival["read_ranges"]) == 313
+    assert sum(item["end_line"] - item["start_line"] + 1 for item in rival["read_ranges"]) == 280
     assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
     assert "Exact owner-reviewed write paths (no others):" in rival_context
 
