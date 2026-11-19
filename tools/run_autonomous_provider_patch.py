@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import re
+import signal
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -109,8 +110,12 @@ def _validate_opencode_config() -> None:
     if not isinstance(config, dict):
         raise ProviderPatchError("OpenCode config root must be an object")
     permissions = config.get("permission")
-    if not isinstance(permissions, dict) or permissions.get("*") != "deny":
-        raise ProviderPatchError("OpenCode config must deny every model tool by default")
+    if (
+        not isinstance(permissions, dict)
+        or permissions.get("*") != "deny"
+        or any(action != "deny" for action in permissions.values())
+    ):
+        raise ProviderPatchError("OpenCode config must deny every model tool without per-tool exceptions")
     if config.get("mcp") not in (None, {}):
         raise ProviderPatchError("OpenCode patch generation must not expose MCP servers")
 
@@ -246,29 +251,45 @@ def run_provider_patch(
         "--dir", str(target),
         prompt,
     ]
+    process = None
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             command,
             cwd=trusted,
             env=env,
             stdin=subprocess.DEVNULL,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
             errors="strict",
-            timeout=timeout_seconds,
-            check=False,
+            start_new_session=True,
         )
+        stdout, _stderr = process.communicate(timeout=timeout_seconds)
     except subprocess.TimeoutExpired as exc:
-        raise ProviderPatchError("OpenCode provider invocation timed out; no retry was attempted") from exc
+        if process is not None:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.wait()
+        raise ProviderPatchError("OpenCode provider invocation timed out; process group stopped without retry") from exc
     except (OSError, UnicodeError) as exc:
         raise ProviderPatchError("OpenCode could not be launched or returned invalid UTF-8") from exc
-    if len(result.stdout.encode("utf-8")) > MAX_STREAM_BYTES:
+    if len(stdout.encode("utf-8")) > MAX_STREAM_BYTES:
         raise ProviderPatchError("OpenCode event stream exceeded the 256 KiB limit")
-    if result.returncode != 0:
-        raise ProviderPatchError(f"OpenCode exited with status {result.returncode}; proposal rejected")
+    if process is None or process.returncode != 0:
+        status = process.returncode if process is not None else "unavailable"
+        raise ProviderPatchError(f"OpenCode exited with status {status}; proposal rejected")
 
-    proposal_text = parse_event_stream(result.stdout)
+    proposal_text = parse_event_stream(stdout)
     if len(proposal_text.encode("utf-8")) > MAX_PROPOSAL_BYTES:
         raise ProviderPatchError("Assistant proposal exceeded the 96 KiB limit")
     try:
