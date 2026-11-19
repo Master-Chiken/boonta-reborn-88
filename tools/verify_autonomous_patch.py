@@ -246,6 +246,8 @@ def verify_in_isolated_worktree(
             test_report = run_autonomous_patch_tests.run_test_ids(
                 worktree,
                 executed_tests,
+                registry_root=trusted_root,
+                expected_registry_sha=policy_sha,
             )
             if test_report.get("status") != "PASSED":
                 return {
