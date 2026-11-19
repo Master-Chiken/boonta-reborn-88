@@ -229,7 +229,7 @@ for label, content, tool_names in provider_model_visible_tools:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
 
 for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
-    marker = 'cat > "$RUNNER_TEMP/opencode.json" <<\\'JSON\\''
+    marker = "cat > \"$RUNNER_TEMP/opencode.json\" <<'JSON'"
     parts = content.split(marker)
     if len(parts) != 2:
         errors.append(f"{label} OpenCode config heredoc is missing or duplicated")
