@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 from pathlib import Path
@@ -244,13 +245,22 @@ def run_provider_patch(
         raise ProviderPatchError("Combined provider prompt exceeds the 32 KiB limit")
 
     env = _provider_environment(model)
+    opencode = shutil.which("opencode", path=env.get("PATH"))
+    if not opencode:
+        raise ProviderPatchError("OpenCode CLI is unavailable; no provider request was started")
     command = [
-        "opencode", "run", "--format", "json",
+        opencode, "run", "--format", "json",
         "--model", model,
         "--auto",
         "--dir", str(target),
         prompt,
     ]
+    # The workflow cooldown must begin only after all local validation and
+    # executable checks have passed, immediately before the provider process.
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if output_path:
+        with open(output_path, "a", encoding="utf-8") as output:
+            output.write("provider_request_started=true\n")
     process = None
     try:
         process = subprocess.Popen(
