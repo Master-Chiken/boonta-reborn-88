@@ -887,7 +887,10 @@ jobs:
               "edit": "deny",
               "glob": "deny",
               "grep": "deny",
-              "list": "deny"
+              "list": "deny",
+              "webfetch": "deny",
+              "websearch": "deny",
+              "question": "deny"
             }
           }
           JSON

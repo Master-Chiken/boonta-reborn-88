@@ -228,6 +228,31 @@ for label, content, tool_names in provider_model_visible_tools:
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
 
+for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
+    marker = "          cat > \"$RUNNER_TEMP/opencode.json\" <<'JSON'\\n"
+    start = content.find(marker)
+    if start < 0:
+        errors.append(f"{label} OpenCode config heredoc is missing")
+        continue
+    start += len(marker)
+    end = content.find("\\n          JSON", start)
+    if end < 0:
+        errors.append(f"{label} OpenCode config heredoc is unterminated")
+        continue
+    config_text = "\\n".join(line[10:] for line in content[start:end].splitlines())
+    try:
+        opencode_config = json.loads(config_text)
+    except json.JSONDecodeError as exc:
+        errors.append(f"{label} OpenCode config JSON is invalid: {exc}")
+        continue
+    permission = opencode_config.get("permission", {})
+    for tool_name in ("webfetch", "websearch", "question"):
+        if permission.get(tool_name) != "deny":
+            errors.append(
+                f"{label} autonomous OpenCode config must explicitly deny {tool_name}; "
+                "GitHub MCP is the sole model-visible network/action route"
+            )
+
 # OpenRouter's eight-step ceiling is a hard safety bound, not a discovery budget.
 # The preflight performs task reservation and open-PR duplicate detection before inference.
 for required in (
