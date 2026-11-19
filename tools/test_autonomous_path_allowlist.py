@@ -194,6 +194,44 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         with self.assertRaisesRegex(AllowlistError, "target branch"):
             self.call_allowlist()
 
+    def test_policy_can_be_pinned_to_main_while_target_checkout_is_dev(self):
+        target = self.root.parent / "target-dev"
+        target.mkdir()
+        git(target, "init", "-q")
+        git(target, "config", "user.name", "Boonta Target")
+        git(target, "config", "user.email", "boonta-target@example.invalid")
+        target_source = target / PATH
+        target_source.parent.mkdir(parents=True)
+        target_source.write_text("int boonta(void) { return 2; }\\n", encoding="utf-8")
+        git(target, "add", PATH)
+        git(target, "commit", "-qm", "target branch fixture")
+        target_sha = git(target, "rev-parse", "HEAD")
+
+        report = build_allowlist(
+            target,
+            expected_base_sha=target_sha,
+            requested_task_id=TASK_ID,
+            policy_root=self.root,
+            expected_policy_sha=self.base_sha,
+            ledger_path=self.ledger_path,
+            policy_path=self.policy_path,
+        )
+        self.assertEqual(report["status"], "READY")
+        self.assertEqual(report["base_sha"], target_sha)
+        self.assertEqual(report["policy_base_sha"], self.base_sha)
+        self.assertEqual(report["allowed_paths"], [PATH])
+
+        with self.assertRaisesRegex(AllowlistError, "differs from the trusted preflight base SHA"):
+            build_allowlist(
+                target,
+                expected_base_sha=target_sha,
+                requested_task_id=TASK_ID,
+                policy_root=self.root,
+                expected_policy_sha="0" * 40,
+                ledger_path=self.ledger_path,
+                policy_path=self.policy_path,
+            )
+
     def test_stale_base_sha_is_rejected(self):
         with self.assertRaisesRegex(AllowlistError, "differs"):
             self.call_allowlist(expected_sha="0" * 40)
