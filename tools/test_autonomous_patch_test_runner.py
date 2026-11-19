@@ -112,7 +112,7 @@ class DispatcherTests(unittest.TestCase):
             expected_registry_sha=registry_sha,
         )
         self.assertEqual(report["status"], "PASSED")
-        self.assertEqual(report["results"][0]["stdout"], "fixed test ran\\n")
+        self.assertEqual(report["results"][0]["stdout"], "fixed test ran\n")
 
         with self.assertRaisesRegex(dispatcher.TestDispatchError, "pinned SHA"):
             dispatcher.run_test_ids(
