@@ -192,10 +192,10 @@ def build_delivery_plan(
         raise DeliveryPlanError(
             f"Current canonical task/path policy is not READY ({status}): {reason}"
         )
-    if set(current_scope.get("allowed_paths", [])) != allowed_paths:
-        raise DeliveryPlanError("Supplied allowlist report differs from the current owner-reviewed policy")
-    if current_scope.get("approval_ref") != _load_report(allowlist_report_path).get("approval_ref"):
-        raise DeliveryPlanError("Supplied allowlist evidence differs from the current owner-reviewed policy")
+    if _load_report(allowlist_report_path) != current_scope:
+        raise DeliveryPlanError(
+            "Supplied allowlist report differs from the current canonical owner-reviewed policy"
+        )
 
     report = _load_report(verified_report_path)
     expected_fields = {
