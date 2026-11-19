@@ -192,11 +192,6 @@ def build_delivery_plan(
         raise DeliveryPlanError(
             f"Current canonical task/path policy is not READY ({status}): {reason}"
         )
-    if _load_report(allowlist_report_path) != current_scope:
-        raise DeliveryPlanError(
-            "Supplied allowlist report differs from the current canonical owner-reviewed policy"
-        )
-
     report = _load_report(verified_report_path)
     expected_fields = {
         "status", "task_id", "base_sha", "policy_base_sha", "summary", "changed_paths",
@@ -362,6 +357,14 @@ def build_delivery_plan(
         })
     if bundle_paths != sorted(changed_paths) or len(set(bundle_paths)) != len(bundle_paths):
         raise DeliveryPlanError("Delivery bundle paths do not exactly match the sorted changed_paths list")
+
+    # Compare the complete generated evidence only after validating the patch report.
+    # No plan is returned unless the supplied authorization is byte-for-byte equivalent
+    # at the JSON-data level to the current trusted task/path policy.
+    if _load_report(allowlist_report_path) != current_scope:
+        raise DeliveryPlanError(
+            "Supplied allowlist report differs from the current canonical owner-reviewed policy"
+        )
 
     task = _load_canonical_task(trusted_root, expected_task_id)
     target_branch = task["target_branch"]
