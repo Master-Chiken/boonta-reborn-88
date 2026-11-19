@@ -197,7 +197,7 @@ class TaskReadPathTests(unittest.TestCase):
             for path, count in line_counts.items():
                 target = root / path
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text("x\\n" * count, encoding="utf-8")
+                target.write_text("x\n" * count, encoding="utf-8")
             self.assertEqual(validate_read_paths(data, root), [])
             task["read_ranges"][0]["end_line"] -= 1
             errors = validate_read_paths(data, root)
