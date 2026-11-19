@@ -147,6 +147,7 @@ class PipelineFixture(unittest.TestCase):
             "status": status,
             "task_id": task_id,
             "base_sha": base_sha or self.base_sha,
+            "policy_base_sha": self.base_sha,
             "approval_ref": APPROVAL if status == "READY" else "",
             "purpose": "Synthetic fixture approval",
             "allowed_paths": [SOURCE_PATH] if paths is None and status == "READY" else (paths or []),
