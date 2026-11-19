@@ -186,7 +186,7 @@ class ProviderPatchFixture(unittest.TestCase):
             "src/one.c", "src/other.c"
         )
         self.install_fake_opencode(self.event_stream(json.dumps(proposal)))
-        with self.assertRaisesRegex(provider.ProviderPatchError, "allow-list|approved"):
+        with self.assertRaisesRegex(provider.ProviderPatchError, "allowlist|allow-list|approved"):
             self.invoke()
         self.assertFalse(self.output_path.exists())
 
