@@ -334,7 +334,7 @@ def load_allowlist_report(
         "approval_ref", "purpose", "allowed_paths",
     }
     if set(report) != required:
-        raise ProposalError("READY allowlist report must contain exactly the six generated fields")
+        raise ProposalError("READY allowlist report must contain exactly the seven generated fields")
     if report.get("task_id") != expected_task_id:
         raise ProposalError("Allowlist report task ID does not match the trusted preflight task")
     if report.get("base_sha") != expected_base_sha:
@@ -422,6 +422,7 @@ def main() -> int:
     parser.add_argument("--expected-task-id")
     parser.add_argument("--expected-base-sha")
     parser.add_argument("--allowlist-report", type=Path)
+    parser.add_argument("--expected-policy-sha")
     parser.add_argument("--apply", action="store_true", help="apply only after all validation checks pass")
     parser.add_argument("--print-schema", action="store_true", help="print the strict proposal JSON Schema")
     args = parser.parse_args()
@@ -436,6 +437,7 @@ def main() -> int:
             args.allowlist_report,
             expected_task_id=args.expected_task_id,
             expected_base_sha=args.expected_base_sha,
+            expected_policy_sha=args.expected_policy_sha,
         )
         proposal = load_proposal(args.proposal)
         report = validate_or_apply(
