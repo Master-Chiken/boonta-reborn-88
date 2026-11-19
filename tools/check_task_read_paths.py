@@ -7,14 +7,18 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from check_task_ledger import LEDGER_PATH, ROOT, _valid_read_path, validate_ledger
+from check_task_ledger import (
+    LEDGER_PATH, ROOT, RIVAL_ROUTE_READ_PATHS, RIVAL_ROUTE_READ_RANGES,
+    RIVAL_ROUTE_TASK_ID, _valid_read_path, validate_ledger,
+)
 
 MAX_READ_PATH_BYTES = 96 * 1024
 MAX_TOTAL_READ_BYTES = 256 * 1024
-MAX_READ_PATH_COUNT = 5
+MAX_READ_PATH_COUNT = 4
 MAX_READ_RANGES = 8
 MAX_RANGE_LINES = 80
-MAX_TOTAL_RANGE_LINES = 320
+MAX_TOTAL_RANGE_LINES = 240
+RIVAL_ROUTE_TOTAL_RANGE_LINES = 280
 
 
 def validate_read_paths(
@@ -34,8 +38,15 @@ def validate_read_paths(
     for task_index, task in enumerate(data.get("tasks", [])):
         paths = task.get("read_paths") or []
         ranges = task.get("read_ranges") or []
-        if len(paths) > MAX_READ_PATH_COUNT:
-            errors.append(f"tasks[{task_index}].read_paths exceeds the {MAX_READ_PATH_COUNT}-file task limit")
+        task_id = task.get("task_id")
+        is_rival_route_scope = task_id == RIVAL_ROUTE_TASK_ID and paths == list(RIVAL_ROUTE_READ_PATHS)
+        path_limit = len(RIVAL_ROUTE_READ_PATHS) if is_rival_route_scope else MAX_READ_PATH_COUNT
+        range_line_limit = RIVAL_ROUTE_TOTAL_RANGE_LINES if is_rival_route_scope else MAX_TOTAL_RANGE_LINES
+        if task_id == RIVAL_ROUTE_TASK_ID and not is_rival_route_scope:
+            errors.append(f"tasks[{task_index}] does not match the exact owner-approved rival read-path set")
+            continue
+        if len(paths) > path_limit:
+            errors.append(f"tasks[{task_index}].read_paths exceeds its {path_limit}-file task limit")
             continue
         if paths and not isinstance(ranges, list):
             errors.append(f"tasks[{task_index}].read_ranges must be an array for tasks with read_paths")
@@ -133,11 +144,20 @@ def validate_read_paths(
                     errors.append(
                         f"{prefix} ends at line {end}, beyond {path}'s {actual_line_count} lines"
                     )
-            if total_range_lines > MAX_TOTAL_RANGE_LINES:
+            if total_range_lines > range_line_limit:
                 errors.append(
                     f"tasks[{task_index}].read_ranges span {total_range_lines} lines; "
-                    f"aggregate limit is {MAX_TOTAL_RANGE_LINES}"
+                    f"aggregate limit is {range_line_limit}"
                 )
+            if is_rival_route_scope:
+                actual_ranges = [
+                    (item.get("path"), item.get("start_line"), item.get("end_line"))
+                    for item in ranges if isinstance(item, dict)
+                ]
+                if actual_ranges != list(RIVAL_ROUTE_READ_RANGES):
+                    errors.append(
+                        f"tasks[{task_index}].read_ranges differ from the exact owner-approved rival ranges"
+                    )
             missing_paths = sorted(set(paths) - covered_paths)
             if missing_paths:
                 errors.append(
