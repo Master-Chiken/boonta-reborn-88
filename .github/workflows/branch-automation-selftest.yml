@@ -125,6 +125,10 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_patch_proposal.py
 
+      - name: Validate provider JSON handoff without network or GitHub credentials
+        shell: bash
+        run: python3 tools/test_autonomous_provider_patch.py
+
       - name: Validate fixed patch-test dispatcher with isolated fixtures (offline)
         shell: bash
         run: python3 tools/test_autonomous_patch_test_runner.py
