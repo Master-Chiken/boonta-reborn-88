@@ -174,8 +174,8 @@
         "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence."
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
-      "head_sha": "c8f4d9fe88d6bcf8b577c17a54b3508329b029c8",
-      "next_action_excerpt": "Owner authorized test_rival_ai.c read access; writes unchanged; wait for #439 review."
+      "head_sha": "7c49a97bc674f2b5ade8f950bec23944230535dc",
+      "next_action_excerpt": "Keep in_review until human review/merge of PR #439; no provider invocation. Revalidate the exact head and CI before any later resume."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
