@@ -162,6 +162,13 @@ class ProviderPatchFixture(unittest.TestCase):
         self.assertEqual(saved, self.proposal)
         self.assertEqual(git(self.root, "status", "--porcelain"), "")
 
+    def test_provider_attempt_marker_is_written_only_before_launch(self):
+        marker = self.parent / "github-output.txt"
+        self.install_fake_opencode(self.event_stream())
+        with patch.dict(os.environ, {"GITHUB_OUTPUT": str(marker)}, clear=False):
+            self.invoke()
+        self.assertIn("provider_request_started=true", marker.read_text(encoding="utf-8"))
+
     def test_tool_use_event_rejects_proposal(self):
         self.install_fake_opencode(self.event_stream(tool=True))
         with self.assertRaisesRegex(provider.ProviderPatchError, "tool call"):
