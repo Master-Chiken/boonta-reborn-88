@@ -147,6 +147,7 @@ rival_queued_task.update({
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
         "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c",
     ],
 })
 rival_draft_pr = {
@@ -508,7 +509,8 @@ cases = [
         "expected_resume_file_paths": [
             "gamecube-demo/source/gameplay_state.h",
             "gamecube-demo/source/main.c",
-            "gamecube-demo/source/rival_ai.h"
+            "gamecube-demo/source/rival_ai.h",
+            "gamecube-demo/tests/test_rival_ai.c"
         ],
         "expected_resume_target_branch": "dev",
         "expected_resume_pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
