@@ -223,7 +223,6 @@ def run_provider_patch(
     if _inside(destination, target) or _inside(destination, trusted):
         raise ProviderPatchError("Model proposal must be written outside both Git checkouts")
 
-    _validate_opencode_config()
     validate_checkout(target, expected_base_sha)
     validate_checkout(trusted, expected_policy_sha)
     allowed_paths = load_allowlist_report(
@@ -232,6 +231,7 @@ def run_provider_patch(
         expected_base_sha=expected_base_sha,
         expected_policy_sha=expected_policy_sha,
     )
+    _validate_opencode_config()
     context = _read_prompt(prompt_file)
     prompt = _build_prompt(
         context,
