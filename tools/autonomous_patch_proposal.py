@@ -306,6 +306,7 @@ def load_allowlist_report(
     *,
     expected_task_id: str,
     expected_base_sha: str,
+    expected_policy_sha: str | None = None,
 ) -> set[str]:
     """Load a trusted report from the repository-owned path-policy generator."""
     if path.is_symlink():
@@ -325,13 +326,21 @@ def load_allowlist_report(
         raise ProposalError("Allowlist report must be a JSON object")
     if report.get("status") != "READY":
         raise ProposalError("Allowlist report is not READY; no write paths are authorized")
-    required = {"status", "task_id", "base_sha", "approval_ref", "purpose", "allowed_paths"}
+    policy_sha = expected_policy_sha or expected_base_sha
+    if not SHA_RE.fullmatch(policy_sha):
+        raise ProposalError("Expected policy base SHA is invalid")
+    required = {
+        "status", "task_id", "base_sha", "policy_base_sha",
+        "approval_ref", "purpose", "allowed_paths",
+    }
     if set(report) != required:
         raise ProposalError("READY allowlist report must contain exactly the six generated fields")
     if report.get("task_id") != expected_task_id:
         raise ProposalError("Allowlist report task ID does not match the trusted preflight task")
     if report.get("base_sha") != expected_base_sha:
-        raise ProposalError("Allowlist report base SHA does not match the trusted checkout")
+        raise ProposalError("Allowlist report base SHA does not match the target checkout")
+    if report.get("policy_base_sha") != policy_sha:
+        raise ProposalError("Allowlist report policy base SHA does not match the trusted policy checkout")
     if (
         not isinstance(report.get("approval_ref"), str)
         or not APPROVAL_RE.fullmatch(report["approval_ref"])
