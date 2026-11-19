@@ -122,6 +122,7 @@ class PatchCycleTests(unittest.TestCase):
                     target_branch="dev",
                     model="groq/openai/gpt-oss-20b",
                 )
+                self.assertNotIn("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED", os.environ)
         self.assertEqual(result["status"], "BLOCKED")
         self.assertIn("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED", self.report.read_text(encoding="utf-8"))
         provider.assert_not_called()

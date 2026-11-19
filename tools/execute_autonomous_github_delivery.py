@@ -432,7 +432,7 @@ def main() -> int:
                 "task_id": args.expected_task_id,
                 "base_sha": args.expected_base_sha,
                 "branch_name": plan["branch_name"],
-                "draft": False,
+                "draft": True,
                 "remote_write_performed": False,
                 "reason": "Pass --execute and both explicit environment gates to create a draft PR.",
             }, sort_keys=True))
