@@ -108,7 +108,7 @@ class DeliveryPlanFixture(unittest.TestCase):
             "base_sha": base_sha or self.base_sha,
             "policy_base_sha": self.base_sha,
             "approval_ref": APPROVAL if status == "READY" else "",
-            "purpose": "Synthetic exact-path grant",
+            "purpose": "Synthetic owner-reviewed path",
             "allowed_paths": [SOURCE_PATH] if paths is None and status == "READY" else (paths or []),
         }
         self.allowlist_path.write_text(json.dumps(report), encoding="utf-8")
