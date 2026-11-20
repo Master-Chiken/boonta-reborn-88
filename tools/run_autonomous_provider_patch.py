@@ -11,9 +11,11 @@ import argparse
 import json
 import os
 import re
+import selectors
 import shutil
 import signal
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +28,7 @@ from autonomous_patch_proposal import (
 
 MAX_PROMPT_BYTES = 32 * 1024
 MAX_STREAM_BYTES = 256 * 1024
+MAX_STDERR_BYTES = 64 * 1024
 MAX_PROPOSAL_BYTES = 96 * 1024
 MAX_TIMEOUT_SECONDS = 180
 ALLOWED_MODELS = {
@@ -194,6 +197,122 @@ def parse_event_stream(raw: str) -> str:
     return texts[0].strip()
 
 
+
+def _stop_process_group(process: subprocess.Popen[bytes]) -> None:
+    """Terminate OpenCode and any descendants without leaving orphan processes."""
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        os.killpg(process.pid, 0)
+    except ProcessLookupError:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _run_bounded_provider_process(
+    command: list[str], *, cwd: Path, env: dict[str, str], timeout_seconds: int
+) -> bytes:
+    """Capture bounded OpenCode stdout while draining (but not retaining) stderr."""
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False,
+            bufsize=0,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        raise ProviderPatchError("OpenCode could not be launched; no provider request was started") from exc
+
+    # A cooldown marker means the provider process actually started, not merely
+    # that a GITHUB_OUTPUT file happened to exist during local preflight.
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if output_path:
+        try:
+            with open(output_path, "a", encoding="utf-8") as output:
+                output.write("provider_request_started=true\n")
+        except OSError as exc:
+            _stop_process_group(process)
+            raise ProviderPatchError("Could not record provider-start state; OpenCode was stopped") from exc
+
+    stdout_data = bytearray()
+    stderr_size = 0
+    deadline = time.monotonic() + timeout_seconds
+    selector = selectors.DefaultSelector()
+    streams = ((process.stdout, "stdout"), (process.stderr, "stderr"))
+    try:
+        for stream, label in streams:
+            if stream is None:
+                raise ProviderPatchError("OpenCode output pipe was not created")
+            os.set_blocking(stream.fileno(), False)
+            selector.register(stream, selectors.EVENT_READ, label)
+
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ProviderPatchError("OpenCode provider invocation timed out; process group stopped without retry")
+            ready = selector.select(remaining)
+            if not ready:
+                continue
+            for key, _mask in ready:
+                try:
+                    chunk = os.read(key.fileobj.fileno(), 8192)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    key.fileobj.close()
+                    continue
+                if key.data == "stdout":
+                    if len(stdout_data) + len(chunk) > MAX_STREAM_BYTES:
+                        raise ProviderPatchError("OpenCode stdout exceeded the 256 KiB limit; process group stopped")
+                    stdout_data.extend(chunk)
+                else:
+                    stderr_size += len(chunk)
+                    if stderr_size > MAX_STDERR_BYTES:
+                        raise ProviderPatchError("OpenCode stderr exceeded the 64 KiB limit; process group stopped")
+
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ProviderPatchError("OpenCode provider invocation timed out; process group stopped without retry")
+        try:
+            status = process.wait(timeout=remaining)
+        except subprocess.TimeoutExpired as exc:
+            raise ProviderPatchError("OpenCode provider invocation timed out; process group stopped without retry") from exc
+    except ProviderPatchError:
+        _stop_process_group(process)
+        raise
+    except (OSError, ValueError) as exc:
+        _stop_process_group(process)
+        raise ProviderPatchError("OpenCode output could not be captured safely; process group stopped") from exc
+    finally:
+        selector.close()
+        for stream, _label in streams:
+            if stream is not None and not stream.closed:
+                stream.close()
+
+    if status != 0:
+        raise ProviderPatchError(f"OpenCode exited with status {status}; proposal rejected")
+    return bytes(stdout_data)
+
+
 def run_provider_patch(
     *,
     repo_root: Path,
@@ -261,43 +380,16 @@ def run_provider_patch(
     if output_path:
         with open(output_path, "a", encoding="utf-8") as output:
             output.write("provider_request_started=true\n")
-    process = None
+    stdout_bytes = _run_bounded_provider_process(
+        command,
+        cwd=trusted,
+        env=env,
+        timeout_seconds=timeout_seconds,
+    )
     try:
-        process = subprocess.Popen(
-            command,
-            cwd=trusted,
-            env=env,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="strict",
-            start_new_session=True,
-        )
-        stdout, _stderr = process.communicate(timeout=timeout_seconds)
-    except subprocess.TimeoutExpired as exc:
-        if process is not None:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                process.wait()
-        raise ProviderPatchError("OpenCode provider invocation timed out; process group stopped without retry") from exc
-    except (OSError, UnicodeError) as exc:
-        raise ProviderPatchError("OpenCode could not be launched or returned invalid UTF-8") from exc
-    if len(stdout.encode("utf-8")) > MAX_STREAM_BYTES:
-        raise ProviderPatchError("OpenCode event stream exceeded the 256 KiB limit")
-    if process is None or process.returncode != 0:
-        status = process.returncode if process is not None else "unavailable"
-        raise ProviderPatchError(f"OpenCode exited with status {status}; proposal rejected")
+        stdout = stdout_bytes.decode("utf-8", errors="strict")
+    except UnicodeError as exc:
+        raise ProviderPatchError("OpenCode stdout was not valid UTF-8") from exc
 
     proposal_text = parse_event_stream(stdout)
     if len(proposal_text.encode("utf-8")) > MAX_PROPOSAL_BYTES:

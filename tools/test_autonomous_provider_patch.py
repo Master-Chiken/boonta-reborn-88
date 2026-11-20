@@ -114,22 +114,28 @@ class ProviderPatchFixture(unittest.TestCase):
                 })
         return "".join(json.dumps(event) + "\n" for event in events)
 
-    def install_fake_opencode(self, stream: str, *, exit_code: int = 0) -> None:
+    def install_fake_opencode(
+        self, stream: str, *, exit_code: int = 0,
+        stdout_padding: int = 0, stderr_padding: int = 0, sleep_seconds: float = 0.0,
+    ) -> None:
         script = self.fake_bin / "opencode"
         script.write_text(
             "#!" + sys.executable + "\n"
-            "import os, sys\n"
+            "import os, sys, time\n"
             "assert os.environ.get('GITHUB_TOKEN') is None\n"
             "assert os.environ.get('GITHUB_PERSONAL_ACCESS_TOKEN') is None\n"
             "assert os.environ.get('GROQ_API_KEY') == 'g' * 32\n"
             "assert '--format' in sys.argv and 'json' in sys.argv\n"
-            "sys.stdout.write(" + repr(stream) + ")\n"
+            "sys.stdout.buffer.write(" + repr(stream.encode("utf-8")) + ")\n"
+            "sys.stdout.buffer.write(b'x' * " + str(stdout_padding) + ")\n"
+            "sys.stderr.buffer.write(b'e' * " + str(stderr_padding) + ")\n"
+            "time.sleep(" + repr(sleep_seconds) + ")\n"
             "sys.exit(" + str(exit_code) + ")\n",
             encoding="utf-8",
         )
         script.chmod(0o755)
 
-    def invoke(self, *, model: str = MODEL) -> dict:
+    def invoke(self, *, model: str = MODEL, timeout_seconds: int = 90) -> dict:
         with patch.dict(os.environ, {
             "PATH": str(self.fake_bin) + os.pathsep + os.environ.get("PATH", os.defpath),
             "HOME": str(self.parent),
@@ -148,6 +154,7 @@ class ProviderPatchFixture(unittest.TestCase):
                 expected_base_sha=self.base_sha,
                 expected_policy_sha=self.base_sha,
                 model=model,
+                timeout_seconds=timeout_seconds,
             )
 
     def test_valid_provider_text_becomes_one_bounded_proposal(self):
@@ -168,6 +175,37 @@ class ProviderPatchFixture(unittest.TestCase):
         with patch.dict(os.environ, {"GITHUB_OUTPUT": str(marker)}, clear=False):
             self.invoke()
         self.assertIn("provider_request_started=true", marker.read_text(encoding="utf-8"))
+
+    def test_stdout_limit_is_enforced_while_streaming(self):
+        self.install_fake_opencode(
+            self.event_stream(), stdout_padding=provider.MAX_STREAM_BYTES + 8192,
+        )
+        with self.assertRaisesRegex(provider.ProviderPatchError, "stdout exceeded"):
+            self.invoke()
+        self.assertFalse(self.output_path.exists())
+
+    def test_stderr_limit_is_enforced_while_streaming(self):
+        self.install_fake_opencode(
+            self.event_stream(), stderr_padding=provider.MAX_STDERR_BYTES + 8192,
+        )
+        with self.assertRaisesRegex(provider.ProviderPatchError, "stderr exceeded"):
+            self.invoke()
+        self.assertFalse(self.output_path.exists())
+
+    def test_timeout_stops_provider_process_without_retry(self):
+        self.install_fake_opencode(self.event_stream(), sleep_seconds=5.0)
+        with self.assertRaisesRegex(provider.ProviderPatchError, "timed out"):
+            self.invoke(timeout_seconds=1)
+        self.assertFalse(self.output_path.exists())
+
+    def test_missing_executable_does_not_mark_provider_started(self):
+        self.install_fake_opencode(self.event_stream())
+        (self.fake_bin / "opencode").unlink()
+        marker = self.parent / "github-output-missing-executable.txt"
+        with patch.dict(os.environ, {"GITHUB_OUTPUT": str(marker)}, clear=False):
+            with self.assertRaisesRegex(provider.ProviderPatchError, "CLI is unavailable"):
+                self.invoke()
+        self.assertFalse(marker.exists())
 
     def test_tool_use_event_rejects_proposal(self):
         self.install_fake_opencode(self.event_stream(tool=True))
