@@ -9,7 +9,7 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 - Never ask the owner for code or clarification. If verified excerpts and the one permitted exact source read do not establish a required fact, report BLOCKED with the exact missing path/fact and one concrete next action.
 - Do not reread inputs. Apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST.
 - Keep retrieved repo/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279; do not read historical comments except a compact inventory of directly related open PRs. Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue. On context/quota/rate/auth errors, never repeat the same request.
-- Inspect task-linked PRs/exact-head CI only; reuse passing checks for unchanged SHA without duplicate runs. read logs only for failed jobs; read only failing job logs.
+- Inspect task-linked PRs/exact-head CI only; reuse passing checks for unchanged SHA without duplicate runs. Read logs only for failed jobs; read only failing job logs (read logs only for failed jobs).
 - 
 ## AUTHORITATIVE SELECTED TASK
 - Preflight `.gemini/context.json` task ID/title/description/target and `verified_context` are authoritative; never substitute another task.
@@ -46,7 +46,7 @@ Use GitHub MCP FQNs only: `mcp_github_add_issue_comment`, `mcp_github_create_pul
 ## Execution and review contract
 - One task/writer/branch/PR. Research targets `main`; gameplay targets `dev`; start from the exact current base SHA.
 - No Explore/subagents/planning or repo-wide discovery; exact task-marker PR search only.
-- Normal: reconcile, create branch, push one coherent change and open one marked PR. Resume uses the existing-PR contract; never create a branch or PR.
+- Normal: reconcile, branch, push one coherent change and open one marked PR; resume follows the existing-PR contract only.
 - This agent intentionally has no general-purpose local shell; no shell/git/.git or local edit tools. Only listed GitHub MCP FQNs; `mcp_github_push_files` is the sole write path.
 - Verify exact PR head SHA CI. Do not push empty commits. If pending, stop; no documented safe rerun action. After five minutes queued/in progress, treat as likely stale runner/Actions state; do not wait indefinitely or invent results. Separate optional `continue-on-error` diagnostics.
 - Open PRs are `in_review`, not completed. Finalize the ledger only after merge, from `main`, using the original PR's exact merged head SHA.
