@@ -370,6 +370,43 @@ if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
 # OpenRouter is allowed only through the audited manual free-model PR reviewer.
 openrouter = read(".github/workflows/openrouter-free-review.yml")
 openrouter_fallback = read(".github/workflows/openrouter-plan-execute.yml")
+gemini_plan_workflow = read(".github/workflows/gemini-plan-execute.yml")
+groq_plan_workflow = read(".github/workflows/groq-plan-execute.yml")
+openrouter_plan_workflow = openrouter_fallback
+autonomous_loop_workflow = read(".github/workflows/boonta-autonomous-loop.yml")
+fresh_guard_tests = read("tools/test_autonomous_fresh_task_guard.py")
+
+# Human review is a global single-writer lock. Every provider must reject both
+# new-task and existing-PR invocations before model inference.
+for label, workflow in (
+    ("Gemini", gemini_plan_workflow),
+    ("Groq", groq_plan_workflow),
+    ("OpenRouter", openrouter_plan_workflow),
+):
+    for required in (
+        "const inReviewTasks = ledgerSummary.tasks.filter((task) => task.status === 'in_review');",
+        "const inReviewTasks = summary.tasks.filter((task) => task.status === 'in_review');",
+        "another task is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation",
+        "task.read_paths.length > (task.task_id === 'GC-RIVAL-ROUTE-PROGRESSION' ? 5 : 4)",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} provider workflow is missing its pre-inference review/read-scope guard: {required!r}")
+for required in (
+    "const hasInReviewTasks = inReviewTasks.length > 0;",
+    "if (hasInReviewTasks) {",
+    "queueState = 'WAITING_FOR_TASK_REVIEW';",
+    "activeTasks.length === 0 && !hasInReviewTasks",
+    "!resumeCandidateTask?.head_sha && !hasInReviewTasks",
+):
+    if required not in autonomous_loop_workflow:
+        errors.append(f"Autonomous scheduler is missing its in_review writer lock: {required!r}")
+for required in (
+    "queued task is blocked while another task awaits human review",
+    "existing PR resume is blocked while another task awaits human review",
+):
+    if required not in fresh_guard_tests:
+        errors.append(f"Provider pre-inference guard tests are missing the review-lock case: {required!r}")
+
 workflow_dir = ROOT / ".github" / "workflows"
 workflow_files = sorted({*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")})
 allowed_openrouter_workflows = {"openrouter-free-review.yml", "openrouter-plan-execute.yml", "boonta-autonomous-readiness.yml"}
