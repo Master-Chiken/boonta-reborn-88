@@ -871,14 +871,15 @@ jobs:
           Groq Free, €0 only. Resume exactly one existing task PR.
 
           AUTHORITY
-          - Workflow revalidated owner, repo, open/non-draft PR, markers, base/branch/URL and prior HEAD under writer lock.
-          - AUTONOMOUS_CONTEXT is injected below, not a repository file. Never request or read AUTONOMOUS_CONTEXT.md.
-          - Task, criteria, next action, excerpts and Exact owner-approved write paths (no others) are supplied. Start now; no questions or plan.
+          - Workflow revalidated owner, repo, open PR, markers, branch, URL and HEAD under writer lock.
+          - AUTONOMOUS_CONTEXT is injected below in this prompt; never request/read AUTONOMOUS_CONTEXT.md.
+          - Task, criteria, next action, excerpts and owner-approved exact write paths are supplied.
+          - Start now; do not ask questions or narrate a plan.
           - Do not search PR history, invoke agents or web tools. Use only the exposed GitHub MCP tools.
 
           WRITE
           - Only github_get_file_contents and github_push_files. Read exactly one listed path using the supplied existing branch as the ref; call github_push_files exactly once with updated content on that branch, changing only owner-approved paths.
-          - No branch/PR creation; never write main/dev, merge, force-push, delete refs, change secrets/settings or edit the canonical ledger.
+          - No branch/PR creation; never write main/dev, merge, force-push, delete refs, change secrets/settings or edit the ledger.
           - Implement one unmet criterion. If unsafe/insufficient, report the exact blocker; never ask the owner for clarification. Preserve provenance/licences; no ROMs/assets.
 
           REPORT
