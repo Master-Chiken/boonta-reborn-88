@@ -22,7 +22,7 @@ jobs:
   static-guardrails:
     name: Verify Gemini free-only guardrails
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
@@ -32,6 +32,30 @@ jobs:
 
       - name: Test pinned trusted main checkout and summary validation (offline)
         run: python3 tools/test_validate_trusted_main_checkout.py
+
+      - name: Run structured patch pipeline regression suite (offline)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/test_preflight_github_mcp.py
+          python3 tools/test_autonomous_task_preflight.py
+          python3 tools/check_task_read_paths.py
+          python3 tools/test_task_read_paths.py
+          python3 tools/test_autonomous_context.py
+          python3 tools/test_autonomous_fresh_task_guard.py
+          python3 tools/test_autonomous_patch_proposal.py
+          python3 tools/test_autonomous_provider_patch.py
+          python3 tools/test_autonomous_patch_test_runner.py
+          python3 tools/test_autonomous_path_allowlist.py
+          python3 tools/test_verify_autonomous_patch.py
+          python3 tools/test_autonomous_delivery_plan.py
+          python3 tools/test_execute_autonomous_github_delivery.py
+          python3 tools/test_openrouter_watchdog.py
+          python3 tools/run_autonomous_patch_tests.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --test-id automation.task_preflight \
+            --test-id automation.provider_handoff \
+            --test-id automation.task_ledger
 
       - name: Verify provider fallback stops after a completed model invocation
         run: python3 tools/check_autonomous_provider_handoff.py
