@@ -427,7 +427,7 @@ for required in (
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "Groq Free, €0 only. Resume exactly one existing task PR.",
     "Only github_get_file_contents and github_push_files are exposed.",
-    "Read exactly one listed path using the supplied existing branch as the ref",
+    "Read at most one listed path using the supplied existing branch as the ref",
 ):
     if required not in groq:
         errors.append(f"Groq exact-PR resume guard is missing {required!r}")
