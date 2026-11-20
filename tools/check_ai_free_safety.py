@@ -35,6 +35,9 @@ instructions = read("GEMINI.md")
 selftest = read(".github/workflows/branch-automation-selftest.yml")
 cycle_validator = read("tools/validate_autonomous_cycle_report.js")
 cycle_validator_tests = read("tools/test_autonomous_cycle_report.js")
+patch_cycle = read("tools/run_autonomous_patch_cycle.py")
+trusted_main_validator = read("tools/validate_trusted_main_checkout.py")
+trusted_main_validator_tests = read("tools/test_validate_trusted_main_checkout.py")
 
 # The on-demand Gemini action installs its own default /gemini-invoke command,
 # whose template uses shell substitutions. Invoke our read-only instructions
@@ -1783,6 +1786,27 @@ for label, workflow, model in (
         errors.append(f"{label} structured patch provider process must not receive GitHub MCP credentials or tool access")
     if "GITHUB_TOKEN:" not in patch_step or "GITHUB_REPOSITORY:" not in patch_step:
         errors.append(f"{label} structured patch runner must retain scoped delivery credentials outside the model process")
+
+# The deterministic fresh-task runner must validate the pinned trusted main ledger/cache
+# before building write paths or invoking a free provider.
+for required in (
+    "from validate_trusted_main_checkout import TrustedMainCheckoutError, validate_trusted_main_checkout",
+    "validate_trusted_main_checkout(trusted, policy_sha)",
+):
+    if required not in patch_cycle:
+        errors.append(f"Fresh-task patch runner is missing trusted-main validation: {required!r}")
+if "from check_task_ledger_summary import build_summary" not in trusted_main_validator:
+    errors.append("Trusted-main validator must derive the compact summary from the canonical ledger")
+if "validate_trusted_main_checkout" not in trusted_main_validator_tests:
+    errors.append("Trusted-main validator offline tests are missing")
+for required in (
+    "tools/validate_trusted_main_checkout.py",
+    "tools/test_validate_trusted_main_checkout.py",
+):
+    if required not in autonomous:
+        errors.append(f"Autonomous loop push path filter is missing trusted-main guard input: {required!r}")
+if "python3 tools/test_validate_trusted_main_checkout.py" not in selftest:
+    errors.append("Branch automation self-test must execute trusted-main validator fixtures")
 
 # Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
 reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
