@@ -251,6 +251,92 @@ static void nemesis_bonus_yields_to_player_and_close_traffic(void)
     assert(nearf_ai(nemesis_traffic, base_traffic));
 }
 
+/*
+ * Exercise the production steering-to-branch mapping against a synthetic
+ * fork/rejoin graph. The graph uses the checked-in Bezier edge tangents, so
+ * left/right choices are tested through the same geometric selector used by
+ * the runtime. Two rivals then traverse different branches and rejoin.
+ */
+static void rival_branch_steering_selects_distinct_paths_and_rejoins(void)
+{
+    static const BoontaRouteCursorEdge branch_edges[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {
+        { 0U, 1U, 0.000f, 0.250f }, /* shared approach */
+        { 1U, 2U, 0.250f, 0.500f }, /* straight/left choice */
+        { 1U, 3U, 0.250f, 0.500f }, /* right choice */
+        { 2U, 4U, 0.500f, 0.750f }, /* left return */
+        { 3U, 4U, 0.500f, 0.750f }, /* right return */
+        { 4U, 5U, 0.750f, 0.850f }, /* shared exit */
+        { 6U, 7U, 0.850f, 0.925f }, /* valid disconnected filler edge */
+        { 7U, 6U, 0.925f, 1.000f }  /* valid disconnected filler edge */
+    };
+    const BoontaRouteCursorGraph branch_graph = {
+        branch_edges, BOONTA_RUNTIME_ROUTE_EDGE_COUNT, 8U, 0U, 0
+    };
+    BoontaRouteGraphSampler sampler = {0};
+    BoontaRouteCursor left_rival;
+    BoontaRouteCursor right_rival;
+    BoontaRouteCursorState left_state;
+    BoontaRouteCursorState right_state;
+    const float selection_distance = 16.8f;
+    const float preview_distance = 4.0f;
+    const float distance_before_junction = 1.0f;
+
+    assert(boonta_rival_route_branch_direction_from_steering(-0.8f, 0.2f) == -1);
+    assert(boonta_rival_route_branch_direction_from_steering(0.8f, 0.2f) == 1);
+    assert(boonta_rival_route_branch_direction_from_steering(-0.2f, 0.2f) == 0);
+    assert(boonta_rival_route_branch_direction_from_steering(0.0f, 0.2f) == 0);
+    assert(boonta_rival_route_branch_direction_from_steering(0.2f, 0.2f) == 0);
+    assert(boonta_rival_route_branch_direction_from_steering(NAN, 0.2f) == 0);
+    assert(boonta_rival_route_branch_direction_from_steering(0.8f, NAN) == 0);
+
+    assert(boonta_route_graph_sampler_prepare(&sampler));
+    assert(boonta_route_cursor_init(&left_rival, &branch_graph,
+        sampler.edge_lengths, 0U) == BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_init(&right_rival, &branch_graph,
+        sampler.edge_lengths, 0U) == BOONTA_ROUTE_CURSOR_OK);
+
+    /* Both rivals reach the same fork with one metre remaining. */
+    assert(boonta_route_cursor_move(&left_rival,
+        sampler.edge_lengths[0] - distance_before_junction,
+        NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&right_rival,
+        sampler.edge_lengths[0] - distance_before_junction,
+        NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+
+    assert(boonta_route_graph_sampler_prime_lookahead(
+        &sampler, &left_rival,
+        boonta_rival_route_branch_direction_from_steering(-0.8f, 0.2f),
+        selection_distance, preview_distance) == BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_graph_sampler_prime_lookahead(
+        &sampler, &right_rival,
+        boonta_rival_route_branch_direction_from_steering(0.8f, 0.2f),
+        selection_distance, preview_distance) == BOONTA_ROUTE_CURSOR_OK);
+
+    assert(left_rival.path_index == 0U && right_rival.path_index == 0U);
+    assert(left_rival.history_count == 2U && right_rival.history_count == 2U);
+    assert(left_rival.path_history[1] == 1U);
+    assert(right_rival.path_history[1] == 2U);
+
+    /* Follow the selected branch and its return edge to their common exit. */
+    assert(boonta_route_cursor_move(&left_rival,
+        distance_before_junction + sampler.edge_lengths[1] +
+            sampler.edge_lengths[3] + 0.25f, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&right_rival,
+        distance_before_junction + sampler.edge_lengths[2] +
+            sampler.edge_lengths[4] + 0.25f, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+
+    assert(boonta_route_cursor_get_state(&left_rival, &left_state) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_get_state(&right_rival, &right_state) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(left_state.edge == 5U && right_state.edge == 5U);
+    assert(left_rival.path_history[1] == 1U &&
+           left_rival.path_history[2] == 3U);
+    assert(right_rival.path_history[1] == 2U &&
+           right_rival.path_history[2] == 4U);
+    assert(left_rival.path_history[3] == right_rival.path_history[3]);
+}
+
 /* Shared geometry is immutable; each opponent must own its traversal history. */
 static void rival_route_cursors_are_independent_and_order_invariant(void)
 {
@@ -542,6 +628,7 @@ int main(void)
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
     shared_frame_snapshot_and_movement_are_order_invariant();
+    rival_branch_steering_selects_distinct_paths_and_rejoins();
     rival_route_cursors_are_independent_and_order_invariant();
     rival_route_progress_finishes_independently_and_resets();
     puts("rival AI tests: PASS");
