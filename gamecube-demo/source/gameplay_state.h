@@ -23,7 +23,9 @@ typedef enum {
  * the exact Y-button restart transition can be exercised by host tests.
  */
 typedef struct {
+    /* Physical route distance drives geometry and movement; route_progress drives race ranking. */
     float distance;
+    float route_progress;
     unsigned int lap_count;
     float race_seconds;
     float lap_seconds;
@@ -568,8 +570,8 @@ static inline unsigned int boonta_race_current_position(const BoontaRaceState *s
         const unsigned int bit = 1U << i;
         if ((state->rival_finished_mask & bit) != 0U ||
             (isfinite(state->rival_progress[i]) &&
-             isfinite(state->distance) &&
-             state->rival_progress[i] > state->distance)) {
+             isfinite(state->route_progress) &&
+             state->rival_progress[i] > state->route_progress)) {
             ++position;
         }
     }
@@ -842,6 +844,7 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     if (state == 0) return;
 
     state->distance = 0.0f;
+    state->route_progress = 0.0f;
     state->lap_count = 0U;
     state->race_seconds = 0.0f;
     state->lap_seconds = 0.0f;
