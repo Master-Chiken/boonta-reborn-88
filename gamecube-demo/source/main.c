@@ -28,6 +28,7 @@
 /* HUD text plus layered finish-banner quads can exceed the old 4096-vertex cap.
  * Keep enough headroom so append operations don't silently drop the checkerboard. */
 #define VERTEX_CAPACITY    16384U
+#define BOONTA_REFERENCE_ROAD_HALF_WIDTH 3.6f
 #define ROAD_SEGMENTS      32U
 #define RACE_LAP_LIMIT       3U
 #define PLAYER_ANCHOR_LOCAL_Z 1.0f
@@ -237,7 +238,7 @@ static float rival_route_signed_curvature_at(unsigned int rival_index, float tra
 static float rival_route_half_width_at(unsigned int rival_index, float travelled)
 {
     float width = g_current_course != NULL
-        ? g_current_course->road_half_width : 3.6f;
+        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
     if (rival_route_sample_at(rival_index, travelled,
             NULL, NULL, NULL, &width) != BOONTA_ROUTE_CURSOR_OK) {
         return g_current_course != NULL
