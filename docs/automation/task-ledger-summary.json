@@ -50,7 +50,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone…"
+      "next_action_excerpt": "Blocked pending issue #459 and #458 reconciliation. The prior local parser probe already recorded structural counts; do not ask the owner…"
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
