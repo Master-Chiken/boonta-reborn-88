@@ -193,7 +193,7 @@ for label, workflow in (
     ("Groq", read(".github/workflows/groq-plan-execute.yml")),
 ):
     config_start = workflow.find('cat > "$RUNNER_TEMP/opencode.json" <<\'JSON\'')
-    config_end = workflow.find("\\n          JSON", config_start)
+    config_end = workflow.find("\n          JSON", config_start)
     config = workflow[config_start:config_end] if config_start >= 0 and config_end > config_start else ""
     for required in (
         '"question": "deny"',
@@ -204,9 +204,9 @@ for label, workflow in (
         if required not in config:
             errors.append(f"{label} OpenCode resume config must deny non-GitHub interaction tool {required!r}")
 
-    resume_start = workflow.find("RESUME_PROMPT\\n")
-    resume_end = workflow.find("\\n          RESUME_PROMPT", resume_start)
-    resume_prompt = workflow[resume_start + len("RESUME_PROMPT\\n"):resume_end] if resume_start >= 0 and resume_end > resume_start else ""
+    resume_start = workflow.find("RESUME_PROMPT\n")
+    resume_end = workflow.find("\n          RESUME_PROMPT", resume_start)
+    resume_prompt = workflow[resume_start + len("RESUME_PROMPT\n"):resume_end] if resume_start >= 0 and resume_end > resume_start else ""
     for required in (
         "AUTONOMOUS_CONTEXT is injected below in this prompt",
         "Never request or read AUTONOMOUS_CONTEXT.md",
