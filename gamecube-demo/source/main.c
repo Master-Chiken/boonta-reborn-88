@@ -246,7 +246,7 @@ static float rival_route_half_width_at(unsigned int rival_index, float travelled
     if (rival_route_sample_at(rival_index, travelled,
             NULL, NULL, NULL, &width) != BOONTA_ROUTE_CURSOR_OK) {
         return g_current_course != NULL
-            ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+            ? g_current_course->road_half_width : 3.6f;
     }
     return width;
 }
@@ -325,7 +325,7 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
         if (y_out != NULL) *y_out = 0.0f;
         if (z_out != NULL) *z_out = 0.0f;
         if (width_out != NULL) *width_out = g_current_course != NULL
-            ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+            ? g_current_course->road_half_width : 3.6f;
         return;
     }
     g_current_course->sample(g_current_course->runtime_context, g_distance, travelled,
@@ -355,14 +355,14 @@ static float track_center_x_at(float travelled)
     float x = 0.0f;
     track_sample_at(travelled, &x, NULL, NULL, NULL);
     const float course_half_width = g_current_course != NULL
-        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+        ? g_current_course->road_half_width : 3.6f;
     return x * (course_half_width * 0.78f / 22.0f);
 }
 
 static float track_half_width_at(float travelled)
 {
     float width = g_current_course != NULL
-        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+        ? g_current_course->road_half_width : 3.6f;
     track_sample_at(travelled, NULL, NULL, NULL, &width);
     return width;
 }
