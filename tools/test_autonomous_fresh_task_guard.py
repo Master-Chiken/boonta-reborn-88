@@ -91,6 +91,7 @@ def summary(tasks: list[dict], completed_task_ids: list[str] | None = None) -> d
 valid_active = task("AUTOMATION-TEST-ACTIVE")
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
 queued = task("AUTOMATION-TEST-QUEUED", "queued")
+in_review = task("AUTOMATION-REVIEW-TASK", "in_review")
 queued["depends_on"] = ["TASK-PREREQUISITE"]
 cases = [
     {
@@ -100,6 +101,14 @@ cases = [
         "ledger": summary([queued], ["TASK-PREREQUISITE"]),
         "open_prs": [],
         "expected_allowed": True,
+    },
+    {
+        "name": "queued task is blocked while another task awaits human review",
+        "task_id": queued["task_id"],
+        "branch": "main",
+        "ledger": summary([queued, in_review], ["TASK-PREREQUISITE"]),
+        "open_prs": [],
+        "expected_allowed": False,
     },
     {
         "name": "queued task with an in-review dependency is rejected",
@@ -408,6 +417,12 @@ resume_cases = [
         "ledger": summary([resume_task]),
         "open_prs": [resume_pr],
         "expected_allowed": True,
+    },
+    {
+        "name": "existing PR resume is blocked while another task awaits human review",
+        "ledger": summary([resume_task, in_review]),
+        "open_prs": [resume_pr],
+        "expected_allowed": False,
     },
     {
         "name": "changed PR head after preflight is rejected",
