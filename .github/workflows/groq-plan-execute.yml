@@ -869,21 +869,24 @@ jobs:
             RESUME_ALLOWED_PATHS="$(jq -r '.[] | "- " + .' <<<"$RESUME_FILE_PATHS")"
             PROMPT="$(cat <<'RESUME_PROMPT'
           Groq Free, €0 only. Resume exactly one existing task PR.
-
+          
           AUTHORITY
-          - Workflow revalidated owner, repo, open PR, markers, branch, URL and HEAD under writer lock.
-          - AUTONOMOUS_CONTEXT is injected below in this prompt. Never request or read AUTONOMOUS_CONTEXT.md.
-          - Task, criteria, next action, excerpts and owner-approved exact write paths are supplied.
-          - Start now; do not ask questions or narrate a plan.
-          - Do not search PR history, invoke agents or web tools. Use only the exposed GitHub MCP tools.
-
+          - Verified owner, same-repo open/non-draft PR, markers, base/branch/URL and HEAD.
+          - AUTONOMOUS_CONTEXT is injected below in this prompt; not a file. Never request or read AUTONOMOUS_CONTEXT.md.
+          - Context has task, criteria, next action, excerpts and owner-approved paths. Start; do not ask questions or narrate a plan.
+          - Do not search PR history, use agents/web or raw URLs. Use only the exposed GitHub MCP tools.
+          
           WRITE
-          - Only github_get_file_contents and github_push_files. Read exactly one listed path using the supplied existing branch as the ref; call github_push_files exactly once with updated content on that branch, changing only owner-approved paths.
-          - No branch/PR creation; never write main/dev, merge, force-push, delete refs, change secrets/settings or edit the ledger.
-          - Implement one unmet criterion. If unsafe/insufficient, report the exact blocker; never ask the owner for clarification. Preserve provenance/licences; no ROMs/assets.
-
+          - Tools: github_get_file_contents + github_push_files only. Use excerpts first; read at most one listed path using the supplied existing branch as the ref. Call github_push_files exactly once with full updated content.
+          - No new branch/PR or main/dev writes, merge, force-push, ref deletion, secret/settings/ledger edits.
+          - Make one safe change for earliest unmet criterion; else BLOCKED with exact gap/action. Never ask the owner for clarification.
+          - Preserve provenance/licenses; don't guess.
+          
+          EVIDENCE
+          - PROGRESS = existing PR URL + exact push SHA; validator checks freshness/exact-head CI. Else BLOCKED with one blocker/action.
+          
           REPORT
-          - PROGRESS needs existing PR URL and exact new SHA from github_push_files; else BLOCKED with one blocker/next action. Machine-readable lines only; copy task ID/branch; no prose/fences.
+          - Machine-readable only: exact task ID/target branch; no prose/fences.
           RESUME_PROMPT
           )"
             PROMPT="${PROMPT}"$'\n\n'
