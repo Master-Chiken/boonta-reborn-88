@@ -106,11 +106,16 @@ provider_outputs = (
     ("Groq", groq_fallback, "groq-plan-execute", "run_opencode"),
 )
 for provider, workflow, job_name, invocation_step in provider_outputs:
+    invocation_output = (
+        "invocation_outcome: ${{ inputs.resume_mode == true && steps.run_opencode.outcome || steps.run_patch_cycle.outcome }}"
+        if provider in {"OpenRouter", "Groq"}
+        else f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}"
+    )
     expected_outputs = (
         f"value: ${{{{ jobs.{job_name}.outputs.invocation_outcome }}}}",
         f"value: ${{{{ jobs.{job_name}.outputs.report_outcome }}}}",
         f"value: ${{{{ jobs.{job_name}.outputs.cycle_status }}}}",
-        f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
+        invocation_output,
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
         "validateAutonomousCycleReport",
@@ -489,17 +494,19 @@ fallback_auth = openrouter_fallback.find("name: Verify OpenRouter Free key authe
 fallback_mint = openrouter_fallback.find("name: Mint scoped GitHub App token")
 fallback_checkout = openrouter_fallback.find("name: Checkout the protected default branch")
 fallback_install = openrouter_fallback.find("name: Install pinned OpenCode CLI")
+fallback_patch_cycle = openrouter_fallback.find("name: Run verified no-tools patch cycle through OpenRouter Free")
 fallback_model = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
-if not (0 <= fallback_guard < fallback_auth < fallback_mint < fallback_checkout < fallback_install < fallback_model):
-    errors.append("OpenRouter fallback must verify Free bearer authentication before token mint, checkout, installation and model call")
+if not (0 <= fallback_guard < fallback_auth < fallback_mint < fallback_checkout < fallback_install < fallback_patch_cycle < fallback_model):
+    errors.append("OpenRouter fallback must verify Free bearer authentication before token mint, checkout, installation and either provider path")
 for guarded_step in (
     "name: Verify OpenRouter Free key authentication without inference\n        id: openrouter_auth_check\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
     "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Snapshot open PR heads before OpenRouter cycle\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
-    "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
-    "name: Validate OpenRouter autonomous cycle report\n        id: validate_report\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
+    "name: Run verified no-tools patch cycle through OpenRouter Free\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && inputs.resume_mode != true",
+    "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && inputs.resume_mode == true",
+    "name: Validate OpenRouter autonomous cycle report\n        id: validate_report\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && ((inputs.resume_mode == true && steps.run_opencode.outcome == 'success') || (inputs.resume_mode != true && steps.run_patch_cycle.outcome == 'success'))",
 ):
     if guarded_step not in openrouter_fallback:
         errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
@@ -526,6 +533,8 @@ for required in (
     "steps.openrouter_auth_check.outputs.quota_available == 'false'",
     "below the ' + quotaRequired + '-request reserve",
     "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'",
+    "steps.run_patch_cycle.outputs.provider_request_started == 'true'",
+    "steps.run_patch_cycle.outcome != 'success' && steps.run_patch_cycle.outcome != 'skipped'",
     "steps.validate_report.outcome == 'failure'",
     "github.rest.issues.updateComment",
     "github.rest.issues.createComment",
@@ -559,8 +568,11 @@ for required in (
         errors.append(f"Gemini cooldown/fallback handoff is missing required behavior {required!r}")
 
 # Keep the OpenRouter report validator to one unambiguous successful invocation guard.
-if openrouter_fallback.count("steps.run_opencode.outcome == 'success'") != 1:
-    errors.append("OpenRouter report validation must check the successful invocation outcome exactly once")
+if (
+    openrouter_fallback.count("steps.run_opencode.outcome == 'success'") != 1
+    or openrouter_fallback.count("steps.run_patch_cycle.outcome == 'success'") != 1
+):
+    errors.append("OpenRouter report validation must check exactly one successful invocation for each mutually exclusive resume/fresh mode")
 
 # Public issue comments cannot spoof provider cooldowns; only bot-authored markers are trusted.
 for label, workflow, marker in (
@@ -796,8 +808,8 @@ if "group: boonta-single-writer" not in execute or "cancel-in-progress: false" n
 # shared non-cancelling writer slot, before checkout/setup or model invocation.
 fresh_guard_providers = (
     ("Gemini", execute, "name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
-    ("OpenRouter", openrouter_fallback, "name: Mint scoped GitHub App token", "name: Run OpenCode through the OpenRouter Free route"),
-    ("Groq", groq_fallback, "name: Mint scoped GitHub App token", "name: Run OpenCode through the Groq Free route"),
+    ("OpenRouter", openrouter_fallback, "name: Mint scoped GitHub App token", "name: Run verified no-tools patch cycle through OpenRouter Free"),
+    ("Groq", groq_fallback, "name: Mint scoped GitHub App token", "name: Run verified no-tools patch cycle through Groq Free"),
 )
 for label, workflow, mint_marker, invocation_marker in fresh_guard_providers:
     cooldown_position = workflow.find("id: " + ("gemini_cooldown" if label == "Gemini" else "openrouter_cooldown" if label == "OpenRouter" else "groq_cooldown"))
