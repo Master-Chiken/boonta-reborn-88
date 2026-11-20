@@ -79,7 +79,7 @@ jobs:
   groq-plan-execute:
     name: One bounded Groq Free research/engineering cycle
     outputs:
-      invocation_outcome: ${{ steps.run_opencode.outcome }}
+      invocation_outcome: ${{ inputs.resume_mode == true && steps.run_opencode.outcome || steps.run_patch_cycle.outcome }}
       report_outcome: ${{ steps.validate_report.outcome }}
       cycle_status: ${{ steps.validate_report.outputs.cycle_status }}
       task_queue_state_outcome: ${{ steps.sync_task_queue_state.outcome }}
@@ -650,8 +650,48 @@ jobs:
             printf '%s\n' "$context"
             echo 'BOONTA_CONTEXT_EOF'
           } >> "$GITHUB_OUTPUT"
+      - name: Run verified no-tools patch cycle through Groq Free
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && inputs.resume_mode != true
+        id: run_patch_cycle
+        shell: bash
+        env:
+          GROQ_API_KEY: \${{ secrets.TA_CLE_GROQ }}
+          GITHUB_TOKEN: \${{ steps.mint_identity_token.outputs.token }}
+          GITHUB_REPOSITORY: \${{ github.repository }}
+          BOONTA_DETERMINISTIC_DELIVERY_ENABLED: \${{ vars.BOONTA_DETERMINISTIC_DELIVERY_ENABLED }}
+          BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED: \${{ vars.BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED }}
+          TASK_ID: \${{ inputs.task_id }}
+          TASK_TARGET_BRANCH: \${{ inputs.task_target_branch }}
+          REPO_ROOT: \${{ steps.prepare_context.outputs.repo_root }}
+          AUTONOMOUS_CONTEXT: \${{ steps.prepare_context.outputs.context }}
+          OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'
+        run: |
+          set -euo pipefail
+          set +x
+          : "\${GROQ_API_KEY:?Groq Free key is required}"
+          cat > "$RUNNER_TEMP/opencode-patch-no-tools.json" <<'JSON'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": {
+              "*": "deny"
+            },
+            "mcp": {}
+          }
+          JSON
+          export OPENCODE_CONFIG="$RUNNER_TEMP/opencode-patch-no-tools.json"
+          context_file="$RUNNER_TEMP/boonta-structured-patch-context.txt"
+          printf '%s\n' "$AUTONOMOUS_CONTEXT" > "$context_file"
+          python3 "$REPO_ROOT/tools/run_autonomous_patch_cycle.py" \
+            --target-root "$GITHUB_WORKSPACE/.boonta-target-source" \
+            --policy-root "$REPO_ROOT" \
+            --context-file "$context_file" \
+            --report-file "$RUNNER_TEMP/opencode-cycle-report.txt" \
+            --task-id "$TASK_ID" \
+            --target-branch "$TASK_TARGET_BRANCH" \
+            --model "groq/openai/gpt-oss-20b"
+
       - name: Run OpenCode through the Groq Free route
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && inputs.resume_mode == true
         id: run_opencode
         shell: bash
         env:
@@ -953,7 +993,7 @@ jobs:
 
       - name: Validate Groq autonomous cycle report
         id: validate_report
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && ((inputs.resume_mode == true && steps.run_opencode.outcome == 'success') || (inputs.resume_mode != true && steps.run_patch_cycle.outcome == 'success'))
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
@@ -1081,7 +1121,7 @@ jobs:
               core.info('No previous task backoff marker needed clearing.');
             }
       - name: Record same-day Groq cooldown after an invocation failure
-        if: always() && ((steps.run_opencode.outputs.provider_request_started == 'true' && steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
+        if: always() && ((inputs.resume_mode == true && steps.run_opencode.outputs.provider_request_started == 'true' && steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || (inputs.resume_mode != true && steps.run_patch_cycle.outputs.provider_request_started == 'true' && steps.run_patch_cycle.outcome != 'success' && steps.run_patch_cycle.outcome != 'skipped') || (steps.validate_report.outcome == 'failure' && ((inputs.resume_mode == true && steps.run_opencode.outputs.provider_request_started == 'true') || (inputs.resume_mode != true && steps.run_patch_cycle.outputs.provider_request_started == 'true'))))
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
@@ -1132,7 +1172,7 @@ jobs:
         env:
           GATE_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
           SNAPSHOT_OUTCOME: ${{ steps.snapshot_pr_heads.outcome }}
-          INVOCATION_OUTCOME: ${{ steps.run_opencode.outcome }}
+          INVOCATION_OUTCOME: ${{ inputs.resume_mode == true && steps.run_opencode.outcome || steps.run_patch_cycle.outcome }}
           REPORT_OUTCOME: ${{ steps.validate_report.outcome }}
         with:
           script: |
