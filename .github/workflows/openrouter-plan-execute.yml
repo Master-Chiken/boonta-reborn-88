@@ -628,7 +628,7 @@ jobs:
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
-          ref: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
+          ref: ${{ inputs.resume_mode == true && inputs.resume_head_sha || inputs.resume_task_target_branch || inputs.task_target_branch }}
           path: .boonta-target-source
           token: ${{ steps.mint_identity_token.outputs.token }}
           persist-credentials: false
