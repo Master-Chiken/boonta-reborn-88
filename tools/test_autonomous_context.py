@@ -524,7 +524,7 @@ with tempfile.TemporaryDirectory() as temp:
 
 # Resume mode must read the validated task PR branch, not just its base.
 workflow_text = (ROOT / ".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
-assert "inputs.resume_mode == true && inputs.resume_branch || inputs.resume_task_target_branch || inputs.task_target_branch" in workflow_text
+assert "inputs.resume_mode == true && inputs.resume_head_sha || inputs.resume_task_target_branch || inputs.task_target_branch" in workflow_text
 assert "--max-source-chars 1800" in workflow_text
 
 
