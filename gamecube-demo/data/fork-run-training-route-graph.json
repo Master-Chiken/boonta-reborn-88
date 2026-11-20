@@ -236,9 +236,9 @@
       "curve": {
         "type": "cubic_bezier",
         "control1": [
+          24,
           0,
-          0,
-          39
+          42
         ],
         "control2": [
           0,
