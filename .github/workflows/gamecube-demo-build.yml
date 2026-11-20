@@ -104,6 +104,7 @@ jobs:
             gamecube-demo/tests/test_course_catalog.c \
             gamecube-demo/source/course_catalog.c \
             gamecube-demo/source/course_canyon_run.c \
+            gamecube-demo/source/course_fork_run.c \
             -lm -o /tmp/test_course_catalog
           /tmp/test_course_catalog
 
