@@ -1,10 +1,15 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-18",
+  "updated_at": "2026-11-21",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
-    "rule": "One active task; preserve evidence and platform boundaries; an open PR is in_review, never completed."
+    "rule": "One active writer; no new task unless there are zero other open PRs, at most ten branch refs, and an owner-authored structured original-game emulator test report on issue #459 explicitly chooses NATIVE_FALLBACK. Preserve evidence and platform boundaries; an open PR is in_review, never completed.",
+    "max_open_prs_for_new_task": 0,
+    "max_branch_refs_for_new_task": 10,
+    "owner_test_gate_issue": 459,
+    "owner_test_gate_marker": "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+    "owner_test_gate_decision": "NATIVE_FALLBACK"
   },
   "tasks": [
     {
