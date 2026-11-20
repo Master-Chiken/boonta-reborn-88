@@ -160,17 +160,18 @@ static void test_course_owned_rival_cursors_use_the_selected_graph(void)
     float left_width = 0.0f, right_width = 0.0f;
     BoontaRouteCursorState left_state, right_state;
     const float initial_offset = 0.5f;
-    const float distance_to_branch_window =
-        context != NULL ? context->sampler.edge_lengths[0] - 1.5f : 0.0f;
-    const float left_join_delta =
-        1.0f + context->sampler.edge_lengths[1] +
-        context->sampler.edge_lengths[3] + 0.25f;
-    const float right_join_delta =
-        1.0f + context->sampler.edge_lengths[2] +
-        context->sampler.edge_lengths[4] + 0.25f;
+    float distance_to_branch_window;
+    float left_join_delta;
+    float right_join_delta;
 
     assert(course->has_branches);
     assert(course->reset(course->runtime_context));
+    assert(context != NULL);
+    distance_to_branch_window = context->sampler.edge_lengths[0] - 1.5f;
+    left_join_delta = 1.0f + context->sampler.edge_lengths[1] +
+                      context->sampler.edge_lengths[3] + 0.25f;
+    right_join_delta = 1.0f + context->sampler.edge_lengths[2] +
+                       context->sampler.edge_lengths[4] + 0.25f;
     assert(course->reset_rival_route != NULL);
     assert(course->advance_rival_route != NULL);
     assert(course->sample_rival_route != NULL);
