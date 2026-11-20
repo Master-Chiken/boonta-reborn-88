@@ -37,7 +37,14 @@ def ledger_with_paths(paths: list[str]) -> dict:
     return {
         "schema_version": 1,
         "updated_at": "2026-11-11",
-        "policy": {"max_active_tasks": 1},
+        "policy": {
+            "max_active_tasks": 1,
+            "max_open_prs_for_new_task": 0,
+            "max_branch_refs_for_new_task": 10,
+            "owner_test_gate_issue": 459,
+            "owner_test_gate_marker": "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+            "owner_test_gate_decision": "NATIVE_FALLBACK",
+        },
         "tasks": [task],
     }
 
