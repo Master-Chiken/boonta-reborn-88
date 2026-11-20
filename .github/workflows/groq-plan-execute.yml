@@ -872,7 +872,7 @@ jobs:
 
           AUTHORITY
           - Workflow revalidated owner, repo, open PR, markers, branch, URL and HEAD under writer lock.
-          - AUTONOMOUS_CONTEXT is injected below in this prompt; never request/read AUTONOMOUS_CONTEXT.md.
+          - AUTONOMOUS_CONTEXT is injected below in this prompt. Never request or read AUTONOMOUS_CONTEXT.md.
           - Task, criteria, next action, excerpts and owner-approved exact write paths are supplied.
           - Start now; do not ask questions or narrate a plan.
           - Do not search PR history, invoke agents or web tools. Use only the exposed GitHub MCP tools.
