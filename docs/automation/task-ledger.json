@@ -1016,7 +1016,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "blocked",
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
       "read_paths": [
@@ -1071,8 +1071,8 @@
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
       "evidence": [],
-      "next_action": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps.",
-      "updated_at": "2026-11-18",
+      "next_action": "Blocked on 2026-11-21 pending exact-scope reconciliation with open PR #458. That HOLD PR already contains generic rival-route cursor/normalized-progress work in the same subsystem; do not create a duplicate branch or PR. After issue #459 emulator testing, compare #458 changed files and exact diff against this task's acceptance criteria, then reuse, narrow, supersede or explicitly unblock only after owner review. Synthetic Canyon Run/Fork Run content is not original Racer.",
+      "updated_at": "2026-11-21",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
