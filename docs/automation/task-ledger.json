@@ -916,8 +916,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710922112",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570"
       ],
-      "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
-      "updated_at": "2026-11-07",
+      "next_action": "Blocked pending issue #459 and #458 reconciliation. The prior local parser probe already recorded structural counts; do not ask the owner to install .NET or rerun it. Revisit local-only asset/material graph extraction only if native fallback is chosen. Keep all ROM-derived bytes local; do not claim GX export until validated.",
+      "updated_at": "2026-11-21",
       "target_branch": "main",
       "owner_role_id": "research",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
