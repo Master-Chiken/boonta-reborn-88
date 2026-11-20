@@ -54,7 +54,14 @@ def valid_ledger():
     return {
         "schema_version": 1,
         "updated_at": "2026-11-04",
-        "policy": {"max_active_tasks": 1},
+        "policy": {
+            "max_active_tasks": 1,
+            "max_open_prs_for_new_task": 0,
+            "max_branch_refs_for_new_task": 10,
+            "owner_test_gate_issue": 459,
+            "owner_test_gate_marker": "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+            "owner_test_gate_decision": "NATIVE_FALLBACK",
+        },
         "tasks": [valid_task()],
     }
 
@@ -62,6 +69,26 @@ def valid_ledger():
 class TaskLedgerTests(unittest.TestCase):
     def test_accepts_valid_ledger(self):
         self.assertEqual(ledger.validate_ledger(valid_ledger()), [])
+
+    def test_requires_no_competing_open_pr_for_new_task(self):
+        data = valid_ledger()
+        data["policy"]["max_open_prs_for_new_task"] = 1
+        self.assertTrue(any("max_open_prs_for_new_task" in e for e in ledger.validate_ledger(data)))
+
+    def test_enforces_ten_branch_ref_limit(self):
+        data = valid_ledger()
+        data["policy"]["max_branch_refs_for_new_task"] = 20
+        self.assertTrue(any("max_branch_refs_for_new_task" in e for e in ledger.validate_ledger(data)))
+
+    def test_requires_owner_emulator_report_gate(self):
+        data = valid_ledger()
+        data["policy"]["owner_test_gate_marker"] = "<!-- wrong -->"
+        self.assertTrue(any("owner_test_gate_marker" in e for e in ledger.validate_ledger(data)))
+
+    def test_requires_explicit_native_fallback_decision(self):
+        data = valid_ledger()
+        data["policy"]["owner_test_gate_decision"] = "EMULATOR_ACCEPTED"
+        self.assertTrue(any("owner_test_gate_decision" in e for e in ledger.validate_ledger(data)))
 
     def test_rejects_duplicate_ids(self):
         data = valid_ledger()
