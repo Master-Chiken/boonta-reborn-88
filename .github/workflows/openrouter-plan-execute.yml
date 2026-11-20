@@ -820,7 +820,11 @@ jobs:
               "edit": "deny",
               "glob": "deny",
               "grep": "deny",
-              "list": "deny"
+              "list": "deny",
+              "question": "deny",
+              "webfetch": "deny",
+              "websearch": "deny",
+              "doom_loop": "deny"
             }
           }
           JSON
@@ -916,7 +920,9 @@ jobs:
           
           AUTHORITY
           - The workflow verified the task, owner, same repository, open/non-draft state, unique task/target markers, base, branch, PR URL and prior exact HEAD after acquiring the shared writer slot.
-          - Do not search PR history, inspect unrelated PRs or treat an open PR as completed.
+          - AUTONOMOUS_CONTEXT is injected below in this prompt; it is not a repository file. Never request or read AUTONOMOUS_CONTEXT.md.
+          - The task question, acceptance criteria, next action, source excerpts and exact owner-approved write paths are already supplied. Start the implementation immediately; do not ask questions or narrate a plan.
+          - Do not search PR history, inspect unrelated PRs, invoke subagents, use web tools or fetch raw URLs. Use only the exposed GitHub MCP tools.
           
           SAFETY
           - €0 only. No credits, billing, paid fallback, key/secret/provider/settings changes.
@@ -924,11 +930,11 @@ jobs:
           - Preserve clean-room provenance; never upload ROMs, commercial binaries or extracted assets.
           
           TOOLS / WRITE
-          - Only github_get_file_contents and github_push_files are exposed. Read up to four exact paths from the canonical task's "Read-only source paths" allow-list in AUTONOMOUS_CONTEXT, using the existing branch as the ref. These validated paths may include dependencies not changed in the existing PR; read the relevant cross-file definitions before editing.
+          - Only github_get_file_contents and github_push_files are exposed. Use the preloaded excerpts first. Read at most two exact paths from the canonical task's "Read-only source paths" allow-list in AUTONOMOUS_CONTEXT, using the existing branch as the ref; never read more than two.
           - Do not read any path outside that task read allow-list. The "Verified changed files" list below identifies the existing PR's changed files; it is context, not the read allow-list.
           - Call github_push_files exactly once with one coherent patch, updating only paths from "Exact owner-reviewed write paths (no others)" in AUTONOMOUS_CONTEXT, on the same existing branch.
           - Do not create a branch or PR. Do not write the canonical ledger or alter repository settings.
-          - If the task read allow-list or owner-reviewed write paths are insufficient, stop and report the exact blocker rather than guessing.
+          - Make one concrete code change that advances the earliest unmet acceptance criterion. If the provided task scope cannot support a safe change after the bounded reads, report the exact blocker; never ask the owner for clarification.
           
           EVIDENCE
           - PROGRESS cites the existing PR URL and exact new head SHA returned by github_push_files. The shared validator re-fetches the PR and requires fresh content and exact-head CI.
