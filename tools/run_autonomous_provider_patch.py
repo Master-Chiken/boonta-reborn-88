@@ -47,6 +47,10 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 class ProviderPatchError(ValueError):
     """Raised when provider output cannot be accepted as a strict patch."""
 
+    def __init__(self, message: str, *, provider_request_started: bool = False) -> None:
+        super().__init__(message)
+        self.provider_request_started = provider_request_started
+
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     value: dict[str, Any] = {}
@@ -250,7 +254,10 @@ def _run_bounded_provider_process(
                 output.write("provider_request_started=true\n")
         except OSError as exc:
             _stop_process_group(process)
-            raise ProviderPatchError("Could not record provider-start state; OpenCode was stopped") from exc
+            raise ProviderPatchError(
+                "Could not record provider-start state; OpenCode was stopped",
+                provider_request_started=True,
+            ) from exc
 
     stdout_data = bytearray()
     stderr_size = 0
@@ -296,12 +303,16 @@ def _run_bounded_provider_process(
             status = process.wait(timeout=remaining)
         except subprocess.TimeoutExpired as exc:
             raise ProviderPatchError("OpenCode provider invocation timed out; process group stopped without retry") from exc
-    except ProviderPatchError:
+    except ProviderPatchError as exc:
         _stop_process_group(process)
+        exc.provider_request_started = True
         raise
     except (OSError, ValueError) as exc:
         _stop_process_group(process)
-        raise ProviderPatchError("OpenCode output could not be captured safely; process group stopped") from exc
+        raise ProviderPatchError(
+            "OpenCode output could not be captured safely; process group stopped",
+            provider_request_started=True,
+        ) from exc
     finally:
         selector.close()
         for stream, _label in streams:
@@ -309,7 +320,10 @@ def _run_bounded_provider_process(
                 stream.close()
 
     if status != 0:
-        raise ProviderPatchError(f"OpenCode exited with status {status}; proposal rejected")
+        raise ProviderPatchError(
+            f"OpenCode exited with status {status}; proposal rejected",
+            provider_request_started=True,
+        )
     return bytes(stdout_data)
 
 
@@ -374,12 +388,9 @@ def run_provider_patch(
         "--dir", str(target),
         prompt,
     ]
-    # The workflow cooldown must begin only after all local validation and
-    # executable checks have passed, immediately before the provider process.
-    output_path = os.environ.get("GITHUB_OUTPUT")
-    if output_path:
-        with open(output_path, "a", encoding="utf-8") as output:
-            output.write("provider_request_started=true\n")
+    # The start marker is written once, by _run_bounded_provider_process,
+    # immediately after Popen succeeds. Missing binaries and preflight errors
+    # must never consume the provider cooldown.
     stdout_bytes = _run_bounded_provider_process(
         command,
         cwd=trusted,
@@ -388,37 +399,35 @@ def run_provider_patch(
     )
     try:
         stdout = stdout_bytes.decode("utf-8", errors="strict")
-    except UnicodeError as exc:
-        raise ProviderPatchError("OpenCode stdout was not valid UTF-8") from exc
-
-    proposal_text = parse_event_stream(stdout)
-    if len(proposal_text.encode("utf-8")) > MAX_PROPOSAL_BYTES:
-        raise ProviderPatchError("Assistant proposal exceeded the 96 KiB limit")
-    try:
+        proposal_text = parse_event_stream(stdout)
+        if len(proposal_text.encode("utf-8")) > MAX_PROPOSAL_BYTES:
+            raise ProviderPatchError("Assistant proposal exceeded the 96 KiB limit")
         proposal = json.loads(proposal_text, object_pairs_hook=_unique_object)
-    except (json.JSONDecodeError, ProviderPatchError) as exc:
-        raise ProviderPatchError("Assistant response was not one strict JSON proposal") from exc
-    if not isinstance(proposal, dict):
-        raise ProviderPatchError("Assistant proposal root must be a JSON object")
-    try:
+        if not isinstance(proposal, dict):
+            raise ProviderPatchError("Assistant proposal root must be a JSON object")
         paths = validate_proposal(
             proposal,
             expected_task_id=expected_task_id,
             expected_base_sha=expected_base_sha,
             allowed_paths=allowed_paths,
         )
-    except ProposalError as exc:
-        raise ProviderPatchError(f"Assistant proposal failed strict validation: {exc}") from exc
-
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_name(destination.name + ".tmp")
-    if temporary.exists() or temporary.is_symlink():
-        raise ProviderPatchError("Temporary proposal output already exists")
-    temporary.write_text(
-        json.dumps(proposal, ensure_ascii=False, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    temporary.replace(destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(destination.name + ".tmp")
+        if temporary.exists() or temporary.is_symlink():
+            raise ProviderPatchError("Temporary proposal output already exists")
+        temporary.write_text(
+            json.dumps(proposal, ensure_ascii=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(destination)
+    except ProviderPatchError as exc:
+        exc.provider_request_started = True
+        raise
+    except (UnicodeError, json.JSONDecodeError, ProposalError, OSError) as exc:
+        raise ProviderPatchError(
+            "Provider response could not be decoded, validated or saved safely",
+            provider_request_started=True,
+        ) from exc
     return {
         "status": "PROPOSAL_VALIDATED",
         "task_id": expected_task_id,
