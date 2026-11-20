@@ -163,22 +163,29 @@ def verify_in_isolated_worktree(
     allowlist_report_path: Path,
     expected_task_id: str,
     expected_base_sha: str,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
 ) -> dict[str, Any]:
     root = repo_root.resolve()
-    if not root.is_dir():
-        raise PipelineError("Repository checkout does not exist")
+    trusted_root = (policy_root or root).resolve()
+    policy_sha = expected_policy_sha if expected_policy_sha is not None else expected_base_sha
+    if not root.is_dir() or not trusted_root.is_dir():
+        raise PipelineError("Target or trusted policy checkout does not exist")
     validate_checkout(root, expected_base_sha)
 
     allowed_paths = load_allowlist_report(
         allowlist_report_path,
         expected_task_id=expected_task_id,
         expected_base_sha=expected_base_sha,
+        expected_policy_sha=policy_sha,
     )
     try:
         current_scope = build_allowlist(
             root,
             expected_base_sha=expected_base_sha,
             requested_task_id=expected_task_id,
+            policy_root=trusted_root,
+            expected_policy_sha=policy_sha,
         )
         supplied_scope = load_json(allowlist_report_path)
     except AllowlistError as exc:
@@ -239,12 +246,15 @@ def verify_in_isolated_worktree(
             test_report = run_autonomous_patch_tests.run_test_ids(
                 worktree,
                 executed_tests,
+                registry_root=trusted_root,
+                expected_registry_sha=policy_sha,
             )
             if test_report.get("status") != "PASSED":
                 return {
                     "status": "FAILED",
                     "task_id": expected_task_id,
                     "base_sha": expected_base_sha,
+                    "policy_base_sha": policy_sha,
                     "changed_paths": list(changed_paths),
                     "test_report": test_report,
                     "isolated_worktree": True,
@@ -287,6 +297,7 @@ def verify_in_isolated_worktree(
                 "status": "VERIFIED",
                 "task_id": expected_task_id,
                 "base_sha": expected_base_sha,
+                "policy_base_sha": policy_sha,
                 "summary": proposal["summary"],
                 "changed_paths": expected,
                 "requested_test_ids": requested_tests,
@@ -311,6 +322,8 @@ def main() -> int:
     parser.add_argument("--allowlist-report", type=Path)
     parser.add_argument("--expected-task-id")
     parser.add_argument("--expected-base-sha")
+    parser.add_argument("--policy-root", type=Path)
+    parser.add_argument("--expected-policy-sha")
     args = parser.parse_args()
     if not all((
         args.repo_root,
@@ -327,6 +340,8 @@ def main() -> int:
             allowlist_report_path=args.allowlist_report,
             expected_task_id=args.expected_task_id,
             expected_base_sha=args.expected_base_sha,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
     except (PipelineError, ProposalError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))

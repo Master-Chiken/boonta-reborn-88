@@ -62,6 +62,8 @@ def run_test_ids(
     root: Path,
     test_ids: list[str],
     *,
+    registry_root: Path | None = None,
+    expected_registry_sha: str | None = None,
     timeout_seconds: int = MAX_TEST_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     if not isinstance(test_ids, list) or not 1 <= len(test_ids) <= MAX_TESTS:
@@ -77,30 +79,49 @@ def run_test_ids(
         raise TestDispatchError("Test timeout must be an integer between one and 120 seconds")
 
     root = resolve_checkout(root)
+    registry = resolve_checkout(registry_root) if registry_root is not None else root
+    if registry_root is not None:
+        if not isinstance(expected_registry_sha, str) or len(expected_registry_sha) != 40 or any(
+            char not in "0123456789abcdef" for char in expected_registry_sha
+        ):
+            raise TestDispatchError("A pinned 40-character registry SHA is required for a separate test checkout")
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=registry, stdin=subprocess.DEVNULL,
+            text=True, capture_output=True, check=False, timeout=10,
+        )
+        status = subprocess.run(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=registry, stdin=subprocess.DEVNULL, text=True,
+            capture_output=True, check=False, timeout=10,
+        )
+        if head.returncode != 0 or head.stdout.strip() != expected_registry_sha:
+            raise TestDispatchError("Trusted test registry checkout differs from its pinned SHA")
+        if status.returncode != 0 or status.stdout.strip():
+            raise TestDispatchError("Trusted test registry checkout must be clean")
     env = _test_environment()
     results: list[dict[str, Any]] = []
 
     for test_id in test_ids:
         script = TEST_REGISTRY[test_id][0]
-        script_path = root / script
+        script_path = registry / script
         if script_path.is_symlink():
             raise TestDispatchError(f"Registered test script must not be a symlink: {script}")
         resolved_script = script_path.resolve()
         try:
-            resolved_script.relative_to(root)
+            resolved_script.relative_to(registry)
         except ValueError as exc:
             raise TestDispatchError(f"Registered test script escapes the checkout: {script}") from exc
         if not resolved_script.is_file():
             raise TestDispatchError(f"Registered test script is missing: {script}")
         parent = script_path.parent
-        while parent != root:
+        while parent != registry:
             if parent.is_symlink():
                 raise TestDispatchError(f"Registered test script has a symlink parent: {script}")
             parent = parent.parent
         started = time.monotonic()
         try:
             completed = subprocess.run(
-                [sys.executable, script],
+                [sys.executable, str(resolved_script)],
                 cwd=root,
                 env=env,
                 stdin=subprocess.DEVNULL,
