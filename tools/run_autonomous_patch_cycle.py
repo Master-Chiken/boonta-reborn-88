@@ -19,6 +19,7 @@ from typing import Any
 from autonomous_patch_proposal import ProposalError
 from build_autonomous_delivery_plan import DeliveryPlanError, build_delivery_plan
 from build_autonomous_path_allowlist import AllowlistError, build_allowlist
+from validate_trusted_main_checkout import TrustedMainCheckoutError, validate_trusted_main_checkout
 from execute_autonomous_github_delivery import (
     DeliveryExecutionError,
     execute_delivery,
@@ -113,6 +114,17 @@ def run_cycle(
 
     target_sha = _git_sha(target)
     policy_sha = _git_sha(trusted)
+    try:
+        validate_trusted_main_checkout(trusted, policy_sha)
+    except TrustedMainCheckoutError as exc:
+        reason = _clean_line(exc)
+        _write_report(
+            report, task_id=task_id, status="BLOCKED", target_branch=target_branch,
+            blocker="Trusted main policy preflight rejected the task: " + reason,
+            next_action="Restore the pinned main checkout and its canonical ledger/path policy before allowing another provider invocation.",
+        )
+        return {"status": "BLOCKED", "reason": reason, "provider_request_started": False}
+
     try:
         allowlist = build_allowlist(
             target,
