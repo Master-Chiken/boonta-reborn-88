@@ -783,7 +783,11 @@ jobs:
               "edit": "deny",
               "glob": "deny",
               "grep": "deny",
-              "list": "deny"
+              "list": "deny",
+              "question": "deny",
+              "webfetch": "deny",
+              "websearch": "deny",
+              "doom_loop": "deny"
             }
           }
           JSON
@@ -868,11 +872,14 @@ jobs:
           
           AUTHORITY
           - The preloaded task context and exact existing-PR metadata are authoritative. The workflow revalidated owner, same repository, open/non-draft, task/target markers, branch, URL and prior head SHA.
-          - Do not search history, use agents, or inspect unrelated PRs. Read exactly one file from the preflight-verified changed-path allow-list appended below.
+          - AUTONOMOUS_CONTEXT is injected below in this prompt; it is not a repository file. Never request or read AUTONOMOUS_CONTEXT.md.
+          - The task question, acceptance criteria, next action, source excerpts and exact owner-approved write paths are already supplied. Start the implementation immediately; do not ask questions or narrate a plan.
+          - Do not search history, use agents, inspect unrelated PRs, call web tools or fetch raw URLs. Use only the exposed GitHub MCP tools.
           
           WRITE
-          - Only github_get_file_contents and github_push_files are exposed. Read exactly one listed path using the supplied existing branch as the ref, then call github_push_files once with the full updated file content on that same branch.
+          - Only github_get_file_contents and github_push_files are exposed. Use the preloaded excerpts first. Read at most one listed path using the supplied existing branch as the ref, then call github_push_files once with the full updated file content on that same branch.
           - Never create a branch or PR; never write main/dev, merge, force-push, delete refs, change secrets or edit the canonical ledger.
+          - Make one concrete code change that advances the earliest unmet acceptance criterion. If the provided task scope cannot support a safe change after the one permitted read, return BLOCKED with the exact missing fact; never ask the owner for clarification.
           - Preserve provenance and licenses. Stop rather than guess.
           
           EVIDENCE
