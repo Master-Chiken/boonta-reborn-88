@@ -242,6 +242,28 @@ def build_allowlist(
             raise AllowlistError(f"Path policy contains duplicate paths for task: {task_id}")
         policy_map[task_id] = {**entry, "allowed_paths": checked}
 
+    # An open task PR reserves the single writer slot until a human has reviewed
+    # it, merged/closed it, and the canonical ledger has been reconciled. This
+    # check lives in the shared allowlist builder so manual/provider entry points
+    # cannot bypass the scheduler's review lock.
+    review_tasks = sorted(
+        (item for item in task_map.values() if item.get("status") == "in_review"),
+        key=lambda item: item["task_id"],
+    )
+    if review_tasks:
+        return {
+            "status": "WAITING_FOR_TASK_REVIEW",
+            "task_id": requested_task_id,
+            "base_sha": expected_base_sha,
+            "policy_base_sha": policy_sha,
+            "allowed_paths": [],
+            "review_task_ids": [item["task_id"] for item in review_tasks],
+            "reason": (
+                "One or more task PRs are awaiting human review; no provider patch "
+                "cycle may start until review/merge and canonical ledger reconciliation."
+            ),
+        }
+
     active = [item for item in task_map.values() if item.get("status") == "active"]
     if len(active) > 1:
         raise AllowlistError("Canonical ledger violates the one-active-task policy")
