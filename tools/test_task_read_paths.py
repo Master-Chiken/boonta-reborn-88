@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from check_task_ledger import RIVAL_ROUTE_READ_PATHS, RIVAL_ROUTE_READ_RANGES, RIVAL_ROUTE_TASK_ID
+
 from check_task_read_paths import (
     MAX_READ_PATH_BYTES,
     MAX_TOTAL_READ_BYTES,
@@ -12,9 +14,9 @@ from check_task_read_paths import (
 )
 
 
-def ledger_with_paths(paths: list[str]) -> dict:
+def ledger_with_paths(paths: list[str], task_id: str = "TASK-001") -> dict:
     task = {
-        "task_id": "TASK-001",
+        "task_id": task_id,
         "title": "Bounded source read test",
         "queue": "#226",
         "platform_scope": ["automation"],
@@ -165,7 +167,7 @@ class TaskReadPathTests(unittest.TestCase):
             self.assertGreater(4 * 70000, MAX_TOTAL_READ_BYTES)
             self.assertEqual(validate_read_paths(data, root), [])
 
-    def test_rejects_too_many_paths(self):
+    def test_rejects_five_paths_for_an_unapproved_task(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "source").mkdir()
@@ -175,7 +177,31 @@ class TaskReadPathTests(unittest.TestCase):
                 (root / path).write_text("x", encoding="utf-8")
                 paths.append(path)
             errors = validate_read_paths(ledger_with_paths(paths), root)
-            self.assertTrue(any("1-4 unique safe repository text paths" in error for error in errors))
+            self.assertTrue(any("read_paths" in error for error in errors))
+
+    def test_accepts_only_the_exact_rival_five_path_seven_range_scope(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            data = ledger_with_paths(list(RIVAL_ROUTE_READ_PATHS), task_id=RIVAL_ROUTE_TASK_ID)
+            task = data["tasks"][0]
+            task["status"] = "in_review"
+            task["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/439"
+            task["head_sha"] = "7c49a97bc674f2b5ade8f950bec23944230535dc"
+            task["read_ranges"] = [
+                {"path": path, "start_line": start, "end_line": end}
+                for path, start, end in RIVAL_ROUTE_READ_RANGES
+            ]
+            line_counts = {}
+            for path, _, end in RIVAL_ROUTE_READ_RANGES:
+                line_counts[path] = max(line_counts.get(path, 0), end)
+            for path, count in line_counts.items():
+                target = root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("x\n" * count, encoding="utf-8")
+            self.assertEqual(validate_read_paths(data, root), [])
+            task["read_ranges"][0]["end_line"] -= 1
+            errors = validate_read_paths(data, root)
+            self.assertTrue(any("exact owner-approved rival ranges" in error for error in errors))
 
     def test_rejects_symlink_outside_repository(self):
         with tempfile.TemporaryDirectory() as temp, tempfile.TemporaryDirectory() as outside:
