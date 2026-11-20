@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-19",
+  "updated_at": "2026-11-20",
   "completed_task_ids": [
     "RE002-SYSTEM-MATRIX",
     "RE001-SYSTEM-MATRIX",
@@ -174,8 +174,8 @@
         "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence."
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
-      "head_sha": "7c49a97bc674f2b5ade8f950bec23944230535dc",
-      "next_action_excerpt": "Keep in_review until human review/merge of PR #439; no provider invocation. Revalidate the exact head and CI before any later resume."
+      "head_sha": "5345664d59df93974e3e4aee432954542fcbc21b",
+      "next_action_excerpt": "Current #439 head 5345664d59df93974e3e4aee432954542fcbc21b. GameCube/Wii builds, host tests and null-video smoke passed; Dolphin visual diagnostic is being retried after dependency-install timeout. Keep in_review; no provider invocation before human review/merge."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",

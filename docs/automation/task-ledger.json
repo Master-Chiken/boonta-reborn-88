@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-19",
+  "updated_at": "2026-11-20",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -1072,10 +1072,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44407302584",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44575835732"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44575835732",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44766976477"
       ],
-      "next_action": "On 2026-11-19 the owner explicitly authorized read-only access to gamecube-demo/tests/test_rival_ai.c. Scope is now 5 exact paths / 7 bounded ranges / 280 lines; the owner-reviewed write allow-list remains unchanged at five paths. Keep the task in_review; do not invoke a provider or bypass the human review/merge lock. After owner review and merge of PR #439 and canonical ledger reconciliation, revalidate the exact PR head, file list and CI before any provider resume.\n\nNext: Keep in_review until human review/merge of PR #439; no provider invocation. Revalidate the exact head and CI before any later resume.",
-      "updated_at": "2026-11-19",
+      "next_action": "Updated 2026-11-20: gameplay PR #439 head is 5345664d59df93974e3e4aee432954542fcbc21b. Exact-head GameCube/Wii builds, host pause/resume tests and Dolphin null-video process smoke passed. The optional Dolphin software-renderer job failed during dependency installation after its 4-minute network timeout and is being retried as job 136397432913. Keep this task in_review; do not invoke a provider until human review/merge of #439 and canonical reconciliation. Revalidate the exact head and all required CI before any later resume.",
+      "updated_at": "2026-11-20",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
@@ -1083,7 +1084,7 @@
       ],
       "owner_approved": true,
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
-      "head_sha": "7c49a97bc674f2b5ade8f950bec23944230535dc"
+      "head_sha": "5345664d59df93974e3e4aee432954542fcbc21b"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
