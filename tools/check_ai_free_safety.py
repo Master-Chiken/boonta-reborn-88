@@ -38,6 +38,7 @@ cycle_validator_tests = read("tools/test_autonomous_cycle_report.js")
 patch_cycle = read("tools/run_autonomous_patch_cycle.py")
 trusted_main_validator = read("tools/validate_trusted_main_checkout.py")
 trusted_main_validator_tests = read("tools/test_validate_trusted_main_checkout.py")
+allowlist_builder = read("tools/build_autonomous_path_allowlist.py")
 
 # The on-demand Gemini action installs its own default /gemini-invoke command,
 # whose template uses shell substitutions. Invoke our read-only instructions
@@ -1799,6 +1800,13 @@ if "from check_task_ledger_summary import build_summary" not in trusted_main_val
     errors.append("Trusted-main validator must derive the compact summary from the canonical ledger")
 if "validate_trusted_main_checkout" not in trusted_main_validator_tests:
     errors.append("Trusted-main validator offline tests are missing")
+for protected_path in (
+    "tools/run_autonomous_patch_cycle.py",
+    "tools/validate_trusted_main_checkout.py",
+    "tools/test_validate_trusted_main_checkout.py",
+):
+    if '"' + protected_path + '"' not in allowlist_builder:
+        errors.append(f"Model write allowlist must protect trusted automation file: {protected_path}")
 for required in (
     "tools/validate_trusted_main_checkout.py",
     "tools/test_validate_trusted_main_checkout.py",
