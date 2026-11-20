@@ -437,7 +437,7 @@ static inline int boonta_route_graph_choose_outgoing_edge(
         }
 
         dot = incoming_x * outgoing_x + incoming_z * outgoing_z;
-        cross = incoming_x * outgoing_z - incoming_z * outgoing_x;
+        cross = incoming_z * outgoing_x - incoming_x * outgoing_z;
         angle = atan2f(cross, dot);
         if (!isfinite(angle)) continue;
 
