@@ -185,6 +185,40 @@ for required in (
     if required not in groq_agent_prompt:
         errors.append(f"Groq agent must preserve its low-TPM delivery contract: {required!r}")
 
+# Existing-PR resume must stay inside the verified GitHub MCP surface. OpenCode's
+# permissive defaults otherwise expose webfetch/question tools even though the
+# resume workflow is intended to perform one bounded branch update only.
+for label, workflow in (
+    ("OpenRouter", read(".github/workflows/openrouter-plan-execute.yml")),
+    ("Groq", read(".github/workflows/groq-plan-execute.yml")),
+):
+    config_start = workflow.find('cat > "$RUNNER_TEMP/opencode.json" <<\'JSON\'')
+    config_end = workflow.find("\\n          JSON", config_start)
+    config = workflow[config_start:config_end] if config_start >= 0 and config_end > config_start else ""
+    for required in (
+        '"question": "deny"',
+        '"webfetch": "deny"',
+        '"websearch": "deny"',
+        '"doom_loop": "deny"',
+    ):
+        if required not in config:
+            errors.append(f"{label} OpenCode resume config must deny non-GitHub interaction tool {required!r}")
+
+    resume_start = workflow.find("RESUME_PROMPT\\n")
+    resume_end = workflow.find("\\n          RESUME_PROMPT", resume_start)
+    resume_prompt = workflow[resume_start + len("RESUME_PROMPT\\n"):resume_end] if resume_start >= 0 and resume_end > resume_start else ""
+    for required in (
+        "AUTONOMOUS_CONTEXT is injected below in this prompt",
+        "Never request or read AUTONOMOUS_CONTEXT.md",
+        "do not ask questions or narrate a plan",
+        "Do not search PR history",
+        "Use only the exposed GitHub MCP tools",
+        "github_push_files exactly once",
+        "never ask the owner for clarification",
+    ):
+        if required.lower() not in resume_prompt.lower():
+            errors.append(f"{label} resume prompt is missing a direct-execution rule: {required!r}")
+
 
 for required in (
     "Never ask the owner for code or clarification.",
