@@ -32,8 +32,6 @@ from export_closed_loop_track import (  # noqa: E402
     export_closed_loop_track,
 )
 
-from export_runtime_route_header import generate_runtime_route_header  # noqa: E402
-
 
 def fixture(name):
     return load_route_graph(FIXTURE_DIR / name)
@@ -53,30 +51,6 @@ class RouteGraphFormatTests(unittest.TestCase):
                 graph = fixture(name)
                 self.assertEqual(graph["format"], "boonta-route-graph-v1")
                 self.assertEqual(graph["source"]["platform"], "synthetic")
-
-    def test_playable_fork_run_graph_and_generated_runtime_header_match(self):
-        graph_path = ROOT / "gamecube-demo" / "data" / "fork-run-training-route-graph.json"
-        widths_path = ROOT / "gamecube-demo" / "data" / "fork-run-training-surface-widths.json"
-        header_path = ROOT / "gamecube-demo" / "source" / "generated_fork_run_route_graph.h"
-
-        graph = load_route_graph(graph_path)
-        normalized = validate_route_graph(graph)
-        self.assertTrue(normalized["closed_loop"])
-        self.assertEqual(len(normalized["nodes"]), 6)
-        self.assertEqual(len(normalized["edges"]), 7)
-        self.assertTrue(any(
-            sum(1 for edge in normalized["edges"] if edge["from"] == node["id"]) > 1
-            for node in normalized["nodes"]
-        ))
-
-        widths = json.loads(widths_path.read_text(encoding="utf-8"))
-        generated = generate_runtime_route_header(
-            normalized, widths, default_half_width=3.5,
-            distance_subdivisions=128,
-        )
-        self.assertEqual(generated, header_path.read_text(encoding="utf-8"))
-        self.assertIn("#define BOONTA_RUNTIME_ROUTE_HAS_BRANCHES 1", generated)
-        self.assertIn("#define BOONTA_RUNTIME_ROUTE_CLOSED_LOOP 1", generated)
 
     def test_validation_is_idempotent_and_json_compatible(self):
         graph = fixture("open-bezier.json")

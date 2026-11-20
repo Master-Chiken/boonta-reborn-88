@@ -13,7 +13,7 @@ static void test_single_vertical_slice_course(void)
     float remaining = 0.0f;
     float x = 0.0f, y = 0.0f, z = 0.0f, width = 0.0f;
 
-    assert(BOONTA_COURSE_COUNT == 2U);
+    assert(BOONTA_COURSE_COUNT == 1U);
     assert(course != NULL);
     assert(strcmp(course->id, "canyon-run") == 0);
     assert(strcmp(course->display_name, "CANYON RUN") == 0);
@@ -88,56 +88,10 @@ static void test_course_owns_independent_rival_route_cursors(void)
     }
 }
 
-static void test_fork_run_course_exposes_real_left_and_right_routes(void)
-{
-    const BoontaCourseDefinition *course = boonta_course_catalog[1];
-    unsigned int completed_laps = 99U;
-    float lap_progress = -1.0f;
-    float x_left = 0.0f, y_left = 0.0f, z_left = 0.0f, width_left = 0.0f;
-    float x_right = 0.0f, y_right = 0.0f, z_right = 0.0f, width_right = 0.0f;
-    float remaining = 0.0f;
-
-    assert(course != NULL);
-    assert(strcmp(course->id, "fork-run") == 0);
-    assert(strcmp(course->display_name, "FORK RUN") == 0);
-    assert(strcmp(course->region, "BRANCHING CANYON") == 0);
-    assert(course->has_branches);
-    assert(course->node_count == 6U && course->edge_count == 7U);
-    assert(isfinite(course->lap_distance) && course->lap_distance > 90.0f);
-    assert(course->reset && course->advance && course->sample);
-    assert(course->reset_rival_route && course->advance_rival_route &&
-           course->sample_rival_route);
-
-    /* Negative steering chooses the positive-X (left) branch. */
-    assert(course->reset(course->runtime_context));
-    assert(course->get_lap_state(course->runtime_context,
-        &completed_laps, &lap_progress));
-    assert(course->advance(course->runtime_context, 1.0f, -0.8f));
-    course->sample(course->runtime_context, 1.0f, 13.0f,
-        course->road_half_width, &x_left, &y_left, &z_left, &width_left);
-    assert(x_left > 0.5f);
-    assert(isfinite(y_left) && isfinite(z_left));
-    assert(isfinite(width_left) && width_left >= 2.2f && width_left <= 4.8f);
-
-    /* Positive steering chooses the negative-X (right) branch. */
-    assert(course->reset(course->runtime_context));
-    assert(course->advance(course->runtime_context, 1.0f, 0.8f));
-    course->sample(course->runtime_context, 1.0f, 13.0f,
-        course->road_half_width, &x_right, &y_right, &z_right, &width_right);
-    assert(x_right < -0.5f);
-    assert(isfinite(y_right) && isfinite(z_right));
-    assert(isfinite(width_right) && width_right >= 2.2f && width_right <= 4.8f);
-
-    assert(course->distance_to_next_finish(
-        course->runtime_context, 1.0f, &remaining));
-    assert(isfinite(remaining) && remaining > 0.0f);
-}
-
 int main(void)
 {
     test_single_vertical_slice_course();
     test_course_owns_independent_rival_route_cursors();
-    test_fork_run_course_exposes_real_left_and_right_routes();
     puts("single-course and rival-route adapter tests passed");
     return 0;
 }

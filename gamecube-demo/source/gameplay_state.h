@@ -57,25 +57,6 @@ typedef struct {
     BoontaRaceSessionPhase session_phase;
 } BoontaRaceState;
 
-/*
- * Cycle through the course catalog only from an explicit left/right press.
- * Simultaneous inputs cancel instead of producing an accidental jump.
- */
-static inline unsigned int boonta_course_selection_after_input(
-    unsigned int current_index, int left_pressed, int right_pressed,
-    unsigned int course_count)
-{
-    if (course_count == 0U) return 0U;
-    current_index %= course_count;
-    if (left_pressed && !right_pressed) {
-        return current_index == 0U ? course_count - 1U : current_index - 1U;
-    }
-    if (right_pressed && !left_pressed) {
-        return (current_index + 1U) % course_count;
-    }
-    return current_index;
-}
-
 /* Renderer-owned chase-camera state, kept deterministic for host regression tests. */
 typedef struct {
     float x, y, z;

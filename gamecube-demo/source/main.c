@@ -67,7 +67,6 @@ static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
 static BoontaCameraState g_camera_state;
 static const BoontaCourseDefinition *g_current_course;
-static unsigned int g_course_index;
 static int g_course_ready;
 static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
 
@@ -1212,7 +1211,6 @@ static void draw_hud(void)
         append_text("RACE READY", cx - 30.0f, cy - 40.0f, 1.0f, boost_fill);
         append_text(course_name, name_x, cy - 10.0f, 1.0f, white);
         append_text(course_region, region_x, cy + 12.0f, 0.8f, heat_cool);
-        append_text("LEFT/RIGHT SELECT", cx - 42.0f, cy + 26.0f, 0.8f, heat_cool);
         append_text("PRESS START", cx - 34.0f, cy + 40.0f, 0.8f, boost_fill);
     } else if (g_paused) {
         /* Keep the pause state legible on a TV from normal couch distance. */
@@ -1413,8 +1411,7 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
     initialise_video_and_gx();
-    g_course_index = 0U;
-    g_current_course = boonta_course_catalog[g_course_index];
+    g_current_course = boonta_course_catalog[0];
     boonta_race_state_reset(&g_race_state);
     boonta_camera_state_reset(&g_camera_state);
     (void)reset_runtime_route_cursor();
@@ -1443,25 +1440,6 @@ int main(int argc, char **argv)
         buttons_held = (u32)input.buttons_held;
         stick_x = (s8)input.stick_x;
         stick_y = (s8)input.stick_y;
-        if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY &&
-            BOONTA_COURSE_COUNT > 1U) {
-            const unsigned int next_course_index =
-                boonta_course_selection_after_input(
-                    g_course_index,
-                    (buttons_down & BOONTA_BUTTON_LEFT) != 0U,
-                    (buttons_down & BOONTA_BUTTON_RIGHT) != 0U,
-                    BOONTA_COURSE_COUNT);
-            if (next_course_index != g_course_index) {
-                g_course_index = next_course_index;
-                g_current_course = boonta_course_catalog[g_course_index];
-                boonta_race_state_reset(&g_race_state);
-                boonta_camera_state_reset(&g_camera_state);
-                (void)reset_runtime_route_cursor();
-                (void)reset_rival_route_cursors();
-                draw_frame(frame_delta_seconds);
-                continue;
-            }
-        }
         if (boonta_race_should_reset(g_race_finished,
                                      (buttons_down & BOONTA_BUTTON_START) != 0U,
                                      (buttons_down & BOONTA_BUTTON_Y) != 0U)) {
