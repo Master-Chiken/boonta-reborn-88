@@ -423,9 +423,14 @@ def run_provider_patch(
     except ProviderPatchError as exc:
         exc.provider_request_started = True
         raise
-    except (UnicodeError, json.JSONDecodeError, ProposalError, OSError) as exc:
+    except ProposalError as exc:
         raise ProviderPatchError(
-            "Provider response could not be decoded, validated or saved safely",
+            f"Assistant proposal failed strict validation: {exc}",
+            provider_request_started=True,
+        ) from exc
+    except (UnicodeError, json.JSONDecodeError, OSError) as exc:
+        raise ProviderPatchError(
+            "Provider response could not be decoded or saved safely",
             provider_request_started=True,
         ) from exc
     return {
