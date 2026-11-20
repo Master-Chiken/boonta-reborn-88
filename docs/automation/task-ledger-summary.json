@@ -25,64 +25,6 @@
   },
   "tasks": [
     {
-      "task_id": "AUTOMATION-LEDGER-ACTIVATION",
-      "title": "Activate and validate persistent autonomous task tracking",
-      "owner_role_id": "chief-of-staff",
-      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
-      "depends_on": [],
-      "owner_approved": false,
-      "queue": "#226",
-      "platform_scope": [
-        "automation"
-      ],
-      "status": "blocked",
-      "target_branch": "main",
-      "read_paths": [
-        "tools/check_task_ledger.py",
-        "tools/test_check_task_ledger.py",
-        "tools/check_task_ledger_summary.py",
-        ".github/workflows/boonta-autonomous-loop.yml"
-      ],
-      "read_ranges": [
-        {
-          "path": "tools/check_task_ledger.py",
-          "start_line": 48,
-          "end_line": 94
-        },
-        {
-          "path": "tools/test_check_task_ledger.py",
-          "start_line": 46,
-          "end_line": 82
-        },
-        {
-          "path": "tools/check_task_ledger_summary.py",
-          "start_line": 20,
-          "end_line": 62
-        },
-        {
-          "path": ".github/workflows/boonta-autonomous-loop.yml",
-          "start_line": 156,
-          "end_line": 199
-        },
-        {
-          "path": ".github/workflows/boonta-autonomous-loop.yml",
-          "start_line": 217,
-          "end_line": 246
-        }
-      ],
-      "question_excerpt": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
-      "acceptance_criteria_total": 15,
-      "acceptance_criteria_excerpt": [
-        "Ledger validator and regression tests pass in CI",
-        "Gemini and OpenRouter prompts both reconcile the ledger with live GitHub state",
-        "One active task maximum is enforced",
-        "A post-merge cycle records exact PR state and continues the next unanswered research question"
-      ],
-      "pr_url": null,
-      "head_sha": null,
-      "next_action_excerpt": "after 2026-11-11 UTC reset, require one actual €0 provider invocation, a same-task PR and exact-head CI before completing this task. Only…"
-    },
-    {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
       "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
       "owner_role_id": "research",
