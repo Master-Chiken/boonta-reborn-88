@@ -104,6 +104,47 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         self.assertEqual(report["base_sha"], self.base_sha)
         self.assertEqual(report["approval_ref"], APPROVAL)
 
+    def test_in_review_task_blocks_an_otherwise_active_task(self):
+        review = dict(
+            BASE_TASK,
+            task_id="AUTOMATION-REVIEW-TASK",
+            status="in_review",
+            pr_url="https://github.com/Master-Chiken/boonta-reborn-88/pull/998",
+            head_sha="a" * 40,
+        )
+        self.ledger["tasks"].append(review)
+        self.commit_inputs()
+        report = self.call_allowlist()
+        self.assertEqual(report["status"], "WAITING_FOR_TASK_REVIEW")
+        self.assertEqual(report["allowed_paths"], [])
+        self.assertEqual(report["review_task_ids"], ["AUTOMATION-REVIEW-TASK"])
+
+    def test_in_review_task_blocks_owner_approved_queued_task_promotion(self):
+        queued = dict(BASE_TASK, status="queued", owner_approved=True, depends_on=[])
+        review = dict(
+            BASE_TASK,
+            task_id="AUTOMATION-REVIEW-TASK",
+            status="in_review",
+            pr_url="https://github.com/Master-Chiken/boonta-reborn-88/pull/998",
+            head_sha="b" * 40,
+        )
+        self.ledger["tasks"] = [queued, review]
+        self.commit_inputs()
+        report = self.call_allowlist()
+        self.assertEqual(report["status"], "WAITING_FOR_TASK_REVIEW")
+        self.assertEqual(report["allowed_paths"], [])
+        self.assertEqual(report["review_task_ids"], ["AUTOMATION-REVIEW-TASK"])
+
+    def test_requested_in_review_task_never_receives_write_paths(self):
+        self.ledger["tasks"][0]["status"] = "in_review"
+        self.ledger["tasks"][0]["pr_url"] = APPROVAL
+        self.ledger["tasks"][0]["head_sha"] = "c" * 40
+        self.commit_inputs()
+        report = self.call_allowlist()
+        self.assertEqual(report["status"], "WAITING_FOR_TASK_REVIEW")
+        self.assertEqual(report["allowed_paths"], [])
+        self.assertEqual(report["review_task_ids"], [TASK_ID])
+
     def test_owner_approved_queued_task_with_completed_dependencies_is_ready(self):
         queued = dict(BASE_TASK, status="queued", owner_approved=True, depends_on=["TASK-PREREQUISITE"])
         self.ledger["tasks"] = [queued]
