@@ -243,7 +243,7 @@ static float rival_route_half_width_at(unsigned int rival_index, float travelled
     if (rival_route_sample_at(rival_index, travelled,
             NULL, NULL, NULL, &width) != BOONTA_ROUTE_CURSOR_OK) {
         return g_current_course != NULL
-            ? g_current_course->road_half_width : 3.6f;
+            ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
     }
     return width;
 }
