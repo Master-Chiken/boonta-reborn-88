@@ -16,7 +16,6 @@
 #include "gameplay_state.h"
 #include "rival_ai.h"
 #include "course_catalog.h"
-#include "route_graph_sampling.h"
 #include "generated_mesh_player_pod.h"
 #include "generated_texture_player_pod.h"
 
@@ -74,18 +73,9 @@ static const BoontaCourseDefinition *g_current_course;
 static int g_course_ready;
 static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
 
-/* Rivals share one immutable arc-length sampler but own independent route history. */
-static BoontaRouteGraphSampler g_rival_route_sampler;
-static BoontaRouteCursor g_rival_route_cursors[BOONTA_RIVAL_COUNT];
+/* Race-facing coordinates; each course owns the corresponding rival route cursors. */
 static float g_rival_route_distance[BOONTA_RIVAL_COUNT];
 static int g_rival_route_cursor_ready[BOONTA_RIVAL_COUNT];
-static const BoontaRouteCursorGraph g_rival_route_cursor_graph = {
-    boonta_runtime_route_topology_edges,
-    BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
-    BOONTA_RUNTIME_ROUTE_NODE_COUNT,
-    BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
-    BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
-};
 
 
 /* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
@@ -135,100 +125,64 @@ static void initialise_pod_texture(void)
 
 static int reset_rival_route_cursors(void)
 {
-    unsigned int start_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
-    unsigned int edge;
     unsigned int rival_index;
+    int all_ready = 1;
 
-    if (!g_rival_route_sampler.lengths_ready) {
-        memset(&g_rival_route_sampler, 0, sizeof(g_rival_route_sampler));
-        if (!boonta_route_graph_sampler_prepare(&g_rival_route_sampler)) return 0;
-    }
-    for (edge = 0U; edge < BOONTA_RUNTIME_ROUTE_EDGE_COUNT; ++edge) {
-        if (boonta_runtime_route_topology_edges[edge].from_node ==
-            BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) {
-            start_edge = edge;
-            break;
+    if (g_current_course == NULL ||
+        g_current_course->reset_rival_route == NULL) {
+        for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+            g_rival_route_cursor_ready[rival_index] = 0;
+            g_rival_route_distance[rival_index] = 0.0f;
         }
+        return 0;
     }
-    if (start_edge == BOONTA_ROUTE_CURSOR_NO_EDGE) return 0;
 
     for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
         const float grid_offset = boonta_rival_initial_progress(rival_index);
-        g_rival_route_distance[rival_index] = grid_offset;
+        float route_distance = 0.0f;
+        float progress = 0.0f;
         g_rival_route_cursor_ready[rival_index] =
-            boonta_route_cursor_init(&g_rival_route_cursors[rival_index],
-                &g_rival_route_cursor_graph, g_rival_route_sampler.edge_lengths,
-                start_edge) == BOONTA_ROUTE_CURSOR_OK;
-        if (g_rival_route_cursor_ready[rival_index] && grid_offset > 0.0f) {
-            g_rival_route_cursor_ready[rival_index] =
-                boonta_route_cursor_move(&g_rival_route_cursors[rival_index],
-                    grid_offset, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK;
-        }
-        if (g_rival_route_cursor_ready[rival_index]) {
-            float lap_progress = 0.0f;
-            BoontaRouteCursor *cursor = &g_rival_route_cursors[rival_index];
-            if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES &&
-                boonta_route_graph_sampler_prime_lookahead(
-                    &g_rival_route_sampler, cursor, 0,
-                    ROUTE_BRANCH_SELECTION_DISTANCE,
-                    ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
-                g_rival_route_cursor_ready[rival_index] = 0;
-            } else if (boonta_route_cursor_lap_progress(
-                           cursor, &lap_progress) == BOONTA_ROUTE_CURSOR_OK &&
-                       boonta_rival_progress_from_cursor_state(
-                           cursor->completed_laps, lap_progress,
-                           g_current_course->lap_distance,
-                           &g_rival_progress[rival_index])) {
-                g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
-                    g_distance, g_rival_progress[rival_index]);
-            } else {
-                g_rival_route_cursor_ready[rival_index] = 0;
-            }
+            g_current_course->reset_rival_route(
+                g_current_course->runtime_context, rival_index, grid_offset,
+                g_current_course->lap_distance, &route_distance, &progress);
+        if (g_rival_route_cursor_ready[rival_index] &&
+            isfinite(route_distance) && route_distance >= 0.0f &&
+            isfinite(progress) && progress >= 0.0f) {
+            g_rival_route_distance[rival_index] = route_distance;
+            g_rival_progress[rival_index] = progress;
+            g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
+                g_distance, g_rival_progress[rival_index]);
+        } else {
+            g_rival_route_cursor_ready[rival_index] = 0;
+            g_rival_route_distance[rival_index] = 0.0f;
+            all_ready = 0;
         }
     }
-    for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-        if (!g_rival_route_cursor_ready[rival_index]) return 0;
-    }
-    return 1;
+    return all_ready;
 }
 
 static int advance_rival_route_cursor(unsigned int rival_index,
                                       float distance_delta, float steering)
 {
-    BoontaRouteCursor *cursor;
-    BoontaRouteCursor candidate;
-    float next_route_distance;
-    float next_progress;
-    int branch_direction = 0;
-
+    float next_route_distance = 0.0f;
+    float next_progress = 0.0f;
     if (rival_index >= BOONTA_RIVAL_COUNT ||
         !g_rival_route_cursor_ready[rival_index] ||
         !isfinite(distance_delta) || distance_delta < 0.0f ||
         g_current_course == NULL ||
+        g_current_course->advance_rival_route == NULL ||
         !isfinite(g_rival_route_distance[rival_index])) return 0;
 
-    cursor = &g_rival_route_cursors[rival_index];
-    /*
-     * Stage branch selection on a private cursor. The shared transaction helper
-     * then validates movement and both race-space coordinates before commit.
-     */
-    candidate = *cursor;
-    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        branch_direction = boonta_rival_route_branch_direction_from_steering(
-            steering, ROUTE_BRANCH_STEERING_DEADZONE);
-        if (boonta_route_graph_sampler_prime_lookahead(
-                &g_rival_route_sampler, &candidate, branch_direction,
-                ROUTE_BRANCH_SELECTION_DISTANCE,
-                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
-            return 0;
-        }
+    if (!g_current_course->advance_rival_route(
+            g_current_course->runtime_context, rival_index, distance_delta,
+            steering, g_rival_route_distance[rival_index],
+            g_current_course->lap_distance,
+            &next_route_distance, &next_progress) ||
+        !isfinite(next_route_distance) || next_route_distance < 0.0f ||
+        !isfinite(next_progress) || next_progress < 0.0f) {
+        return 0;
     }
-    if (!boonta_rival_advance_cursor_transaction(
-            &candidate, distance_delta, g_rival_route_distance[rival_index],
-            g_current_course->lap_distance, &next_route_distance,
-            &next_progress)) return 0;
 
-    *cursor = candidate;
     g_rival_route_distance[rival_index] = next_route_distance;
     g_rival_progress[rival_index] = next_progress;
     return 1;
@@ -239,13 +193,13 @@ static int rival_route_sample_at(unsigned int rival_index, float target_distance
 {
     if (rival_index >= BOONTA_RIVAL_COUNT ||
         !g_rival_route_cursor_ready[rival_index] ||
-        !isfinite(g_rival_progress[rival_index])) return BOONTA_ROUTE_CURSOR_INVALID;
-    return boonta_route_graph_sampler_sample_relative_to_cursor(
-        &g_rival_route_sampler, &g_rival_route_cursors[rival_index],
+        !isfinite(g_rival_progress[rival_index]) ||
+        g_current_course == NULL ||
+        g_current_course->sample_rival_route == NULL) return -1;
+    return g_current_course->sample_rival_route(
+        g_current_course->runtime_context, rival_index,
         g_rival_route_distance[rival_index], target_distance,
-        g_current_course != NULL ? g_current_course->road_half_width :
-            BOONTA_REFERENCE_ROAD_HALF_WIDTH,
-        x, y, z, width);
+        g_current_course->road_half_width, x, y, z, width);
 }
 
 static float rival_route_curvature_at(unsigned int rival_index, float travelled)
@@ -288,7 +242,7 @@ static float rival_route_signed_curvature_at(unsigned int rival_index, float tra
 static float rival_route_half_width_at(unsigned int rival_index, float travelled)
 {
     float width = g_current_course != NULL
-        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+        ? g_current_course->road_half_width : 3.6f;
     if (rival_route_sample_at(rival_index, travelled,
             NULL, NULL, NULL, &width) != BOONTA_ROUTE_CURSOR_OK) {
         return g_current_course != NULL
