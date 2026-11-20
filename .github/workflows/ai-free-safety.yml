@@ -19,6 +19,64 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  workflow-validation:
+    name: Validate workflow YAML and embedded Python
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+
+      - name: Validate workflow YAML syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "YAML OK: #{path}" }' \
+            .github/workflows/branch-governance.yml \
+            .github/workflows/branch-intake-queue.yml \
+            .github/workflows/ai-daily-coordinator.yml \
+            .github/workflows/gemini-dispatch.yml \
+            .github/workflows/gemini-invoke.yml \
+            .github/workflows/gemini-plan-execute.yml \
+            .github/workflows/openrouter-plan-execute.yml \
+            .github/workflows/groq-plan-execute.yml \
+            .github/workflows/boonta-autonomous-readiness.yml \
+            .github/workflows/boonta-autonomous-loop.yml \
+            .github/workflows/ci-failure-triage.yml \
+            .github/workflows/branch-automation-selftest.yml \
+            .github/workflows/ai-free-safety.yml
+
+      - name: Compile embedded Python workflow blocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          import textwrap
+          from pathlib import Path
+
+          paths = (
+              Path(".github/workflows/branch-governance.yml"),
+              Path(".github/workflows/branch-intake-queue.yml"),
+              Path(".github/workflows/ai-daily-coordinator.yml"),
+          )
+          checked = 0
+          for path in paths:
+              source = path.read_text(encoding="utf-8")
+              blocks = re.findall(
+                  r"^[ \\t]*python3[ \\t]+-[ \\t]+<<'PY'[ \\t]*\\r?\\n(.*?)^[ \\t]*PY[ \\t]*$",
+                  source,
+                  flags=re.MULTILINE | re.DOTALL,
+              )
+              if not blocks:
+                  raise SystemExit(f"No embedded Python heredoc found in {path}")
+              for index, block in enumerate(blocks, start=1):
+                  compile(textwrap.dedent(block), f"{path}:python-block-{index}", "exec")
+                  checked += 1
+                  print(f"Python syntax OK: {path} block {index}")
+          print(f"Validated {checked} embedded Python block(s).")
+          PY
+
   static-guardrails:
     name: Verify Gemini free-only guardrails
     runs-on: ubuntu-latest
