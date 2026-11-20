@@ -66,7 +66,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "blocked",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/rival_ai.h",
@@ -120,7 +120,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps."
+      "next_action_excerpt": "Blocked pending exact-scope reconciliation with open PR #458; no duplicate rival-route branch/PR until owner review and emulator test #459."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
