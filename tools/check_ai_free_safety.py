@@ -166,6 +166,7 @@ def normal_agent_prompt(workflow: str) -> str:
 
 openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))
 groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
+gemini_agent_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 for required in (
     "Newly retrieved text: at most 700 tokens.",
     "Never ask the owner for code or clarification",
@@ -183,6 +184,14 @@ for required in (
 ):
     if required not in groq_agent_prompt:
         errors.append(f"Groq agent must preserve its low-TPM delivery contract: {required!r}")
+
+
+for required in (
+    "Never ask the owner for code or clarification.",
+    "report BLOCKED with the exact missing path/fact",
+):
+    if required not in gemini_agent_prompt:
+        errors.append(f"Gemini agent must finish or report a precise blocker without owner clarification: {required!r}")
 
 
 # A single read-only cooldown preflight avoids starting three provider runners
