@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-18",
+  "updated_at": "2026-11-20",
   "completed_task_ids": [
     "RE002-SYSTEM-MATRIX",
     "RE001-SYSTEM-MATRIX",
@@ -119,23 +119,25 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "in_review",
       "target_branch": "dev",
       "read_paths": [
+        "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
-        "gamecube-demo/source/gameplay_state.h"
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c"
       ],
       "read_ranges": [
         {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 91,
-          "end_line": 145
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1430,
+          "end_line": 1484
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 203,
-          "end_line": 223
+          "start_line": 213,
+          "end_line": 272
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
@@ -144,7 +146,7 @@
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 228,
+          "start_line": 232,
           "end_line": 275
         },
         {
@@ -154,13 +156,13 @@
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 14,
-          "end_line": 35
+          "start_line": 578,
+          "end_line": 625
         },
         {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 435,
-          "end_line": 484
+          "path": "gamecube-demo/tests/test_rival_ai.c",
+          "start_line": 180,
+          "end_line": 220
         }
       ],
       "question_excerpt": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
@@ -171,9 +173,9 @@
         "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing…",
         "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence."
       ],
-      "pr_url": null,
-      "head_sha": null,
-      "next_action_excerpt": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps."
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+      "head_sha": "5345664d59df93974e3e4aee432954542fcbc21b",
+      "next_action_excerpt": "Current #439 head 5345664d59df93974e3e4aee432954542fcbc21b passed all four jobs on run #44766976477 (attempt 2), including the Dolphin software-renderer diagnostic. Emulator evidence only; no physical hardware/branched-course acceptance. Keep in_review; no provider before human review/merge."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
