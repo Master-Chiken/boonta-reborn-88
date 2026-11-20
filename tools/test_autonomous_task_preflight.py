@@ -936,6 +936,50 @@ cases = [
         "expected_error": "duplicate task IDs",
     },
     {
+        "name": "branch ceiling blocks new task selection",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "branch_count": 11,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "branch count 11 exceeds allowed 10",
+    },
+    {
+        "name": "missing owner emulator report blocks new task selection",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "emulator_report": false,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "owner emulator report with NATIVE_FALLBACK decision is missing",
+    },
+    {
+        "name": "accepted emulator result keeps native implementation parked",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "owner_decision": "EMULATOR_ACCEPTED",
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "owner emulator report with NATIVE_FALLBACK decision is missing",
+    },
+    {
+        "name": "competing open PR blocks new task selection",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "open_pr_count": 1,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "open PR count 1 exceeds allowed 0",
+    },
+    {
         "name": "legacy summary schema fails closed",
         "tasks": [valid_active],
         "marker_day_offset": None,
@@ -981,16 +1025,45 @@ async function runCase(testCase) {{
     schema_version: testCase.schema_version === undefined ? 2 : testCase.schema_version,
     source: "docs/automation/task-ledger.json",
     updated_at: todayUtc,
-    policy: {{ max_active_tasks: 1 }},
+    policy: {{
+      max_active_tasks: 1,
+      max_open_prs_for_new_task: 0,
+      max_branch_refs_for_new_task: 10,
+      owner_test_gate_issue: 459,
+      owner_test_gate_marker: "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+      owner_test_gate_decision: "NATIVE_FALLBACK"
+    }},
     completed_task_ids: testCase.completed_task_ids || [],
     tasks: testCase.tasks
   }};
   const github = {{
     paginate: async (_endpoint, options) => {{
-      if (options.issue_number !== 226 || options.since !== todayUtc + "T00:00:00Z") {{
-        throw new Error("unexpected issue-comment query");
+      if (_endpoint === github.rest.repos.listBranches) {{
+        const branchCount = testCase.branch_count === undefined ? 1 : testCase.branch_count;
+        return Array.from({{ length: branchCount }}, (_value, index) => ({{ name: "test/branch-" + index }}));
       }}
-      return comments;
+      if (_endpoint === github.rest.issues.listComments) {{
+        if (options.issue_number === 226 && options.since === todayUtc + "T00:00:00Z") {{
+          return comments;
+        }}
+        if (options.issue_number === 459 && options.since === undefined) {{
+          if (testCase.emulator_report === false) return [];
+          const decision = testCase.owner_decision || "NATIVE_FALLBACK";
+          return [{{
+            user: {{ login: "Master-Chiken" }},
+            body: [
+              "Emulator: Wii64 1.5.0",
+              "Platform: Dolphin on macOS",
+              "Graphics plugin: glN64",
+              "ROM region: NTSC-U",
+              "Full race: FAIL",
+              "Owner decision: " + decision,
+              "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->"
+            ].join("\\n")
+          }}];
+        }}
+      }}
+      throw new Error("unexpected paginated query");
     }},
     rest: {{
       issues: {{ listComments: async () => ({{ data: comments }}) }},
@@ -1010,6 +1083,7 @@ async function runCase(testCase) {{
         }}
       }},
       repos: {{
+        listBranches: async () => ({{ data: [] }}),
         getContent: async (options) => {{
           if (options.ref !== "main") throw new Error("unexpected canonical file ref");
           if (options.path === "docs/automation/task-ledger-summary.json") {{
