@@ -918,6 +918,18 @@ static void race_session_transition_tests(void) {
  assert(!boonta_race_session_should_advance(NULL));
 }
 
+static void course_selection_input_tests(void)
+{
+    assert(boonta_course_selection_after_input(0U, 0, 0, 2U) == 0U);
+    assert(boonta_course_selection_after_input(0U, 1, 0, 2U) == 1U);
+    assert(boonta_course_selection_after_input(1U, 0, 1, 2U) == 0U);
+    assert(boonta_course_selection_after_input(1U, 1, 0, 2U) == 0U);
+    assert(boonta_course_selection_after_input(0U, 0, 1, 2U) == 1U);
+    assert(boonta_course_selection_after_input(1U, 1, 1, 2U) == 1U);
+    assert(boonta_course_selection_after_input(99U, 1, 0, 0U) == 0U);
+    assert(boonta_course_selection_after_input(3U, 0, 1, 2U) == 0U);
+}
+
 static void normalized_route_progress_is_independent_of_physical_distance(void)
 {
     BoontaRaceState state = {0};
@@ -1452,6 +1464,7 @@ int main(void) {
  championship_ledger_ignores_invalid_results_and_saturates();
  camera_follow_damping_tests();
  race_session_transition_tests();
+ course_selection_input_tests();
  normalized_route_progress_is_independent_of_physical_distance();
  race_order_and_finish_tests();
  competitive_race_pace_tests();
