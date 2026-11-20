@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-18",
+  "updated_at": "2026-11-20",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -1011,24 +1011,26 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "in_review",
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
       "read_paths": [
+        "gamecube-demo/source/main.c",
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
-        "gamecube-demo/source/gameplay_state.h"
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c"
       ],
       "read_ranges": [
         {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 91,
-          "end_line": 145
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1430,
+          "end_line": 1484
         },
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 203,
-          "end_line": 223
+          "start_line": 213,
+          "end_line": 272
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
@@ -1037,7 +1039,7 @@
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 228,
+          "start_line": 232,
           "end_line": 275
         },
         {
@@ -1047,13 +1049,13 @@
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 14,
-          "end_line": 35
+          "start_line": 578,
+          "end_line": 625
         },
         {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 435,
-          "end_line": 484
+          "path": "gamecube-demo/tests/test_rival_ai.c",
+          "start_line": 180,
+          "end_line": 220
         }
       ],
       "acceptance_criteria": [
@@ -1065,15 +1067,24 @@
         "Integrate rival progress into the current results/session data only where values are measured; do not invent finishing positions or claim retail AI parity.",
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
-      "evidence": [],
-      "next_action": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps.",
-      "updated_at": "2026-11-18",
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44279415458",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44281586837",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44407302584",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44575835732",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44766976477"
+      ],
+      "next_action": "Updated 2026-11-20: gameplay PR #439 current exact head 5345664d59df93974e3e4aee432954542fcbc21b passed all four jobs in workflow run #44766976477 (attempt 2): GameCube/Wii builds, host pause/resume tests, Dolphin headless process smoke, and Dolphin software-renderer diagnostic. The first diagnostic attempt hit a bounded dependency-install network timeout; the retry completed successfully. This is scripted emulator evidence only, not physical GameCube/Wii acceptance or branched-course rival validation. Keep the task in_review; no provider invocation until human review/merge of #439 and canonical reconciliation. Revalidate the exact head and all required CI before any later resume.",
+      "updated_at": "2026-11-20",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
         "GC-RACE-PROGRESSION"
       ],
-      "owner_approved": true
+      "owner_approved": true,
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+      "head_sha": "5345664d59df93974e3e4aee432954542fcbc21b"
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
