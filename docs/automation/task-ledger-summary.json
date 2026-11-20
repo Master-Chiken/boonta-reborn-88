@@ -175,7 +175,7 @@
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
       "head_sha": "5345664d59df93974e3e4aee432954542fcbc21b",
-      "next_action_excerpt": "Current #439 head 5345664d59df93974e3e4aee432954542fcbc21b. GameCube/Wii builds, host tests and null-video smoke passed; Dolphin visual diagnostic is being retried after dependency-install timeout. Keep in_review; no provider invocation before human review/merge."
+      "next_action_excerpt": "Current #439 head 5345664d59df93974e3e4aee432954542fcbc21b passed all four jobs on run #44766976477 (attempt 2), including the Dolphin software-renderer diagnostic. Emulator evidence only; no physical hardware/branched-course acceptance. Keep in_review; no provider before human review/merge."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",

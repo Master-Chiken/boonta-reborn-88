@@ -1075,7 +1075,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44575835732",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/44766976477"
       ],
-      "next_action": "Updated 2026-11-20: gameplay PR #439 head is 5345664d59df93974e3e4aee432954542fcbc21b. Exact-head GameCube/Wii builds, host pause/resume tests and Dolphin null-video process smoke passed. The optional Dolphin software-renderer job failed during dependency installation after its 4-minute network timeout and is being retried as job 136397432913. Keep this task in_review; do not invoke a provider until human review/merge of #439 and canonical reconciliation. Revalidate the exact head and all required CI before any later resume.",
+      "next_action": "Updated 2026-11-20: gameplay PR #439 current exact head 5345664d59df93974e3e4aee432954542fcbc21b passed all four jobs in workflow run #44766976477 (attempt 2): GameCube/Wii builds, host pause/resume tests, Dolphin headless process smoke, and Dolphin software-renderer diagnostic. The first diagnostic attempt hit a bounded dependency-install network timeout; the retry completed successfully. This is scripted emulator evidence only, not physical GameCube/Wii acceptance or branched-course rival validation. Keep the task in_review; no provider invocation until human review/merge of #439 and canonical reconciliation. Revalidate the exact head and all required CI before any later resume.",
       "updated_at": "2026-11-20",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
