@@ -71,7 +71,7 @@ jobs:
       needs.readiness.result == 'success' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner) || (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'))
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner) || (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback' && github.event.client_payload.failed_provider == 'openrouter'))
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
