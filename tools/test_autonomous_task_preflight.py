@@ -1072,7 +1072,11 @@ async function runCase(testCase) {{
           if (options.state !== "open" || options.per_page !== 100 || options.page !== 1) {{
             throw new Error("unexpected open-PR query");
           }}
-          return {{ data: testCase.open_task_prs || [] }};
+          const openPrs = testCase.open_task_prs || Array.from(
+            {{ length: testCase.open_pr_count || 0 }},
+            (_value, index) => ({{ number: 900 + index, body: "Unrelated open PR" }})
+          );
+          return {{ data: openPrs }};
         }},
         listFiles: async (options) => {{
           const expectedPullNumber = Number(testCase.expected_resume_pr_number || "388");
