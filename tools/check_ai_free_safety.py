@@ -39,6 +39,7 @@ patch_cycle = read("tools/run_autonomous_patch_cycle.py")
 trusted_main_validator = read("tools/validate_trusted_main_checkout.py")
 trusted_main_validator_tests = read("tools/test_validate_trusted_main_checkout.py")
 allowlist_builder = read("tools/build_autonomous_path_allowlist.py")
+free_safety_workflow = read(".github/workflows/ai-free-safety.yml")
 
 # The on-demand Gemini action installs its own default /gemini-invoke command,
 # whose template uses shell substitutions. Invoke our read-only instructions
@@ -1815,6 +1816,9 @@ for required in (
         errors.append(f"Autonomous loop push path filter is missing trusted-main guard input: {required!r}")
 if "python3 tools/test_validate_trusted_main_checkout.py" not in selftest:
     errors.append("Branch automation self-test must execute trusted-main validator fixtures")
+
+if "python3 tools/test_validate_trusted_main_checkout.py" not in free_safety_workflow:
+    errors.append("PR safety workflow must execute trusted-main validator fixtures")
 
 # Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
 reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
