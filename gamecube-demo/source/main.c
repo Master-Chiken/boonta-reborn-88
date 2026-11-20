@@ -1268,9 +1268,9 @@ static void draw_hud(void)
         append_screen_quad(cx - 76.0f, cy - 48.0f, cx + 76.0f, cy + 48.0f,
                            0.6f, pause_panel);
         append_text("PAUSED", cx - 18.0f, cy - 25.0f, 1.2f, boost_fill);
-        append_screen_quad(cx - 13.0f, cy - 5.0f, cx - 4.0f, cy + 13.0f,
+        append_screen_quad(cx - 13.0f, cy - 18.0f, cx - 4.0f, cy + 18.0f,
                            0.2f, white);
-        append_screen_quad(cx + 4.0f, cy - 5.0f, cx + 13.0f, cy + 13.0f,
+        append_screen_quad(cx + 4.0f, cy - 18.0f, cx + 13.0f, cy + 18.0f,
                            0.2f, white);
         append_text("PRESS START", cx - 34.0f, cy + 27.0f, 0.8f, white);
     }
