@@ -374,6 +374,14 @@ gemini_plan_workflow = read(".github/workflows/gemini-plan-execute.yml")
 groq_plan_workflow = read(".github/workflows/groq-plan-execute.yml")
 openrouter_plan_workflow = openrouter_fallback
 autonomous_loop_workflow = read(".github/workflows/boonta-autonomous-loop.yml")
+for label, workflow in (
+    ("Gemini", gemini_plan_workflow),
+    ("Groq", groq_plan_workflow),
+    ("OpenRouter", openrouter_plan_workflow),
+):
+    if "ref: ${{ inputs.resume_mode == true && inputs.resume_head_sha || inputs.resume_task_target_branch || inputs.task_target_branch }}" not in workflow:
+        errors.append(f"{label} resume context checkout must pin the exact head SHA verified by its PR guard")
+
 fresh_guard_tests = read("tools/test_autonomous_fresh_task_guard.py")
 
 # Human review is a global single-writer lock. Every provider must reject both
