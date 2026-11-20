@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-18",
+  "updated_at": "2026-11-21",
   "completed_task_ids": [
     "RE002-SYSTEM-MATRIX",
     "RE001-SYSTEM-MATRIX",
@@ -16,7 +16,12 @@
   ],
   "policy": {
     "max_active_tasks": 1,
-    "completed_requires_merged_pr": true
+    "completed_requires_merged_pr": true,
+    "max_open_prs_for_new_task": 0,
+    "max_branch_refs_for_new_task": 10,
+    "owner_test_gate_issue": 459,
+    "owner_test_gate_marker": "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+    "owner_test_gate_decision": "NATIVE_FALLBACK"
   },
   "tasks": [
     {
