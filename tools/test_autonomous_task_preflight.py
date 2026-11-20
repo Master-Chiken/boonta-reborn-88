@@ -747,16 +747,18 @@ cases = [
         "reason_contains": "open PR #356",
     },
     {
-        "name": "open PR for a different task does not block activation",
+        "name": "unrelated open PR blocks new activation under zero-PR policy",
         "tasks": [activation],
         "marker_day_offset": None,
         "open_task_prs": [{
             "number": 123,
-            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\nBOONTA_TASK_TARGET_BRANCH: main"
+            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\\nBOONTA_TASK_TARGET_BRANCH: main"
         }],
-        "expected_ready": True,
-        "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
+        "expected_ready": False,
+        "expected_task_id": "",
         "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "open PR count 1 exceeds allowed 0",
     },
     {
         "name": "100 open PRs fail closed at the bounded inventory ceiling",
