@@ -950,7 +950,7 @@ cases = [
         "name": "missing owner emulator report blocks new task selection",
         "tasks": [valid_queued],
         "marker_day_offset": None,
-        "emulator_report": false,
+        "emulator_report": False,
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
