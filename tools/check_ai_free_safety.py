@@ -204,9 +204,10 @@ for label, workflow in (
         if required not in config:
             errors.append(f"{label} OpenCode resume config must deny non-GitHub interaction tool {required!r}")
 
-    resume_start = workflow.find("RESUME_PROMPT\n")
+    resume_open = workflow.find("<<'RESUME_PROMPT'\n")
+    resume_start = resume_open + len("<<'RESUME_PROMPT'\n") if resume_open >= 0 else -1
     resume_end = workflow.find("\n          RESUME_PROMPT", resume_start)
-    resume_prompt = workflow[resume_start + len("RESUME_PROMPT\n"):resume_end] if resume_start >= 0 and resume_end > resume_start else ""
+    resume_prompt = workflow[resume_start:resume_end] if resume_start >= 0 and resume_end > resume_start else ""
     for required in (
         "AUTONOMOUS_CONTEXT is injected below in this prompt",
         "Never request or read AUTONOMOUS_CONTEXT.md",
