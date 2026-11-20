@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - automation/split-policy-target-checkouts-20261119
   workflow_dispatch:
 
 permissions:
