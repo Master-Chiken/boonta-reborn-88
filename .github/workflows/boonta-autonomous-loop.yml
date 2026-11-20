@@ -135,9 +135,8 @@ jobs:
             if (!Array.isArray(openPullRequests) || openPullRequests.length >= 100) {
               throw new Error('Open PR inventory reached the 100-item safety ceiling; refusing provider invocation to avoid duplicate task work.');
             }
-            // Existing trusted PRs remain resumable; never start new work above the PR budget.
-            const MAX_OPEN_PRS_FOR_NEW_TASK = 3;
-            const canStartNewTask = openPullRequests.length < MAX_OPEN_PRS_FOR_NEW_TASK;
+            // New work is deliberately fail-closed: no competing PR, branch sprawl,
+            // or stale pre-emulator task selection may create another writer.
             const matchingTaskPullRequests = (task) => {
               if (!task) return [];
               const markerLine = 'BOONTA_TASK_ID: ' + task.task_id;
@@ -190,10 +189,53 @@ jobs:
               ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
               !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
               ledgerSummary.policy?.max_active_tasks !== 1 ||
+              ledgerSummary.policy?.max_open_prs_for_new_task !== 0 ||
+              ledgerSummary.policy?.max_branch_refs_for_new_task !== 10 ||
+              ledgerSummary.policy?.owner_test_gate_issue !== 459 ||
+              ledgerSummary.policy?.owner_test_gate_marker !== '<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->' ||
+              ledgerSummary.policy?.owner_test_gate_decision !== 'NATIVE_FALLBACK' ||
               !Array.isArray(ledgerSummary.tasks)
             ) {
               throw new Error('Canonical compact task ledger schema or one-active-task policy is invalid.');
             }
+
+            const MAX_OPEN_PRS_FOR_NEW_TASK = ledgerSummary.policy.max_open_prs_for_new_task;
+            const MAX_BRANCH_REFS_FOR_NEW_TASK = ledgerSummary.policy.max_branch_refs_for_new_task;
+            const emulatorGateIssue = ledgerSummary.policy.owner_test_gate_issue;
+            const emulatorGateMarker = ledgerSummary.policy.owner_test_gate_marker;
+            const emulatorGateDecision = ledgerSummary.policy.owner_test_gate_decision;
+
+            const branchRefs = await github.paginate(github.rest.repos.listBranches, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            if (!Array.isArray(branchRefs) || branchRefs.length >= 100) {
+              throw new Error('Branch inventory is missing or reached the 100-ref safety ceiling; refusing new task selection.');
+            }
+
+            const emulatorTestComments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: emulatorGateIssue,
+              per_page: 100,
+            });
+            const ownerEmulatorReportRecorded = emulatorTestComments.some((comment) => {
+              const body = typeof comment.body === 'string' ? comment.body : '';
+              const hasMarker = body.split(/\r?\n/).some((line) => line.trim() === emulatorGateMarker);
+              return comment.user?.login === context.repo.owner && hasMarker &&
+                /Emulator\s*:/i.test(body) &&
+                /Platform\s*:/i.test(body) &&
+                /Graphics plugin\s*:/i.test(body) &&
+                /ROM region\s*:/i.test(body) &&
+                /Full race\s*:/i.test(body) &&
+                new RegExp('Owner decision\\s*:\\s*' + emulatorGateDecision, 'i').test(body);
+            });
+
+            const canStartNewTask =
+              openPullRequests.length <= MAX_OPEN_PRS_FOR_NEW_TASK &&
+              branchRefs.length <= MAX_BRANCH_REFS_FOR_NEW_TASK &&
+              ownerEmulatorReportRecorded;
             const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
             if (
               taskIds.some((taskId) => typeof taskId !== 'string' || !taskId.trim()) ||
@@ -398,7 +440,17 @@ jobs:
               selectedTask = eligibleQueuedTask;
               taskReason = 'first owner-approved queued task whose complete dependency set is completed and whose bounded execution scope is valid';
             } else if (!canStartNewTask) {
-              taskReason = 'open PR budget reached (' + openPullRequests.length + '/' + MAX_OPEN_PRS_FOR_NEW_TASK + '); no new task branch or PR will be created, but a trusted existing task PR may still be resumed';
+              const gateReasons = [];
+              if (openPullRequests.length > MAX_OPEN_PRS_FOR_NEW_TASK) {
+                gateReasons.push('open PR count ' + openPullRequests.length + ' exceeds allowed ' + MAX_OPEN_PRS_FOR_NEW_TASK);
+              }
+              if (branchRefs.length > MAX_BRANCH_REFS_FOR_NEW_TASK) {
+                gateReasons.push('branch count ' + branchRefs.length + ' exceeds allowed ' + MAX_BRANCH_REFS_FOR_NEW_TASK);
+              }
+              if (!ownerEmulatorReportRecorded) {
+                gateReasons.push('owner emulator report with NATIVE_FALLBACK decision is missing from issue #' + emulatorGateIssue);
+              }
+              taskReason = gateReasons.join('; ') + '; no new task branch, provider write or PR will be created';
             } else if (activeTasks.length === 0 && queuedTasks.length > 0) {
               taskReason = 'queued tasks are waiting for completed dependencies, explicit owner approval, bounded read paths, or PR reconciliation';
             } else if (activeTasks.length > 1) {
@@ -490,6 +542,8 @@ jobs:
               queueState = 'TASK_BACKOFF';
             } else if (activationTaskOpenPr || queuedTaskPrEntries.length > 0) {
               queueState = 'WAITING_FOR_OPEN_TASK_PR';
+            } else if (!canStartNewTask) {
+              queueState = 'NEW_TASK_GATES_BLOCKED';
             } else if (queuedTasks.length > 0) {
               queueState = 'QUEUED_TASKS_WAITING_FOR_PROMOTION';
             } else if (blockedTasks.length > 0) {
