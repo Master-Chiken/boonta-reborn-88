@@ -84,6 +84,19 @@ static inline float boonta_rival_route_lookahead_sample(
     return isfinite(sample_distance) ? sample_distance : 0.0f;
 }
 
+/* Convert rival steering into a deterministic route-graph branch direction. */
+static inline int boonta_rival_route_branch_direction_from_steering(
+    float steering, float steering_deadzone)
+{
+    if (!isfinite(steering) || !isfinite(steering_deadzone) ||
+        steering_deadzone < 0.0f) {
+        return 0;
+    }
+    if (steering < -steering_deadzone) return -1;
+    if (steering > steering_deadzone) return 1;
+    return 0;
+}
+
 /* Stable roster traits: rivals keep their style for the whole race. */
 static inline float boonta_rival_ai_personality_line_commitment(unsigned int rival_index)
 {
