@@ -169,12 +169,13 @@ class ProviderPatchFixture(unittest.TestCase):
         self.assertEqual(saved, self.proposal)
         self.assertEqual(git(self.root, "status", "--porcelain"), "")
 
-    def test_provider_attempt_marker_is_written_only_before_launch(self):
+    def test_provider_attempt_marker_is_written_once_after_successful_launch(self):
         marker = self.parent / "github-output.txt"
         self.install_fake_opencode(self.event_stream())
         with patch.dict(os.environ, {"GITHUB_OUTPUT": str(marker)}, clear=False):
             self.invoke()
-        self.assertIn("provider_request_started=true", marker.read_text(encoding="utf-8"))
+        lines = marker.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(lines.count("provider_request_started=true"), 1)
 
     def test_stdout_limit_is_enforced_while_streaming(self):
         self.install_fake_opencode(
