@@ -118,6 +118,7 @@ rival_queued_task.update({
 rival_draft_pr = {
     **queued_draft_pr,
     "number": 439,
+    "draft": False,
     "head": {
         "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
         "ref": "gameplay/rival-route-cursors-20261117",
@@ -361,7 +362,7 @@ cases = [
         "expected_resume_ready": False,
     },
     {
-        "name": "real owner-approved GC rival Draft PR resumes after its canonical dependency completes",
+        "name": "owner-approved queued rival PR resumes only while its ledger remains queued",
         "tasks": [rival_queued_task],
         "completed_task_ids": ["GC-RACE-PROGRESSION"],
         "open_task_prs": [rival_draft_pr],
