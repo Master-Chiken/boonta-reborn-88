@@ -23,6 +23,16 @@ on:
       - tools/validate_autonomous_cycle_report.js
       - tools/test_autonomous_task_preflight.py
       - tools/preflight_github_mcp.py
+      # Structured patch writer runtime: changes to any safety-critical runner must trigger an immediate bounded re-evaluation.
+      - tools/run_autonomous_patch_cycle.py
+      - tools/run_autonomous_provider_patch.py
+      - tools/autonomous_patch_proposal.py
+      - tools/build_autonomous_delivery_plan.py
+      - tools/build_autonomous_path_allowlist.py
+      - tools/verify_autonomous_patch.py
+      - tools/execute_autonomous_github_delivery.py
+      - tools/run_autonomous_patch_tests.py
+      - tools/check_ai_free_safety.py
       - tools/test_autonomous_cycle_report.js
   schedule:
     # Four bounded opportunities per day, including 00:17 UTC just after daily quota reset; runs without asking for another continue message.
