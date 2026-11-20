@@ -328,7 +328,7 @@ with tempfile.TemporaryDirectory() as temp:
     fixture(root)
     summary_path = root / "docs/automation/task-ledger-summary.json"
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    task_id = "GC-RIVAL-ROUTE-PROGRESSION"
+    task_id = "GC-RIVAL-ROUTE-PROGRESSION-TEST"
     title = "Make rival racers progress through the native route and complete the race"
     queued = {
         "task_id": task_id,
@@ -432,13 +432,17 @@ with tempfile.TemporaryDirectory() as temp:
         ), encoding="utf-8")
     ranges = [
         {"path": paths[0], "start_line": 4, "end_line": 8},
+        {"path": paths[0], "start_line": 9, "end_line": 10},
         {"path": paths[1], "start_line": 10, "end_line": 14},
+        {"path": paths[1], "start_line": 15, "end_line": 16},
         {"path": paths[2], "start_line": 16, "end_line": 20},
+        {"path": paths[2], "start_line": 21, "end_line": 22},
         {"path": paths[3], "start_line": 22, "end_line": 26},
+        {"path": paths[3], "start_line": 27, "end_line": 28},
     ]
     excerpt = MODULE._build_source_excerpt(source_root, paths, ranges, 1800)
     assert all(path in excerpt for path in paths)
-    assert "line 4" in excerpt and "line 26" in excerpt
+    assert "line 4" in excerpt and "line 28" in excerpt
     assert len(excerpt) <= 1800
 
     try:
@@ -516,6 +520,12 @@ with tempfile.TemporaryDirectory() as temp:
     assert "[tools/test_check_task_ledger.py:" in context
     assert all(path in context for path in paths)
     assert "line 3" in context and "line 11" in context
+
+
+# Resume mode must read the validated task PR branch, not just its base.
+workflow_text = (ROOT / ".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
+assert "inputs.resume_mode == true && inputs.resume_branch || inputs.resume_task_target_branch || inputs.task_target_branch" in workflow_text
+assert "--max-source-chars 1800" in workflow_text
 
 
 # Production smoke test: the real activation task must remain fail-closed
@@ -601,22 +611,94 @@ rival_handoff = "\n".join([
     *("- " + item for item in rival["acceptance_criteria_excerpt"][:5]),
     "Next: " + rival["next_action_excerpt"],
 ])
-rival_context = MODULE.build_context(
-    ROOT,
-    rival["task_id"],
-    rival["title"],
-    rival["target_branch"],
-    rival_handoff,
-    max_chars=3100,
-    max_task_context=1600,
-    max_criteria=4,
-    max_next_action=100,
-    source_root=ROOT,
-    max_source_chars=1350,
+
+# The five-path exception is bound to the exact task and fixed approved paths/ranges.
+def assert_rejects_changed_rival_scope(mutator, expected_message: str) -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        test_root = Path(temp)
+        (test_root / "docs/automation").mkdir(parents=True)
+        for relative in (
+            "docs/REVERSE_ENGINEERING_FIRST.md",
+            "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
+        ):
+            target = test_root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text((ROOT / relative).read_text(encoding="utf-8"), encoding="utf-8")
+        altered_summary = json.loads(json.dumps(current_summary))
+        altered_rival = next(
+            task for task in altered_summary["tasks"]
+            if task["task_id"] == "GC-RIVAL-ROUTE-PROGRESSION"
+        )
+        # Disable the pre-existing-PR writer lock only in this negative fixture
+        # so the exact path/range rejection is the first failing guard.
+        altered_rival["pr_url"] = None
+        altered_rival["head_sha"] = None
+        mutator(altered_rival)
+        (test_root / "docs/automation/task-ledger-summary.json").write_text(
+            json.dumps(altered_summary), encoding="utf-8"
+        )
+        try:
+            MODULE.build_context(
+                test_root, rival["task_id"], rival["title"], rival["target_branch"],
+                rival_handoff, max_chars=3100, max_task_context=1600,
+                max_criteria=4, max_next_action=100, source_root=ROOT,
+                max_source_chars=1350,
+            )
+        except MODULE.ContextBuildError as exc:
+            assert expected_message in str(exc)
+        else:
+            raise AssertionError("The rival task must reject a changed owner-approved read scope")
+
+
+assert_rejects_changed_rival_scope(
+    lambda task: task["read_paths"].__setitem__(-1, "gamecube-demo/tests/test_gameplay_state.c"),
+    "exact owner-approved five-path/seven-range",
 )
-assert len(rival_context) <= 3100
-assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
-assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
-assert "Exact owner-reviewed write paths (no others):" in rival_context
+assert_rejects_changed_rival_scope(
+    lambda task: task["read_ranges"][-1].__setitem__("end_line", task["read_ranges"][-1]["end_line"] - 1),
+    "exact owner-approved five-path/seven-range",
+)
+if rival.get("pr_url") or rival.get("head_sha"):
+    # Once the canonical ledger records an existing task PR/head, context
+    # generation must refuse to create a duplicate writer for that task.
+    try:
+        MODULE.build_context(
+            ROOT,
+            rival["task_id"],
+            rival["title"],
+            rival["target_branch"],
+            rival_handoff,
+            max_chars=3100,
+            max_task_context=1600,
+            max_criteria=4,
+            max_next_action=100,
+            source_root=ROOT,
+            max_source_chars=1350,
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "Selected task already has PR/head evidence" in str(exc)
+    else:
+        raise AssertionError("A task with recorded PR/head evidence must not receive a second writer")
+else:
+    rival_context = MODULE.build_context(
+        ROOT,
+        rival["task_id"],
+        rival["title"],
+        rival["target_branch"],
+        rival_handoff,
+        max_chars=3100,
+        max_task_context=1600,
+        max_criteria=4,
+        max_next_action=100,
+        source_root=ROOT,
+        max_source_chars=1350,
+    )
+    assert len(rival_context) <= 3100
+    assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
+    assert len(rival["read_paths"]) == 5
+    assert len(rival["read_ranges"]) == 7
+    assert sum(item["end_line"] - item["start_line"] + 1 for item in rival["read_ranges"]) == 280
+    assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
+    assert "Exact owner-reviewed write paths (no others):" in rival_context
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
