@@ -717,6 +717,19 @@ static inline float boonta_rival_initial_progress(unsigned int rival_index)
     return 4.0f - boonta_rival_initial_z(rival_index);
 }
 
+/* Map route-relative lateral steering onto the cursor's left/right convention. */
+static inline int boonta_route_branch_direction_from_steering(
+    float steering, float steering_deadzone)
+{
+    if (!isfinite(steering) || !isfinite(steering_deadzone) ||
+        steering_deadzone < 0.0f) {
+        return 0;
+    }
+    if (steering < -steering_deadzone) return -1;
+    if (steering > steering_deadzone) return 1;
+    return 0;
+}
+
 /* Convert normalized route-cursor state into the race's cumulative distance axis. */
 static inline int boonta_rival_progress_from_cursor_state(
     unsigned int completed_laps, float lap_progress, float lap_distance,
