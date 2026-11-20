@@ -22,6 +22,24 @@ MAX_SOURCE_PATHS = 4
 MAX_SOURCE_RANGES = 8
 MAX_RANGE_LINES = 80
 MAX_TOTAL_RANGE_LINES = 240
+RIVAL_ROUTE_MAX_TOTAL_RANGE_LINES = 280
+RIVAL_ROUTE_TASK_ID = "GC-RIVAL-ROUTE-PROGRESSION"
+RIVAL_ROUTE_READ_PATHS = (
+    "gamecube-demo/source/main.c",
+    "gamecube-demo/source/rival_ai.h",
+    "gamecube-demo/source/route_cursor.h",
+    "gamecube-demo/source/gameplay_state.h",
+    "gamecube-demo/tests/test_rival_ai.c",
+)
+RIVAL_ROUTE_READ_RANGES = (
+    ("gamecube-demo/source/main.c", 1430, 1484),
+    ("gamecube-demo/source/rival_ai.h", 213, 272),
+    ("gamecube-demo/source/route_cursor.h", 56, 67),
+    ("gamecube-demo/source/route_cursor.h", 232, 275),
+    ("gamecube-demo/source/route_cursor.h", 400, 419),
+    ("gamecube-demo/source/gameplay_state.h", 578, 625),
+    ("gamecube-demo/tests/test_rival_ai.c", 180, 220),
+)
 MAX_SOURCE_FILE_BYTES = 96 * 1024
 MAX_WRITE_PATHS = 20
 APPROVAL_REF_RE = re.compile(
@@ -211,6 +229,7 @@ def _build_source_excerpt(
     read_paths: list[str],
     read_ranges: Any,
     max_source_chars: int,
+    max_total_range_lines: int = MAX_TOTAL_RANGE_LINES,
 ) -> str:
     if not isinstance(read_ranges, list) or not read_ranges:
         raise ContextBuildError(
@@ -235,8 +254,8 @@ def _build_source_excerpt(
             raise ContextBuildError(f"Source range exceeds the {MAX_RANGE_LINES}-line per-range limit")
         total_lines += line_count
         checked.append((path, start, end))
-    if total_lines > MAX_TOTAL_RANGE_LINES:
-        raise ContextBuildError(f"Task source ranges exceed the {MAX_TOTAL_RANGE_LINES}-line aggregate limit")
+    if total_lines > max_total_range_lines:
+        raise ContextBuildError(f"Task source ranges exceed the {max_total_range_lines}-line aggregate limit")
     if set(path for path, _, _ in checked) != set(read_paths):
         raise ContextBuildError("Every exact task read path must have at least one bounded source range")
 
@@ -385,12 +404,25 @@ def build_context(
     if not isinstance(criteria_total, int) or criteria_total < len(criteria):
         raise ContextBuildError("Selected task acceptance-criteria count is inconsistent")
     read_paths = task.get("read_paths")
+    read_ranges = task.get("read_ranges", [])
+    actual_rival_ranges = [
+        (item.get("path"), item.get("start_line"), item.get("end_line"))
+        for item in read_ranges if isinstance(item, dict)
+    ] if isinstance(read_ranges, list) else []
+    rival_route_scope = (
+        task_id == RIVAL_ROUTE_TASK_ID
+        and read_paths == list(RIVAL_ROUTE_READ_PATHS)
+        and actual_rival_ranges == list(RIVAL_ROUTE_READ_RANGES)
+    )
+    if task_id == RIVAL_ROUTE_TASK_ID and not rival_route_scope:
+        raise ContextBuildError("Rival task does not match its exact owner-approved five-path/seven-range read scope")
+    path_limit = len(RIVAL_ROUTE_READ_PATHS) if rival_route_scope else MAX_SOURCE_PATHS
     if not (
-        isinstance(read_paths, list) and 1 <= len(read_paths) <= MAX_SOURCE_PATHS
+        isinstance(read_paths, list) and 1 <= len(read_paths) <= path_limit
         and all(_safe_source_path(path) for path in read_paths)
         and len(set(read_paths)) == len(read_paths)
     ):
-        raise ContextBuildError("Selected task has no valid 1-4 path read allow-list")
+        raise ContextBuildError("Selected task has no valid 1-4 path read allow-list; only the exact rival scope may use five")
     handoff_paths_line = "Read-only source paths (select at most one): " + ", ".join(read_paths)
     required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5], handoff_paths_line]
     if not all(item in task_context for item in required_handoff_text):
@@ -399,7 +431,8 @@ def build_context(
     source_excerpt = ""
     if max_source_chars > 0:
         source_excerpt = _build_source_excerpt(
-            source_root or root, read_paths, task.get("read_ranges", []), max_source_chars
+            source_root or root, read_paths, read_ranges, max_source_chars,
+            max_total_range_lines=RIVAL_ROUTE_MAX_TOTAL_RANGE_LINES if rival_route_scope else MAX_TOTAL_RANGE_LINES,
         )
         if not source_excerpt.strip():
             raise ContextBuildError("Configured source excerpts are empty; refusing an ungrounded provider handoff")
