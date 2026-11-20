@@ -1,6 +1,9 @@
 name: Branch automation self-test
 
 on:
+  push:
+    branches:
+      - automation/structured-patch-loop-integration-20261120
   pull_request:
     branches:
       - main
