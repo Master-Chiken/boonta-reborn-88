@@ -124,6 +124,10 @@ class ProviderPatchFixture(unittest.TestCase):
             "import os, sys, time\n"
             "assert os.environ.get('GITHUB_TOKEN') is None\n"
             "assert os.environ.get('GITHUB_PERSONAL_ACCESS_TOKEN') is None\n"
+            "assert os.environ.get('GH_TOKEN') is None\n"
+            "assert os.environ.get('APP_PRIVATE_KEY') is None\n"
+            "assert os.environ.get('GITHUB_TOOLS') is None\n"
+            "assert os.environ.get('GITHUB_MCP_REQUIRED_TOOLS') is None\n"
             "assert os.environ.get('GROQ_API_KEY') == 'g' * 32\n"
             "assert '--format' in sys.argv and 'json' in sys.argv\n"
             "sys.stdout.buffer.write(" + repr(stream.encode("utf-8")) + ")\n"
@@ -143,6 +147,10 @@ class ProviderPatchFixture(unittest.TestCase):
             "GROQ_API_KEY": "g" * 32,
             "GITHUB_TOKEN": "github-token-must-not-be-forwarded",
             "GITHUB_PERSONAL_ACCESS_TOKEN": "github-mcp-token-must-not-be-forwarded",
+            "GH_TOKEN": "gh-token-must-not-be-forwarded",
+            "APP_PRIVATE_KEY": "app-private-key-must-not-be-forwarded",
+            "GITHUB_TOOLS": "create_branch,push_files,create_pull_request",
+            "GITHUB_MCP_REQUIRED_TOOLS": "create_branch,push_files,create_pull_request",
         }, clear=False):
             return provider.run_provider_patch(
                 repo_root=self.root,
