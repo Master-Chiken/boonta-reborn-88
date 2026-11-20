@@ -313,11 +313,12 @@ const BoontaCourseDefinition BOONTA_COURSE_SYMBOL = {
     BOONTA_RUNTIME_ROUTE_NODE_COUNT, BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
     BOONTA_RUNTIME_ROUTE_HAS_BRANCHES,
     boonta_course_runtime_reset, boonta_course_runtime_advance,
-    boonta_course_runtime_sample, boonta_course_runtime_get_lap_state,
-    boonta_course_runtime_distance_to_next_finish,
+    boonta_course_runtime_sample,
     boonta_course_runtime_reset_rival_route,
     boonta_course_runtime_advance_rival_route,
     boonta_course_runtime_sample_rival_route,
+    boonta_course_runtime_get_lap_state,
+    boonta_course_runtime_distance_to_next_finish,
     &g_boonta_course_runtime_context
 };
 #endif
