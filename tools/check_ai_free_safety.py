@@ -890,7 +890,7 @@ for required_phrase in (
     "do not read historical comments except",
     "compact inventory of directly related open PRs",
     "Deep-inspect changed files and exact-head CI only for PRs",
-    "Read logs only for failed jobs",
+    "read logs only for failed jobs",
     "Reuse a successful check for an unchanged exact SHA",
     "without duplicate runs",
 ):
@@ -1000,7 +1000,7 @@ for required_phrase in (
     "This agent intentionally has no general-purpose local shell",
     "exact PR head SHA",
     "Do not push empty commits",
-    "Read logs only for failed jobs",
+    "read logs only for failed jobs",
     "no documented safe rerun action",
     "After five minutes queued/in progress",
     "treat as likely stale runner/Actions state",
