@@ -20,6 +20,23 @@ TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 REPO = "Master-Chiken/boonta-reborn-88"
 READ_PATH_EXTENSIONS = {".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".toml", ".md", ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh"}
 READ_PATH_BLOCKED = {"docs/automation/task-ledger.json", "docs/automation/task-ledger-summary.json"}
+RIVAL_ROUTE_TASK_ID = "GC-RIVAL-ROUTE-PROGRESSION"
+RIVAL_ROUTE_READ_PATHS = (
+    "gamecube-demo/source/main.c",
+    "gamecube-demo/source/rival_ai.h",
+    "gamecube-demo/source/route_cursor.h",
+    "gamecube-demo/source/gameplay_state.h",
+    "gamecube-demo/tests/test_rival_ai.c",
+)
+RIVAL_ROUTE_READ_RANGES = (
+    ("gamecube-demo/source/main.c", 1430, 1484),
+    ("gamecube-demo/source/rival_ai.h", 213, 272),
+    ("gamecube-demo/source/route_cursor.h", 56, 67),
+    ("gamecube-demo/source/route_cursor.h", 232, 275),
+    ("gamecube-demo/source/route_cursor.h", 400, 419),
+    ("gamecube-demo/source/gameplay_state.h", 578, 625),
+    ("gamecube-demo/tests/test_rival_ai.c", 180, 220),
+)
 
 
 def _valid_read_path(value: Any) -> bool:
@@ -110,19 +127,23 @@ def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: 
         read_paths = task.get("read_paths")
         requires_read_paths = status == "active" or (
             task_id == "AUTOMATION-LEDGER-ACTIVATION" and status == "blocked"
-        )
+        ) or task_id == RIVAL_ROUTE_TASK_ID
+        is_rival_route_scope = task_id == RIVAL_ROUTE_TASK_ID and read_paths == list(RIVAL_ROUTE_READ_PATHS)
+        max_read_paths = len(RIVAL_ROUTE_READ_PATHS) if is_rival_route_scope else 4
         if requires_read_paths and not (
-            isinstance(read_paths, list) and 1 <= len(read_paths) <= 4
+            isinstance(read_paths, list) and 1 <= len(read_paths) <= max_read_paths
             and all(_valid_read_path(path) for path in read_paths)
             and len(set(read_paths)) == len(read_paths)
+            and (task_id != RIVAL_ROUTE_TASK_ID or is_rival_route_scope)
         ):
-            errors.append(f"{prefix}.read_paths must contain 1-4 unique safe repository text paths for executable tasks")
+            errors.append(f"{prefix}.read_paths must use at most four paths, except for the exact owner-approved GC-RIVAL-ROUTE-PROGRESSION five-path set")
         elif read_paths is not None and not (
-            isinstance(read_paths, list) and len(read_paths) <= 4
+            isinstance(read_paths, list) and len(read_paths) <= max_read_paths
             and all(_valid_read_path(path) for path in read_paths)
             and len(set(read_paths)) == len(read_paths)
+            and (task_id != RIVAL_ROUTE_TASK_ID or is_rival_route_scope)
         ):
-            errors.append(f"{prefix}.read_paths must contain at most four unique safe repository text paths")
+            errors.append(f"{prefix}.read_paths exceeds its task-specific exact read allow-list")
         for field in ("question", "next_action"):
             if not isinstance(task.get(field), str) or not task[field].strip():
                 errors.append(f"{prefix}.{field} is required")
