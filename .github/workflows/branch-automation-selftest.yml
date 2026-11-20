@@ -1,9 +1,6 @@
 name: Branch automation self-test
 
 on:
-  push:
-    branches:
-      - "automation/**"
   pull_request:
     branches:
       - main
@@ -18,7 +15,6 @@ concurrency:
 
 jobs:
   validate:
-    if: github.event_name != 'pull_request' || !startsWith(github.event.pull_request.head.ref, 'automation/')
     name: Validate workflow YAML and embedded Python
     runs-on: ubuntu-latest
     timeout-minutes: 8
