@@ -39,6 +39,7 @@ patch_cycle = read("tools/run_autonomous_patch_cycle.py")
 trusted_main_validator = read("tools/validate_trusted_main_checkout.py")
 trusted_main_validator_tests = read("tools/test_validate_trusted_main_checkout.py")
 allowlist_builder = read("tools/build_autonomous_path_allowlist.py")
+allowlist_tests = read("tools/test_autonomous_path_allowlist.py")
 free_safety_workflow = read(".github/workflows/ai-free-safety.yml")
 
 # The on-demand Gemini action installs its own default /gemini-invoke command,
@@ -1852,6 +1853,27 @@ for protected_path in (
 ):
     if '"' + protected_path + '"' not in allowlist_builder:
         errors.append(f"Model write allowlist must protect trusted automation file: {protected_path}")
+# The shared patch-cycle allowlist must enforce the human-review lock itself,
+# not rely solely on workflow-level scheduling guards.
+for required in (
+    'review_tasks = sorted(',
+    'if review_tasks:',
+    '"status": "WAITING_FOR_TASK_REVIEW"',
+    '"allowed_paths": []',
+    '"review_task_ids": [item["task_id"] for item in review_tasks]',
+):
+    if required not in allowlist_builder:
+        errors.append(f"Shared patch-cycle allowlist is missing its in_review fail-closed guard: {required!r}")
+for required in (
+    "test_in_review_task_blocks_an_otherwise_active_task",
+    "test_in_review_task_blocks_owner_approved_queued_task_promotion",
+    "test_requested_in_review_task_never_receives_write_paths",
+):
+    if required not in allowlist_tests:
+        errors.append(f"Shared patch-cycle allowlist regression tests are missing {required!r}")
+if "python3 tools/test_autonomous_path_allowlist.py" not in selftest:
+    errors.append("Branch automation self-test must execute in_review path-allowlist regression tests")
+
 for required in (
     "tools/validate_trusted_main_checkout.py",
     "tools/test_validate_trusted_main_checkout.py",
