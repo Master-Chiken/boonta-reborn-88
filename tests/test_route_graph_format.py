@@ -32,6 +32,8 @@ from export_closed_loop_track import (  # noqa: E402
     export_closed_loop_track,
 )
 
+from export_runtime_route_header import generate_runtime_route_header  # noqa: E402
+
 
 def fixture(name):
     return load_route_graph(FIXTURE_DIR / name)
