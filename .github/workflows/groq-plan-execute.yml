@@ -877,7 +877,7 @@ jobs:
           - Do not search PR history, use agents/web or raw URLs. Use only the exposed GitHub MCP tools.
           
           WRITE
-          - Only github_get_file_contents and github_push_files are exposed. Use excerpts first; read at most one listed path using the supplied existing branch as the ref, then call github_push_files exactly once with full updated content.
+          - Only github_get_file_contents and github_push_files are exposed. Use excerpts first. Read at most one listed path using the supplied existing branch as the ref, then call github_push_files exactly once with full updated content.
           - No new branch/PR or main/dev writes, merge, force-push, ref deletion, secret/settings/ledger edits.
           - Make one safe change for earliest unmet criterion; else BLOCKED with exact gap/action. Never ask the owner for clarification.
           - Preserve provenance/licenses; don't guess.
