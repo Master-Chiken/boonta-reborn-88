@@ -169,6 +169,7 @@ def run_cycle(
         context_file = work / "context.txt"
         context_file.write_text(context, encoding="utf-8")
 
+        provider_request_started = False
         try:
             provider_report = run_provider_patch(
                 repo_root=target,
@@ -182,6 +183,7 @@ def run_cycle(
                 model=model,
                 timeout_seconds=90,
             )
+            provider_request_started = True
             verified = verify_in_isolated_worktree(
                 target,
                 proposal_path=proposal_path,
@@ -239,7 +241,13 @@ def run_cycle(
             return {
                 "status": "BLOCKED",
                 "reason": reason,
-                "provider_request_started": os.environ.get("GITHUB_OUTPUT") is not None,
+                "provider_request_started": (
+                    provider_request_started
+                    or (
+                        isinstance(exc, ProviderPatchError)
+                        and exc.provider_request_started
+                    )
+                ),
                 "provider_model": model,
             }
 
