@@ -248,7 +248,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "blocked",
+      "status": "superseded",
       "question": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
       "acceptance_criteria": [
         "Ledger validator and regression tests pass in CI",
@@ -411,8 +411,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42823713444",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42823726550"
       ],
-      "next_action": "Merged and validated: #374 owner re-evaluation gate; #375 direct preflight-owned delivery; #377 Groq four-step/1,152+384/three-tool profile; #378 supported temperature 0.2; #373 order-independent rival avoidance. Mainline checks passed. The 2026-11-10 UTC Gemini/OpenRouter/Groq cooldowns are active and scheduled loops correctly skipped provider calls. Next: after 2026-11-11 UTC reset, require one actual €0 provider invocation, a same-task PR and exact-head CI before completing this task. Only after the activation gate clears, perform the owner-directed Phase 1 cross-platform reuse/compatibility decision using #279 evidence in #226; defer #307 until the race slice is coherent.",
-      "updated_at": "2026-11-10",
+      "next_action": "Superseded on 2026-11-21 by the owner-prioritized original-game feasibility gate in issue #459. Do not reactivate provider-loop infrastructure work unless the owner explicitly reopens it after the game delivery path is established.",
+      "updated_at": "2026-11-21",
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
