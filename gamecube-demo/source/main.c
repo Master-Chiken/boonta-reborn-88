@@ -97,6 +97,7 @@ static void initialise_pod_texture(void)
  * cleared by reset into one host-testable object.
  */
 #define g_distance          (g_race_state.distance)
+#define g_route_progress    (g_race_state.route_progress)
 #define g_lap_count         (g_race_state.lap_count)
 #define g_race_seconds      (g_race_state.race_seconds)
 #define g_lap_seconds       (g_race_state.lap_seconds)
@@ -148,7 +149,7 @@ static int reset_rival_route_cursors(void)
             g_rival_route_distance[rival_index] = route_distance;
             g_rival_progress[rival_index] = progress;
             g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
-                g_distance, g_rival_progress[rival_index]);
+                g_route_progress, g_rival_progress[rival_index]);
         } else {
             g_rival_route_cursor_ready[rival_index] = 0;
             g_rival_route_distance[rival_index] = 0.0f;
@@ -1538,13 +1539,19 @@ int main(int argc, char **argv)
             }
             if (g_current_course->has_branches) {
                 unsigned int completed_laps = g_lap_count;
-                float progress = 0.0f;
+                float lap_progress = 0.0f;
+                float normalized_route_progress = g_route_progress;
                 if (g_course_ready && g_current_course->get_lap_state != NULL &&
                     g_current_course->get_lap_state(
-                        g_current_course->runtime_context, &completed_laps, &progress)) {
+                        g_current_course->runtime_context, &completed_laps, &lap_progress) &&
+                    boonta_rival_progress_from_cursor_state(
+                        completed_laps, lap_progress, g_current_course->lap_distance,
+                        &normalized_route_progress)) {
                     g_lap_count = completed_laps;
+                    g_route_progress = normalized_route_progress;
                 }
             } else {
+                g_route_progress = g_distance;
                 g_lap_count = boonta_lap_count_after_frame(
                     g_lap_count, previous_distance, g_distance, g_current_course->lap_distance);
             }
@@ -1591,7 +1598,7 @@ int main(int argc, char **argv)
                 const float previous_rival_z = g_rival_z[rival_index];
                 if ((g_race_state.rival_finished_mask & (1U << rival_index)) != 0U) {
                     g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
-                        g_distance, g_rival_progress[rival_index]);
+                        g_route_progress, g_rival_progress[rival_index]);
                     continue;
                 }
                 /* A bad shared snapshot freezes every racing rival for this frame. */
@@ -1620,7 +1627,7 @@ int main(int argc, char **argv)
                 g_rival_lateral[rival_index] = step.next_lateral;
                 g_rival_speed[rival_index] = step.next_speed;
                 g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
-                    g_distance, g_rival_progress[rival_index]);
+                    g_route_progress, g_rival_progress[rival_index]);
                 (void)boonta_rival_record_finish(
                     &g_race_state, rival_index,
                     boonta_rival_finish_distance(
