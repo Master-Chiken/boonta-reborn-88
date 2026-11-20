@@ -78,6 +78,11 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_rival_ai.c -lm -o /tmp/test_rival_ai
           /tmp/test_rival_ai
 
+      - name: Compile and run synthetic rival branching tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_rival_branching.c -lm -o /tmp/test_rival_branching
+          /tmp/test_rival_branching
+
       - name: Compile and run pause/resume unit tests
         run: |
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
@@ -93,7 +98,7 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_graph_sampling.c -lm -o /tmp/test_route_graph_sampling
           /tmp/test_route_graph_sampling
 
-      - name: Compile and run selectable course catalog tests
+      - name: Compile and run single-course catalog tests
         run: |
           cc -std=c99 -Wall -Wextra -Werror -pedantic \
             gamecube-demo/tests/test_course_catalog.c \

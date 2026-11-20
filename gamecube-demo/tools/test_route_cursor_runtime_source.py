@@ -45,9 +45,8 @@ class CourseRuntimeSourceTests(unittest.TestCase):
         self.assertIn("boonta_race_state_reset(&g_race_state);", startup)
         self.assertIn("reset_runtime_route_cursor();", startup)
         self.assertGreaterEqual(self.main.count("reset_runtime_route_cursor();"), 2)
-        self.assertNotIn("g_selected_course_index", self.main)
-        self.assertNotIn("select_course(", self.main)
-        self.assertNotIn("BOONTA_BUTTON_LEFT | BOONTA_BUTTON_RIGHT", self.main)
+        self.assertNotIn("g_course_index", self.main)
+        self.assertNotIn("boonta_course_selection_after_input", self.main)
 
     def test_branch_cursor_is_wired_through_the_selected_course_adapter(self):
         self.assertIn("static int advance_runtime_route_cursor(", self.main)

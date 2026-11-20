@@ -15,6 +15,17 @@ typedef struct BoontaCourseDefinition {
     void (*sample)(void *runtime_context, float player_distance, float travelled,
                    float fallback_half_width,
                    float *x, float *y, float *z, float *width);
+    int (*reset_rival_route)(void *runtime_context, unsigned int rival_index,
+                             float initial_route_distance, float lap_distance,
+                             float *route_distance_out, float *progress_out);
+    int (*advance_rival_route)(void *runtime_context, unsigned int rival_index,
+                               float distance_delta, float steering,
+                               float current_route_distance, float lap_distance,
+                               float *next_route_distance_out, float *next_progress_out);
+    int (*sample_rival_route)(void *runtime_context, unsigned int rival_index,
+                              float current_route_distance, float target_route_distance,
+                              float fallback_half_width,
+                              float *x, float *y, float *z, float *width);
     int (*get_lap_state)(void *runtime_context,
                          unsigned int *completed_laps, float *lap_progress);
     int (*distance_to_next_finish)(void *runtime_context, float player_distance,

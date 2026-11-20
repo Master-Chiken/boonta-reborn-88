@@ -903,6 +903,7 @@ static void race_session_transition_tests(void) {
  assert(nearf(state.lap_times[1], 0.0f));
  assert(nearf(state.lap_times[2], 0.0f));
  assert(nearf(state.distance, 0.0f));
+ assert(nearf(state.route_progress, 0.0f));
  boonta_race_session_start_press(&state);
  assert(state.session_phase == BOONTA_RACE_SESSION_ACTIVE);
  assert(boonta_race_session_should_advance(&state));
@@ -917,12 +918,39 @@ static void race_session_transition_tests(void) {
  assert(!boonta_race_session_should_advance(NULL));
 }
 
+static void normalized_route_progress_is_independent_of_physical_distance(void)
+{
+    BoontaRaceState state = {0};
+    float route_progress = 0.0f;
+
+    assert(boonta_rival_progress_from_cursor_state(
+        1U, 0.25f, 184.0f, &route_progress));
+    assert(nearf(route_progress, 230.0f));
+    assert(route_progress != 205.0f);
+
+    boonta_race_state_reset(&state);
+    state.distance = 205.0f;
+    state.route_progress = route_progress;
+    state.rival_progress[0] = 220.0f;
+    state.rival_progress[1] = 225.0f;
+    state.rival_progress[2] = 180.0f;
+
+    /* The player is physically at 205 m, but race progress is 230 m. */
+    assert(boonta_race_current_position(&state) == 1U);
+
+    /* Reset clears both coordinates; the old physical distance never leaks into ranking. */
+    boonta_race_state_reset(&state);
+    assert(nearf(state.distance, 0.0f));
+    assert(nearf(state.route_progress, 0.0f));
+}
+
 static void race_order_and_finish_tests(void) {
  BoontaRaceState state = {0};
 
  boonta_race_state_reset(&state);
  boonta_race_session_start_press(&state);
- state.distance = 75.0f;
+ state.distance = 500.0f; /* Physical distance may differ after taking a longer branch. */
+ state.route_progress = 75.0f; /* Race coordinate is normalized to the authored lap progress. */
  state.rival_progress[0] = 90.0f;
  state.rival_progress[1] = 70.0f;
  state.rival_progress[2] = 80.0f;
@@ -1424,6 +1452,7 @@ int main(void) {
  championship_ledger_ignores_invalid_results_and_saturates();
  camera_follow_damping_tests();
  race_session_transition_tests();
+ normalized_route_progress_is_independent_of_physical_distance();
  race_order_and_finish_tests();
  competitive_race_pace_tests();
  race_state_reset_tests();

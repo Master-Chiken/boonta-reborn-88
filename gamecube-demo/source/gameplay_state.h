@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <stddef.h>
+#include "route_cursor.h"
 
 #define BOONTA_RIVAL_COUNT 3U
 #define BOONTA_RACE_LAP_CAPACITY 3U
@@ -22,7 +23,9 @@ typedef enum {
  * the exact Y-button restart transition can be exercised by host tests.
  */
 typedef struct {
+    /* Physical route distance drives geometry and movement; route_progress drives race ranking. */
     float distance;
+    float route_progress;
     unsigned int lap_count;
     float race_seconds;
     float lap_seconds;
@@ -567,8 +570,8 @@ static inline unsigned int boonta_race_current_position(const BoontaRaceState *s
         const unsigned int bit = 1U << i;
         if ((state->rival_finished_mask & bit) != 0U ||
             (isfinite(state->rival_progress[i]) &&
-             isfinite(state->distance) &&
-             state->rival_progress[i] > state->distance)) {
+             isfinite(state->route_progress) &&
+             state->rival_progress[i] > state->route_progress)) {
             ++position;
         }
     }
@@ -716,6 +719,82 @@ static inline float boonta_rival_initial_progress(unsigned int rival_index)
     return 4.0f - boonta_rival_initial_z(rival_index);
 }
 
+/* Map route-relative lateral steering onto the cursor's left/right convention. */
+static inline int boonta_route_branch_direction_from_steering(
+    float steering, float steering_deadzone)
+{
+    if (!isfinite(steering) || !isfinite(steering_deadzone) ||
+        steering_deadzone < 0.0f) {
+        return 0;
+    }
+    if (steering < -steering_deadzone) return -1;
+    if (steering > steering_deadzone) return 1;
+    return 0;
+}
+
+/* Convert normalized route-cursor state into the race's cumulative distance axis. */
+static inline int boonta_rival_progress_from_cursor_state(
+    unsigned int completed_laps, float lap_progress, float lap_distance,
+    float *progress_out)
+{
+    float progress;
+    if (progress_out != NULL) *progress_out = 0.0f;
+    if (progress_out == NULL || !isfinite(lap_progress) ||
+        lap_progress < 0.0f || lap_progress > 1.0f ||
+        !isfinite(lap_distance) || lap_distance <= 0.0f) {
+        return 0;
+    }
+    progress = ((float)completed_laps + lap_progress) * lap_distance;
+    if (!isfinite(progress) || progress < 0.0f) return 0;
+    *progress_out = progress;
+    return 1;
+}
+
+/*
+ * Advance a route cursor and its two race-space coordinates as one transaction.
+ * Work on a private cursor copy; neither the cursor nor output coordinates are
+ * committed unless movement, lap conversion and cumulative-distance checks pass.
+ */
+static inline int boonta_rival_advance_cursor_transaction(
+    BoontaRouteCursor *cursor, float distance_delta,
+    float current_route_distance, float lap_distance,
+    float *next_route_distance_out, float *next_progress_out)
+{
+    BoontaRouteCursor candidate;
+    float lap_progress = 0.0f;
+    float next_route_distance;
+    float next_progress = 0.0f;
+
+    if (next_route_distance_out != NULL) *next_route_distance_out = 0.0f;
+    if (next_progress_out != NULL) *next_progress_out = 0.0f;
+    if (cursor == NULL || next_route_distance_out == NULL ||
+        next_progress_out == NULL || !isfinite(distance_delta) ||
+        distance_delta < 0.0f || !isfinite(current_route_distance) ||
+        current_route_distance < 0.0f || !isfinite(lap_distance) ||
+        lap_distance <= 0.0f) {
+        return 0;
+    }
+
+    next_route_distance = current_route_distance + distance_delta;
+    if (!isfinite(next_route_distance)) return 0;
+
+    candidate = *cursor;
+    if (boonta_route_cursor_move(&candidate, distance_delta, NULL, 0U) !=
+            BOONTA_ROUTE_CURSOR_OK ||
+        boonta_route_cursor_lap_progress(&candidate, &lap_progress) !=
+            BOONTA_ROUTE_CURSOR_OK ||
+        !boonta_rival_progress_from_cursor_state(
+            candidate.completed_laps, lap_progress, lap_distance,
+            &next_progress)) {
+        return 0;
+    }
+
+    *cursor = candidate;
+    *next_route_distance_out = next_route_distance;
+    *next_progress_out = next_progress;
+    return 1;
+}
+
 /* Race target preserves each opponent's staggered start-grid offset. */
 static inline float boonta_rival_finish_distance(unsigned int rival_index,
                                                   float lap_distance,
@@ -765,6 +844,7 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     if (state == 0) return;
 
     state->distance = 0.0f;
+    state->route_progress = 0.0f;
     state->lap_count = 0U;
     state->race_seconds = 0.0f;
     state->lap_seconds = 0.0f;

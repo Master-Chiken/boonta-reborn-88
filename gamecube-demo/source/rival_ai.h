@@ -353,4 +353,88 @@ static inline float boonta_rival_relative_z_after_frame(
     return isfinite(next_z) ? next_z : -18.0f;
 }
 
+
+/*
+ * Immutable per-frame rival decision inputs. The production loop fills this
+ * before moving any rival, so every decision observes the same traffic state.
+ */
+typedef struct {
+    float player_lateral;
+    float rival_z[BOONTA_RIVAL_COUNT];
+    float rival_lateral[BOONTA_RIVAL_COUNT];
+    float lookahead_curvature[BOONTA_RIVAL_COUNT];
+    float signed_lookahead_curvature[BOONTA_RIVAL_COUNT];
+    float road_half_width[BOONTA_RIVAL_COUNT];
+    unsigned int rivalry_score[BOONTA_RIVAL_COUNT];
+} BoontaRivalAIFrameSnapshot;
+
+typedef struct {
+    float target_lateral[BOONTA_RIVAL_COUNT];
+    float target_speed[BOONTA_RIVAL_COUNT];
+} BoontaRivalAITargetSnapshot;
+
+typedef struct {
+    float next_lateral;
+    float next_speed;
+    float distance_delta;
+} BoontaRivalAIFrameStep;
+
+static inline int boonta_rival_ai_prepare_frame_snapshot(
+    const BoontaRivalAIFrameSnapshot *snapshot,
+    BoontaRivalAITargetSnapshot *targets)
+{
+    unsigned int rival_index;
+    if (snapshot == NULL || targets == NULL) return 0;
+
+    for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+        targets->target_lateral[rival_index] =
+            boonta_rival_ai_target_lateral_with_rivalry(
+                rival_index, snapshot->rival_z[rival_index],
+                snapshot->rival_lateral[rival_index], snapshot->player_lateral,
+                snapshot->rival_z, snapshot->rival_lateral, BOONTA_RIVAL_COUNT,
+                snapshot->signed_lookahead_curvature[rival_index],
+                snapshot->road_half_width[rival_index],
+                snapshot->rivalry_score[rival_index]);
+        targets->target_speed[rival_index] =
+            boonta_rival_ai_target_speed_with_rivalry(
+                rival_index, snapshot->lookahead_curvature[rival_index],
+                snapshot->rivalry_score[rival_index]);
+        if (!isfinite(targets->target_lateral[rival_index]) ||
+            !isfinite(targets->target_speed[rival_index])) return 0;
+    }
+    return 1;
+}
+
+/* Apply one already-decided target without reading or mutating other rivals. */
+static inline int boonta_rival_ai_step_from_snapshot(
+    const BoontaRivalAITargetSnapshot *targets, unsigned int rival_index,
+    float current_lateral, float current_speed, float current_progress,
+    float frame_scale, BoontaRivalAIFrameStep *step)
+{
+    float next_progress;
+    if (step != NULL) {
+        step->next_lateral = 0.0f;
+        step->next_speed = 0.0f;
+        step->distance_delta = 0.0f;
+    }
+    if (targets == NULL || step == NULL || rival_index >= BOONTA_RIVAL_COUNT ||
+        !isfinite(current_progress) || current_progress < 0.0f ||
+        !isfinite(targets->target_lateral[rival_index]) ||
+        !isfinite(targets->target_speed[rival_index])) return 0;
+
+    step->next_lateral = boonta_rival_ai_after_frame(
+        current_lateral, targets->target_lateral[rival_index], frame_scale);
+    step->next_speed = boonta_rival_ai_speed_after_frame(
+        current_speed, targets->target_speed[rival_index], frame_scale);
+    next_progress = boonta_rival_progress_after_frame(
+        current_progress, step->next_speed, frame_scale);
+    if (!isfinite(next_progress) || next_progress < current_progress) {
+        step->next_lateral = 0.0f;
+        step->next_speed = 0.0f;
+        return 0;
+    }
+    step->distance_delta = next_progress - current_progress;
+    return isfinite(step->distance_delta) && step->distance_delta >= 0.0f;
+}
+
 #endif
