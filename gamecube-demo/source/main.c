@@ -322,7 +322,7 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
         if (y_out != NULL) *y_out = 0.0f;
         if (z_out != NULL) *z_out = 0.0f;
         if (width_out != NULL) *width_out = g_current_course != NULL
-            ? g_current_course->road_half_width : 3.6f;
+            ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
         return;
     }
     g_current_course->sample(g_current_course->runtime_context, g_distance, travelled,
