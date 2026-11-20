@@ -269,6 +269,11 @@ jobs:
               return;
             }
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
+            const inReviewTasks = ledgerSummary.tasks.filter((task) => task.status === 'in_review');
+            if (inReviewTasks.length > 0) {
+              failClosed('another task is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation');
+              return;
+            }
             if (activeTasks.length > 1) {
               failClosed('canonical task ledger violates the one-active-task policy');
               return;
@@ -429,6 +434,11 @@ jobs:
               return;
             }
             const activeTasks = summary.tasks.filter((task) => task.status === 'active');
+            const inReviewTasks = summary.tasks.filter((task) => task.status === 'in_review');
+            if (inReviewTasks.length > 0) {
+              failClosed('another task is in_review; human PR review/merge and ledger reconciliation are required before another provider invocation');
+              return;
+            }
             if (activeTasks.length > 1) {
               failClosed('canonical task ledger violates the one-active-task policy');
               return;
