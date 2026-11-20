@@ -73,17 +73,17 @@ static void test_rivals_choose_left_and_right_then_rejoin(void)
     const float preview_distance = 4.0f;
     const float distance_before_junction = 0.5f;
     const int left_direction =
-        boonta_rival_route_branch_direction_from_steering(-0.8f, 0.2f);
+        boonta_route_branch_direction_from_steering(-0.8f, 0.2f);
     const int right_direction =
-        boonta_rival_route_branch_direction_from_steering(0.8f, 0.2f);
+        boonta_route_branch_direction_from_steering(0.8f, 0.2f);
 
     assert(BOONTA_RUNTIME_ROUTE_HAS_BRANCHES);
     assert(left_direction == -1);
     assert(right_direction == 1);
-    assert(boonta_rival_route_branch_direction_from_steering(-0.2f, 0.2f) == 0);
-    assert(boonta_rival_route_branch_direction_from_steering(0.2f, 0.2f) == 0);
-    assert(boonta_rival_route_branch_direction_from_steering(NAN, 0.2f) == 0);
-    assert(boonta_rival_route_branch_direction_from_steering(0.8f, NAN) == 0);
+    assert(boonta_route_branch_direction_from_steering(-0.2f, 0.2f) == 0);
+    assert(boonta_route_branch_direction_from_steering(0.2f, 0.2f) == 0);
+    assert(boonta_route_branch_direction_from_steering(NAN, 0.2f) == 0);
+    assert(boonta_route_branch_direction_from_steering(0.8f, NAN) == 0);
 
     assert(boonta_route_graph_sampler_prepare(&sampler));
     assert(boonta_route_cursor_init(&left_rival, &g_branch_graph,
