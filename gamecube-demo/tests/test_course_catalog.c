@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../source/course_catalog.h"
+#include "../source/gameplay_state.h"
 
 static void test_single_vertical_slice_course(void)
 {
@@ -42,9 +43,55 @@ static void test_single_vertical_slice_course(void)
     assert(fabsf(remaining - (course->lap_distance - 0.25f)) < 0.001f);
 }
 
+static void test_course_owns_independent_rival_route_cursors(void)
+{
+    const BoontaCourseDefinition *course = boonta_course_catalog[0];
+    unsigned int rival;
+
+    assert(course->reset_rival_route != NULL);
+    assert(course->advance_rival_route != NULL);
+    assert(course->sample_rival_route != NULL);
+    assert(course->reset(course->runtime_context));
+
+    for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+        const float grid_offset = boonta_rival_initial_progress(rival);
+        float route_distance = -1.0f;
+        float progress = -1.0f;
+        float next_route_distance = -1.0f;
+        float next_progress = -1.0f;
+        float x = 0.0f, y = 0.0f, z = 0.0f, width = 0.0f;
+
+        assert(course->reset_rival_route(course->runtime_context, rival,
+            grid_offset, course->lap_distance, &route_distance, &progress));
+        assert(fabsf(route_distance - grid_offset) < 0.001f);
+        assert(fabsf(progress - grid_offset) < 0.02f);
+
+        assert(course->sample_rival_route(course->runtime_context, rival,
+            route_distance, route_distance + 4.0f, course->road_half_width,
+            &x, &y, &z, &width) == BOONTA_ROUTE_CURSOR_OK);
+        assert(isfinite(x) && isfinite(y) && isfinite(z));
+        assert(isfinite(width) && width >= 2.2f && width <= 4.8f);
+
+        assert(course->advance_rival_route(course->runtime_context, rival,
+            0.25f, 0.0f, route_distance, course->lap_distance,
+            &next_route_distance, &next_progress));
+        assert(fabsf(next_route_distance - (route_distance + 0.25f)) < 0.001f);
+        assert(next_progress > progress);
+
+        /* Invalid movement must fail atomically and clear output coordinates. */
+        next_route_distance = -1.0f;
+        next_progress = -1.0f;
+        assert(!course->advance_rival_route(course->runtime_context, rival,
+            NAN, 0.0f, next_route_distance, course->lap_distance,
+            &next_route_distance, &next_progress));
+        assert(next_route_distance == 0.0f && next_progress == 0.0f);
+    }
+}
+
 int main(void)
 {
     test_single_vertical_slice_course();
-    puts("single-course vertical-slice tests passed");
+    test_course_owns_independent_rival_route_cursors();
+    puts("single-course and rival-route adapter tests passed");
     return 0;
 }
