@@ -354,6 +354,7 @@ for required in (
     "needs.provider-cooldowns.outputs.task_ready != 'true'",
     "needs.provider-cooldowns.outputs.resume_ready == 'true'",
     "github.event.client_payload.failed_provider == 'openrouter'",
+    "github.event.client_payload.failed_provider == 'openrouter'",
     "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
     "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}",
