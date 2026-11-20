@@ -58,7 +58,11 @@ For each system: discover existing Boonta code and PRs; identify the relevant RE
 
 ## 4. Product direction and active tasks
 
-The owner's clarified goal is a **faithful native GameCube/Wii port of the original Star Wars Episode I: Racer, followed by improvements**. Do not optimize the project around an original GameCube/Wii binary: the documented original releases are Windows, Nintendo 64, Mac, Dreamcast and Game Boy Color, with later modern ports; no retail GameCube or Wii edition has been identified. The GameCube/Wii executable is therefore our port target, not a source binary that can be decompiled to recover the original game.
+The owner's clarified outcome is the **original Star Wars Episode I: Racer playable on Wii, or on GameCube if that is technically simpler, with the original game preserved as closely as possible**. Choose the shortest lawful path that genuinely runs the original game; do not assume that a native reimplementation is automatically the answer.
+
+**Mandatory first gate — issue #459 (2026-11-21):** test the original N64 release in existing Wii/GameCube emulators before launching another native gameplay task. Start with Wii64 1.5.0 using glN64 and the owner-local test kit; compare Not64 20260410 next, then try Wii64 Rice only if the baseline warrants it. A boot screen is not acceptance: record menu, race entry, control, full race completion, visuals, sound and stability. An owner-authored structured report on #459 is required before the autonomous loop may select any new task. The report must explicitly choose `NATIVE_FALLBACK` before any native implementation task may start. If an existing emulator is accepted, keep native implementation parked. If it is not acceptable and the owner chooses `NATIVE_FALLBACK`, resume the faithful native port as the fallback, reusing lawful public tools and all validated prior work.
+
+Until that report and explicit fallback decision are posted, old owner-approved native gameplay queue entries are **parked by the automation gate**, not invitations to continue implementation. Synthetic Canyon Run/Fork Run content is test scaffolding only and must never be described as original Racer content or as a remaster milestone.
 
 Keep the existing `gamecube-demo/` as a reusable technical foundation: preserve the proven GX submission path, input abstraction, build files, generated original test mesh/texture, host tests and CI diagnostics. Do not mistake its procedural oval, toy rivals or synthetic v1 formats for the finished game, and do not discard or rewrite working infrastructure without evidence.
 
@@ -93,6 +97,9 @@ Tool selection must follow the artifact:
 ## 5. One responsible writer, no branch sprawl
 
 - Use **one write-capable AI/agent at a time**. Read-only research can be parallelized only when it has non-overlapping, explicit questions; to avoid overload, prefer one investigator and one synthesis.
+- The autonomous selector is fail-closed for new work: it requires zero existing open PRs, no more than ten total branch refs, and the owner-authored structured emulator report marker plus explicit `Owner decision: NATIVE_FALLBACK` on issue #459. Any missing API data, malformed marker/report, duplicate task/PR identity, or exceeded inventory ceiling means stop without a provider write.
+- Existing trusted PR resumption is limited to the exact same task, repository, base, branch and head SHA. It may not create another branch/PR or switch tasks. A generic open PR such as #458 is not resumable unless it carries the complete verified task identity.
+- Do not delete, archive, force-move or rename any branch automatically. Above the branch budget, report the inventory and wait for human disposition; branch deletion requires file-level uniqueness/reachability and recovery checks.
 - A substantial change requires a bounded scope, named files, and observable acceptance criteria before writing begins. Manual writers require owner approval; the separately authorized autonomous loop may select its scope only from the canonical queue and must record its criteria before editing.
 - One implementation task normally means one short-lived branch and one PR. Base new branches on the current intended target.
 - `main` is stable/release integration and must not receive direct pushes. Gameplay changes target protected `dev`; docs/policy may target `main`.
@@ -104,9 +111,9 @@ Tool selection must follow the artifact:
 
 - Project budget: **€0**. No paid model, billing, payment method, paid fallback, paid cloud resource or upgrade. If free quota is exhausted, stop.
 - The read-only Gemini coordinator remains manual-only and posts requested reports to canonical issue #156.
-- The owner has authorized scheduled autonomous task selection and branch/PR work through `.github/workflows/boonta-autonomous-loop.yml`; it is not a background process outside GitHub Actions. It runs on a six-hour schedule and serializes writer runs.
+- The owner has authorized scheduled autonomous task selection and branch/PR work through `.github/workflows/boonta-autonomous-loop.yml`, but this authorization is conditional on every fail-closed gate in the canonical ledger and preflight. The six-hour schedule does not itself authorize a task or bypass issue #459, the open-PR ceiling, the branch ceiling, owner approval, €0 budget, or exact-head checks.
 - Autonomous writes require `GEMINI_AUTONOMOUS_ENABLED=true`, `GEMINI_FREE_TIER_CONFIRMED=true`, the `GEMINI_API_KEY` secret, and the GitHub App `APP_ID` variable plus `APP_PRIVATE_KEY` secret. The manual plan/execute path remains separately gated by `GEMINI_WRITE_ENABLED=true` and its owner approval command.
-- Agents may open or update focused PRs, but may not merge, enable auto-merge, alter settings/secrets/variables, force-push or delete branches. If free quota is unavailable, stop without a paid fallback.
+- Agents may open or update focused PRs only after the selector gates pass, but may not merge, enable auto-merge, alter settings/secrets/variables, force-push or delete branches. A new task may not open a PR while any other PR is open. If free quota is unavailable, stop without a paid fallback.
 - One agent-generated summary or green configuration check is not evidence that the game works.
 - Never send secrets, ROMs, disc images, BIOS, commercial archives, extracted proprietary models/textures/audio, or uncertain-provenance data to hosted AI services, public issues, CI artifacts, or the repository.
 
