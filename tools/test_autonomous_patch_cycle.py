@@ -127,6 +127,84 @@ class PatchCycleTests(unittest.TestCase):
         self.assertIn("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED", self.report.read_text(encoding="utf-8"))
         provider.assert_not_called()
 
+    def test_prelaunch_provider_failure_does_not_report_a_request(self):
+        target_sha = git(self.target, "rev-parse", "HEAD")
+        policy_sha = git(self.policy, "rev-parse", "HEAD")
+        output_file = self.parent / "github-output-prelaunch.txt"
+        output_file.write_text("", encoding="utf-8")
+        ready = {
+            "status": "READY",
+            "task_id": TASK_ID,
+            "base_sha": target_sha,
+            "policy_base_sha": policy_sha,
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/400",
+            "purpose": "Synthetic approved path",
+            "allowed_paths": ["target.txt"],
+        }
+        with patch.dict(os.environ, self.env(GITHUB_OUTPUT=str(output_file)), clear=True):
+            with (
+                patch.object(cycle, "build_allowlist", return_value=ready),
+                patch.object(cycle, "require_execution_gates", return_value="scoped-test-token"),
+                patch.object(
+                    cycle,
+                    "run_provider_patch",
+                    side_effect=cycle.ProviderPatchError(
+                        "OpenCode CLI is unavailable; no provider request was started",
+                        provider_request_started=False,
+                    ),
+                ),
+            ):
+                result = cycle.run_cycle(
+                    target_root=self.target,
+                    policy_root=self.policy,
+                    context_path=self.context,
+                    report_path=self.report,
+                    task_id=TASK_ID,
+                    target_branch="dev",
+                    model="groq/openai/gpt-oss-20b",
+                )
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["provider_request_started"])
+
+    def test_postlaunch_provider_failure_reports_a_request(self):
+        target_sha = git(self.target, "rev-parse", "HEAD")
+        policy_sha = git(self.policy, "rev-parse", "HEAD")
+        output_file = self.parent / "github-output-postlaunch.txt"
+        output_file.write_text("provider_request_started=true\n", encoding="utf-8")
+        ready = {
+            "status": "READY",
+            "task_id": TASK_ID,
+            "base_sha": target_sha,
+            "policy_base_sha": policy_sha,
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/400",
+            "purpose": "Synthetic approved path",
+            "allowed_paths": ["target.txt"],
+        }
+        with patch.dict(os.environ, self.env(GITHUB_OUTPUT=str(output_file)), clear=True):
+            with (
+                patch.object(cycle, "build_allowlist", return_value=ready),
+                patch.object(cycle, "require_execution_gates", return_value="scoped-test-token"),
+                patch.object(
+                    cycle,
+                    "run_provider_patch",
+                    side_effect=cycle.ProviderPatchError(
+                        "OpenCode provider invocation timed out",
+                        provider_request_started=True,
+                    ),
+                ),
+            ):
+                result = cycle.run_cycle(
+                    target_root=self.target,
+                    policy_root=self.policy,
+                    context_path=self.context,
+                    report_path=self.report,
+                    task_id=TASK_ID,
+                    target_branch="dev",
+                    model="groq/openai/gpt-oss-20b",
+                )
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertTrue(result["provider_request_started"])
+
     def test_verified_patch_creates_only_draft_non_merged_pr(self):
         target_sha = git(self.target, "rev-parse", "HEAD")
         policy_sha = git(self.policy, "rev-parse", "HEAD")
