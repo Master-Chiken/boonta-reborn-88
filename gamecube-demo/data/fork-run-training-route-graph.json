@@ -1,0 +1,255 @@
+{
+  "format": "boonta-route-graph-v1",
+  "schema_version": 1,
+  "route_id": "fork-run-training",
+  "name": "Fork Run Training Course",
+  "source": {
+    "platform": "synthetic",
+    "release": "Boonta Reborn clean-room practice route",
+    "revision": "2026-11-20"
+  },
+  "units": {
+    "distance": "metres",
+    "lateral_axis": "x",
+    "up_axis": "y",
+    "forward_axis": "z"
+  },
+  "closed_loop": true,
+  "start_node_id": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "split",
+      "position": [
+        0,
+        0,
+        10
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "left-branch",
+      "position": [
+        4,
+        0,
+        18
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "right-branch",
+      "position": [
+        -4,
+        0,
+        18
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "join",
+      "position": [
+        0,
+        0,
+        26
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "finish",
+      "position": [
+        0,
+        0,
+        36
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "approach",
+      "from": "start",
+      "to": "split",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          3
+        ],
+        "control2": [
+          0,
+          0,
+          7
+        ]
+      },
+      "progress": {
+        "start": 0,
+        "end": 0.25
+      }
+    },
+    {
+      "id": "left-path",
+      "from": "split",
+      "to": "left-branch",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          1,
+          0,
+          13
+        ],
+        "control2": [
+          3,
+          0,
+          16
+        ]
+      },
+      "progress": {
+        "start": 0.25,
+        "end": 0.5
+      }
+    },
+    {
+      "id": "right-path",
+      "from": "split",
+      "to": "right-branch",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -1,
+          0,
+          13
+        ],
+        "control2": [
+          -3,
+          0,
+          16
+        ]
+      },
+      "progress": {
+        "start": 0.25,
+        "end": 0.5
+      }
+    },
+    {
+      "id": "left-return",
+      "from": "left-branch",
+      "to": "join",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          5,
+          0,
+          20
+        ],
+        "control2": [
+          0,
+          0,
+          23
+        ]
+      },
+      "progress": {
+        "start": 0.5,
+        "end": 0.75
+      }
+    },
+    {
+      "id": "right-return",
+      "from": "right-branch",
+      "to": "join",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -5,
+          0,
+          20
+        ],
+        "control2": [
+          0,
+          0,
+          23
+        ]
+      },
+      "progress": {
+        "start": 0.5,
+        "end": 0.75
+      }
+    },
+    {
+      "id": "shared-exit",
+      "from": "join",
+      "to": "finish",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          29
+        ],
+        "control2": [
+          0,
+          0,
+          33
+        ]
+      },
+      "progress": {
+        "start": 0.75,
+        "end": 0.85
+      }
+    },
+    {
+      "id": "return-to-start",
+      "from": "finish",
+      "to": "start",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          39
+        ],
+        "control2": [
+          0,
+          0,
+          -3
+        ]
+      },
+      "progress": {
+        "start": 0.85,
+        "end": 1
+      }
+    }
+  ]
+}
