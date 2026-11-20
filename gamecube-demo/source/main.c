@@ -29,11 +29,6 @@
  * Keep enough headroom so append operations don't silently drop the checkerboard. */
 #define VERTEX_CAPACITY    16384U
 #define ROAD_SEGMENTS      32U
-#define ROUTE_SEGMENT_LENGTH 2.8f
-#define ROUTE_BRANCH_STEERING_DEADZONE 0.20f
-#define ROUTE_BRANCH_SELECTION_DISTANCE (6.0f * ROUTE_SEGMENT_LENGTH)
-/* Ground mesh reaches 42 segments ahead of the player (44 total, 2 behind). */
-#define ROUTE_RENDER_LOOKAHEAD_DISTANCE (42.0f * ROUTE_SEGMENT_LENGTH)
 #define RACE_LAP_LIMIT       3U
 #define PLAYER_ANCHOR_LOCAL_Z 1.0f
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
