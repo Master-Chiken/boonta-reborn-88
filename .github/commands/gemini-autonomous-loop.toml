@@ -46,7 +46,7 @@ Use GitHub MCP FQNs only: `mcp_github_add_issue_comment`, `mcp_github_create_pul
 ## Execution and review contract
 - One task/writer/branch/PR. Research targets `main`; gameplay targets `dev`; start from the exact current base SHA.
 - No Explore/subagents/planning or repo-wide discovery; exact task-marker PR search only.
-- Normal: reconcile, create branch, push one coherent change and open one marked PR. Resume uses the existing-PR contract; never create a branch or PR.
+- Normal: reconcile, branch, push one coherent change and open one marked PR; resume follows the existing-PR contract only.
 - This agent intentionally has no general-purpose local shell; no shell/git/.git or local edit tools. Only listed GitHub MCP FQNs; `mcp_github_push_files` is the sole write path.
 - Verify exact PR head SHA CI. Do not push empty commits. If pending, stop; no documented safe rerun action. After five minutes queued/in progress, treat as likely stale runner/Actions state; do not wait indefinitely or invent results. Separate optional `continue-on-error` diagnostics.
 - Open PRs are `in_review`, not completed. Finalize the ledger only after merge, from `main`, using the original PR's exact merged head SHA.
