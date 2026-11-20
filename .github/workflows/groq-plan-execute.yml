@@ -869,25 +869,20 @@ jobs:
             RESUME_ALLOWED_PATHS="$(jq -r '.[] | "- " + .' <<<"$RESUME_FILE_PATHS")"
             PROMPT="$(cat <<'RESUME_PROMPT'
           Groq Free, €0 only. Resume exactly one existing task PR.
-          
+
           AUTHORITY
-          - The preloaded task context and exact existing-PR metadata are authoritative. The workflow revalidated owner, same repository, open/non-draft, task/target markers, branch, URL and prior head SHA.
-          - AUTONOMOUS_CONTEXT is injected below in this prompt; it is not a repository file. Never request or read AUTONOMOUS_CONTEXT.md.
-          - The task question, acceptance criteria, next action, source excerpts and exact owner-approved write paths are already supplied. Start the implementation immediately; do not ask questions or narrate a plan.
-          - Do not search PR history, use agents, inspect unrelated PRs, call web tools or fetch raw URLs. Use only the exposed GitHub MCP tools.
-          
+          - Workflow revalidated owner, repo, open/non-draft PR, markers, base/branch/URL and prior HEAD under writer lock.
+          - AUTONOMOUS_CONTEXT is injected below, not a repository file. Never request or read AUTONOMOUS_CONTEXT.md.
+          - Task, criteria, next action, excerpts and Exact owner-approved write paths (no others) are supplied. Start now; no questions or plan.
+          - Do not search PR history, invoke agents or web tools. Use only the exposed GitHub MCP tools.
+
           WRITE
-          - Only github_get_file_contents and github_push_files are exposed. Use the preloaded excerpts first. Read at most one listed path using the supplied existing branch as the ref, then call github_push_files exactly once with the full updated file content on that same branch.
-          - Never create a branch or PR; never write main/dev, merge, force-push, delete refs, change secrets or edit the canonical ledger.
-          - Make one concrete code change that advances the earliest unmet acceptance criterion. If the provided task scope cannot support a safe change after the one permitted read, return BLOCKED with the exact missing fact; never ask the owner for clarification.
-          - Preserve provenance and licenses. Stop rather than guess.
-          
-          EVIDENCE
-          - PROGRESS requires the existing PR URL and exact new SHA returned by github_push_files. The shared validator checks freshness and exact-head CI.
-          - Otherwise report BLOCKED with one verified blocker and next action.
-          
+          - Only github_get_file_contents and github_push_files. Read exactly one listed path using the supplied existing branch as the ref; call github_push_files exactly once with updated content on that branch, changing only owner-approved paths.
+          - No branch/PR creation; never write main/dev, merge, force-push, delete refs, change secrets/settings or edit the canonical ledger.
+          - Implement one unmet criterion. If unsafe/insufficient, report the exact blocker; never ask the owner for clarification. Preserve provenance/licences; no ROMs/assets.
+
           REPORT
-          - Output only machine-readable lines; copy the task ID and target branch appended below. No prose or fences.
+          - PROGRESS needs existing PR URL and exact new SHA from github_push_files; else BLOCKED with one blocker/next action. Machine-readable lines only; copy task ID/branch; no prose/fences.
           RESUME_PROMPT
           )"
             PROMPT="${PROMPT}"$'\n\n'
