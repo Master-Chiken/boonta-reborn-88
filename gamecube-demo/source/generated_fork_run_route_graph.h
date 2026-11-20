@@ -14,7 +14,7 @@
 #define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE 16U
 #define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT \
     (BOONTA_RUNTIME_ROUTE_EDGE_COUNT * BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE)
-#define BOONTA_RUNTIME_ROUTE_LENGTH 93.014224348f
+#define BOONTA_RUNTIME_ROUTE_LENGTH 103.513341273f
 
 typedef struct {
     float p0[3];
@@ -54,7 +54,7 @@ static const BoontaRuntimeRouteEdge boonta_runtime_route_edges[BOONTA_RUNTIME_RO
     /* shared-exit */
     { {0f, 0f, 26.000000000f}, {0f, 0f, 29.000000000f}, {0f, 0f, 33.000000000f}, {0f, 0f, 36.000000000f} },
     /* return-to-start */
-    { {0f, 0f, 36.000000000f}, {0f, 0f, 39.000000000f}, {0f, 0f, -3.000000000f}, {0f, 0f, 0f} }
+    { {0f, 0f, 36.000000000f}, {24.000000000f, 0f, 42.000000000f}, {0f, 0f, -3.000000000f}, {0f, 0f, 0f} }
 };
 
 static const float boonta_runtime_route_width_samples[BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT] = {
