@@ -1,6 +1,6 @@
 # Branch lifecycle policy
 
-This repository uses three permanent references and short-lived task branches.
+This repository uses four permanent/recovery references and short-lived task branches. The two recovery archives are protected history, never development bases.
 
 AI coordination, testing gates, provenance rules and the one-task queue are defined in [`PROJECT_OPERATING_RULES.md`](PROJECT_OPERATING_RULES.md).
 
@@ -9,6 +9,7 @@ AI coordination, testing gates, provenance rules and the one-task queue are defi
 - `main`: stable, release-ready integration branch.
 - `dev`: normal gameplay and feature integration branch.
 - `archive/branch-heads-20261019`: protected recovery archive; never use it as a development base.
+- `archive/rival-ai-history-20261107`: protected recovery archive for rival-AI history; never use it as a development base.
 
 Do not rename, delete, or force-push these permanent references.
 
@@ -23,9 +24,11 @@ Do not rename, delete, or force-push these permanent references.
 
 ## Branch budget
 
-- **Warning threshold:** 10 total branch refs.
+- **Target / hard automation ceiling:** 10 total branch refs.
 - **Red line:** more than 20 total branch refs.
-- **Active-work target:** 10 or fewer branches with a recent commit or an open PR.
+- A new autonomous task is blocked unless the repository has **zero other open PRs** and **10 or fewer total branch refs**.
+- The autonomous task selector also remains blocked until the owner posts a structured original-game emulator test report on issue #459, uses the exact marker `<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->`, and explicitly chooses `Owner decision: NATIVE_FALLBACK`.
+- Existing trusted task PRs may be resumed only on their exact verified head; this does not authorize a second task, branch or PR.
 - An alert is a review trigger, not permission for unattended deletion. The governance workflow reports inventory and opens or updates one tracking issue; it does not delete or force-move branches.
 - GitHub Actions runs after a branch-creation event and cannot retroactively block the creation. Enable GitHub's built-in **Automatically delete head branches** setting to clean up merged PR heads.
 
