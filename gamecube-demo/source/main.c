@@ -214,8 +214,8 @@ static int advance_rival_route_cursor(unsigned int rival_index,
      */
     candidate = *cursor;
     if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        branch_direction = steering < -ROUTE_BRANCH_STEERING_DEADZONE ? -1 :
-            steering > ROUTE_BRANCH_STEERING_DEADZONE ? 1 : 0;
+        branch_direction = boonta_rival_route_branch_direction_from_steering(
+            steering, ROUTE_BRANCH_STEERING_DEADZONE);
         if (boonta_route_graph_sampler_prime_lookahead(
                 &g_rival_route_sampler, &candidate, branch_direction,
                 ROUTE_BRANCH_SELECTION_DISTANCE,
