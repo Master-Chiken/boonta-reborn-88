@@ -38,16 +38,18 @@ class CourseRuntimeSourceTests(unittest.TestCase):
         self.assertIn("BOONTA_RUNTIME_ROUTE_HAS_BRANCHES", finish)
         self.assertIn("boonta_route_cursor_distance_to_next_lap", finish)
 
-    def test_single_course_start_and_reset_reinitialize_runtime_context(self):
+    def test_default_course_and_ready_screen_selection_reinitialize_runtime_context(self):
         main_start = self.main.index("int main(")
         startup = self.main[main_start:self.main.index("previous_tick = gettime();", main_start)]
-        self.assertIn("g_current_course = boonta_course_catalog[0];", startup)
+        self.assertIn("g_course_index = 0U;", startup)
+        self.assertIn("g_current_course = boonta_course_catalog[g_course_index];", startup)
         self.assertIn("boonta_race_state_reset(&g_race_state);", startup)
         self.assertIn("reset_runtime_route_cursor();", startup)
-        self.assertGreaterEqual(self.main.count("reset_runtime_route_cursor();"), 2)
-        self.assertNotIn("g_selected_course_index", self.main)
-        self.assertNotIn("select_course(", self.main)
-        self.assertNotIn("BOONTA_BUTTON_LEFT | BOONTA_BUTTON_RIGHT", self.main)
+        self.assertGreaterEqual(self.main.count("reset_runtime_route_cursor();"), 3)
+        self.assertIn("boonta_course_selection_after_input(", self.main)
+        self.assertIn("g_race_state.session_phase == BOONTA_RACE_SESSION_READY", self.main)
+        self.assertIn("BOONTA_BUTTON_LEFT", self.main)
+        self.assertIn("BOONTA_BUTTON_RIGHT", self.main)
 
     def test_branch_cursor_is_wired_through_the_selected_course_adapter(self):
         self.assertIn("static int advance_runtime_route_cursor(", self.main)
