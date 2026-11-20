@@ -1,9 +1,6 @@
 name: Branch automation self-test
 
 on:
-  push:
-    branches:
-      - automation/structured-patch-loop-integration-20261120
   pull_request:
     branches:
       - main
@@ -59,7 +56,8 @@ jobs:
             .github/workflows/boonta-autonomous-readiness.yml \
             .github/workflows/boonta-autonomous-loop.yml \
             .github/workflows/ci-failure-triage.yml \
-            .github/workflows/branch-automation-selftest.yml
+            .github/workflows/branch-automation-selftest.yml \
+            .github/workflows/ai-free-safety.yml
 
       - name: Compile embedded Python scripts without executing network operations
         shell: bash
