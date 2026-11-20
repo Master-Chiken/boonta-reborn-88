@@ -518,10 +518,11 @@ or_mint_position = openrouter_fallback.find("name: Mint scoped GitHub App token"
 or_checkout_position = openrouter_fallback.find("name: Checkout the protected default branch")
 or_install_position = openrouter_fallback.find("name: Install pinned OpenCode CLI")
 or_snapshot_position = openrouter_fallback.find("id: snapshot_pr_heads")
+or_patch_position = openrouter_fallback.find("name: Run verified no-tools patch cycle through OpenRouter Free")
 or_run_position = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
 or_validate_position = openrouter_fallback.find("name: Validate OpenRouter autonomous cycle report")
 or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure")
-if not (0 <= or_cooldown_position < or_guard_position < or_auth_position < or_mint_position < or_checkout_position < or_install_position < or_snapshot_position < or_run_position < or_validate_position < or_record_position):
+if not (0 <= or_cooldown_position < or_guard_position < or_auth_position < or_mint_position < or_checkout_position < or_install_position < or_snapshot_position < or_patch_position < or_run_position < or_validate_position < or_record_position):
     errors.append("OpenRouter daily cooldown and bearer-auth check must run before token mint/model invocation; invocation and report-validation failures must be recorded after validation")
 for required in (
     "github.paginate(github.rest.issues.listComments",
@@ -1751,6 +1752,37 @@ for required in (
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter direct MCP tool contract is missing {required!r}")
+
+# The fresh-task patch engine must have no MCP/tools, must remain behind
+# separately attested deterministic-writer gates, and must never take over PR resume.
+for label, workflow, model in (
+    ("OpenRouter", openrouter_fallback, "openrouter/openrouter/free"),
+    ("Groq", groq_fallback, "groq/openai/gpt-oss-20b"),
+):
+    for required in (
+        "id: run_patch_cycle",
+        "inputs.resume_mode != true",
+        "inputs.resume_mode == true",
+        "BOONTA_DETERMINISTIC_DELIVERY_ENABLED",
+        "BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED",
+        '"permission": {',
+        '"*": "deny"',
+        '"mcp": {}',
+        "tools/run_autonomous_patch_cycle.py",
+        '--target-root "$GITHUB_WORKSPACE/.boonta-target-source"',
+        '--policy-root "$REPO_ROOT"',
+        '--report-file "$RUNNER_TEMP/opencode-cycle-report.txt"',
+        '--model "' + model + '"',
+        "steps.run_patch_cycle.outputs.provider_request_started == 'true'",
+        "steps.run_patch_cycle.outcome != 'success'",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} fresh-task structured patch path is missing {required!r}")
+    patch_step = workflow.split("      - name: Run verified no-tools patch cycle", 1)[1].split("      - name:", 1)[0]
+    if "GITHUB_TOOLS" in patch_step or "GITHUB_PERSONAL_ACCESS_TOKEN" in patch_step:
+        errors.append(f"{label} structured patch provider process must not receive GitHub MCP credentials or tool access")
+    if "GITHUB_TOKEN:" not in patch_step or "GITHUB_REPOSITORY:" not in patch_step:
+        errors.append(f"{label} structured patch runner must retain scoped delivery credentials outside the model process")
 
 # Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
 reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
