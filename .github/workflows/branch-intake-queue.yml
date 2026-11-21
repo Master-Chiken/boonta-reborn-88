@@ -19,7 +19,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: branch-intake-queue
+  group: boonta-single-writer
   cancel-in-progress: false
 
 jobs:
