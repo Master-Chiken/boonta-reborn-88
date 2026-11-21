@@ -43,15 +43,45 @@ jobs:
           esac
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
+          gh api "repos/$GH_REPO/contents/docs/automation/task-ledger-summary.json?ref=main" --jq '.content' | base64 --decode > /tmp/task-ledger-summary.json
+          gh api --paginate --slurp "repos/$GH_REPO/issues/459/comments?per_page=100" | jq -c 'add' > /tmp/emulator-test-comments.json
+          policy="$(jq -ce '.policy | select(
+            .max_open_prs_for_new_task == 0 and
+            .max_branch_refs_for_new_task == 10 and
+            .owner_test_gate_issue == 459 and
+            .owner_test_gate_marker == "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->" and
+            .owner_test_gate_decision == "NATIVE_FALLBACK"
+          )' /tmp/task-ledger-summary.json)"
+          max_open_prs="$(jq -r '.max_open_prs_for_new_task' <<<"$policy")"
+          max_branch_refs="$(jq -r '.max_branch_refs_for_new_task' <<<"$policy")"
+          owner_marker="$(jq -r '.owner_test_gate_marker' <<<"$policy")"
+          owner_decision="$(jq -r '.owner_test_gate_decision' <<<"$policy")"
+          branch_count="$(jq 'length' /tmp/branches.json)"
           open_pr_count="$(jq 'length' /tmp/open-prs.json)"
-          if (( open_pr_count >= 3 )); then
+          repo_owner="$(gh api "repos/$GH_REPO" --jq '.owner.login')"
+          owner_report="$(jq -r --arg owner "$repo_owner" --arg marker "$owner_marker" --arg decision "$owner_decision" '
+            any(.[]; .user.login == $owner and
+              ((.body // "") | split("\\n") | index($marker) != null) and
+              ((.body // "") | test("(?im)^Emulator\\s*:")) and
+              ((.body // "") | test("(?im)^Platform\\s*:")) and
+              ((.body // "") | test("(?im)^Graphics plugin\\s*:")) and
+              ((.body // "") | test("(?im)^ROM region\\s*:")) and
+              ((.body // "") | test("(?im)^Full race\\s*:")) and
+              ((.body // "") | test("(?im)^Owner decision\\s*:\\s*" + $decision + "\\s*$"))
+            )' /tmp/emulator-test-comments.json)"
+          if [[ "$owner_report" != "true" ]]; then
+            owner_report="false"
+          fi
+          if (( open_pr_count > max_open_prs || branch_count > max_branch_refs )) || [[ "$owner_report" != "true" ]]; then
             {
-              echo "## Intake paused by PR budget"
+              echo "## Intake paused by strict project gates"
               echo ""
-              echo "Found $open_pr_count open PRs; the limit for new intake is 3."
-              echo "No candidate PRs will be created. Review, merge or close existing PRs first."
+              echo "- Branch refs: $branch_count (maximum: $max_branch_refs)"
+              echo "- Open PRs: $open_pr_count (maximum: $max_open_prs)"
+              echo "- Owner-authored emulator report with NATIVE_FALLBACK: $owner_report"
+              echo "- No candidate branch or PR will be created."
             } >> "$GITHUB_STEP_SUMMARY"
-            echo "::notice::Intake paused: $open_pr_count open PRs already meet/exceed the cap of 3."
+            echo "::notice::Branch intake paused by the canonical project gates; no writes were made."
             exit 0
           fi
           # Mirror public Git history without checking out or executing branch code.
