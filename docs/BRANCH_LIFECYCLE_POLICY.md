@@ -1,6 +1,6 @@
 # Branch lifecycle policy
 
-This repository uses four permanent/recovery references and short-lived task branches. The two recovery archives are protected history, never development bases.
+This repository uses five permanent/recovery references and short-lived task branches. The three recovery archives are protected history, never development bases.
 
 AI coordination, testing gates, provenance rules and the one-task queue are defined in [`PROJECT_OPERATING_RULES.md`](PROJECT_OPERATING_RULES.md).
 
@@ -9,6 +9,7 @@ AI coordination, testing gates, provenance rules and the one-task queue are defi
 - `main`: stable, release-ready integration branch.
 - `dev`: normal gameplay and feature integration branch.
 - `archive/branch-heads-20261019`: protected recovery archive; never use it as a development base.
+- `archive/gameplay-cleanup-20261121`: protected recovery archive for the November 2026 gameplay-branch consolidation; never use it as a development base.
 - `archive/rival-ai-history-20261107`: protected recovery archive for rival-AI history; never use it as a development base.
 
 Do not rename, delete, or force-push these permanent references.
@@ -20,7 +21,7 @@ Do not rename, delete, or force-push these permanent references.
 3. Normal gameplay changes target `dev`. Promotion of validated work from `dev` to `main` is a separate release action. Documentation-only work may follow its explicitly selected target when needed.
 4. Do not keep a branch after its pull request has merged. Do not create a replacement branch merely to rename an existing one.
 5. Before closing an unmerged pull request, decide whether its work is still needed; remove or archive the task branch only after confirming that its work is recoverable.
-6. Keep branch commits recoverable through merged history or the protected recovery archive before any bulk cleanup. Never merge an archive wholesale into `main` or `dev`.
+6. Keep branch commits recoverable through merged history or a protected recovery archive before any bulk cleanup. Never merge an archive wholesale into `main` or `dev`.
 
 ## Branch budget
 
