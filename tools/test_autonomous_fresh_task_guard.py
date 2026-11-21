@@ -268,7 +268,7 @@ cases = [
         "branch": "main",
         "ledger": summary([valid_active]),
         "open_prs": [],
-        "emulator_report": false,
+        "emulator_report": False,
         "expected_allowed": False,
     },
     {
