@@ -186,7 +186,7 @@ cases = [
         "expected_allowed": False,
     },
     {
-        "name": "open PR for a different task does not block",
+        "name": "unrelated open PR blocks new task under zero-PR policy",
         "task_id": valid_active["task_id"],
         "branch": "main",
         "ledger": summary([valid_active]),
@@ -194,7 +194,7 @@ cases = [
             "number": 123,
             "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK",
         }],
-        "expected_allowed": True,
+        "expected_allowed": False,
     },
     {
         "name": "multiple active tasks fail closed",
