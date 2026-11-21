@@ -28,6 +28,7 @@ Do not rename, delete, or force-push these permanent references.
 - **Target / hard automation ceiling:** 10 total branch refs.
 - **Red line:** more than 20 total branch refs.
 - A new autonomous task is blocked unless the repository has **zero other open PRs** and **10 or fewer total branch refs**.
+- Provider execution, manual branch intake, and branch-retirement workflows share the same `boonta-single-writer` Actions concurrency group; queued writes are not cancelled or run concurrently.
 - The autonomous task selector also remains blocked until the owner posts a structured original-game emulator test report on issue #459, uses the exact marker `<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->`, and explicitly chooses `Owner decision: NATIVE_FALLBACK`.
 - Existing trusted task PRs may be resumed only on their exact verified head; this does not authorize a second task, branch or PR.
 - An alert is a review trigger, not permission for unattended deletion. The governance workflow reports inventory and opens or updates one tracking issue; it does not delete or force-move branches.
