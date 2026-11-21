@@ -262,6 +262,8 @@ jobs:
           groq = Path(".github/workflows/groq-plan-execute.yml").read_text(encoding="utf-8")
           setup = Path("docs/AI_AUTOMATION_SETUP.md").read_text(encoding="utf-8")
           branch_docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
+          retirement = Path(".github/workflows/retire-archived-branch-refs.yml").read_text(encoding="utf-8")
+          verified_retirement = Path(".github/workflows/retire-verified-branch.yml").read_text(encoding="utf-8")
           selftest = Path(".github/workflows/branch-automation-selftest.yml").read_text(encoding="utf-8")
           yaml_validation = selftest.split("      - name: Validate workflow YAML syntax", 1)[1].split("      - name: Compile embedded Python", 1)[0]
           intake_header = intake.split("permissions:", 1)[0]
