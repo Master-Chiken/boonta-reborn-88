@@ -104,6 +104,7 @@ Tool selection must follow the artifact:
 - One implementation task normally means one short-lived branch and one PR. Base new branches on the current intended target.
 - `main` is stable/release integration and must not receive direct pushes. Gameplay changes target protected `dev`; docs/policy may target `main`.
 - `archive/branch-heads-20261019` is a protected recovery archive, never a development base and never merged wholesale.
+- `archive/gameplay-cleanup-20261121` is a protected recovery archive for the November 2026 gameplay-branch consolidation, never a development base and never merged wholesale.
 - AI agents may open PRs but must not merge them, enable auto-merge, bypass branch rules, alter repository settings, force-push, or delete branch refs.
 - Automatic deletion of merged PR head branches is enabled. Target a branch budget of 10 refs or fewer; a warning is a review trigger, not permission for unattended deletion.
 
