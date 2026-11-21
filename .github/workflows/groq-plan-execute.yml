@@ -359,14 +359,30 @@ jobs:
             const emulatorDecision = ledgerSummary.policy.owner_test_gate_decision;
             const ownerEmulatorReportRecorded = emulatorTestComments.some((comment) => {
               const body = typeof comment.body === 'string' ? comment.body : '';
-              const hasMarker = body.split(/\\r?\\n/).some((line) => line.trim() === emulatorMarker);
-              return comment.user?.login === context.repo.owner && hasMarker &&
-                /Emulator\\s*:/i.test(body) &&
-                /Platform\\s*:/i.test(body) &&
-                /Graphics plugin\\s*:/i.test(body) &&
-                /ROM region\\s*:/i.test(body) &&
-                /Full race\\s*:/i.test(body) &&
-                new RegExp('Owner decision\\\\s*:\\\\s*' + emulatorDecision + '\\\\s*            const duplicate = openPullRequests.find((pull) =>
+              const lines = body.split(/\r?\n/).map((line) => line.trim());
+              return comment.user?.login === context.repo.owner &&
+                lines.includes(emulatorMarker) &&
+                lines.some((line) => /^Emulator\s*:/i.test(line)) &&
+                lines.some((line) => /^Platform\s*:/i.test(line)) &&
+                lines.some((line) => /^Graphics plugin\s*:/i.test(line)) &&
+                lines.some((line) => /^ROM region\s*:/i.test(line)) &&
+                lines.some((line) => /^Full race\s*:/i.test(line)) &&
+                lines.includes('Owner decision: ' + emulatorDecision);
+            });
+            if (
+              openPullRequests.length > ledgerSummary.policy.max_open_prs_for_new_task ||
+              branchRefs.length > ledgerSummary.policy.max_branch_refs_for_new_task ||
+              !ownerEmulatorReportRecorded
+            ) {
+              failClosed(
+                'project-wide writer gates are closed: require zero open PRs, at most ten branches, ' +
+                'and an owner-authored emulator report on issue #459 selecting NATIVE_FALLBACK'
+              );
+              return;
+            }
+
+            const markerLine = 'BOONTA_TASK_ID: ' + taskId;
+            const duplicate = openPullRequests.find((pull) =>
               (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
             );
             if (duplicate) {
