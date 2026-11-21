@@ -312,7 +312,7 @@ jobs:
               "branch intake can prepare at most one draft PR": '          - "1"' in intake_header and '          - "2"' not in intake_header and "1) ;;" in intake and "1|2) ;;" not in intake,
               "branch intake enforces zero open PRs and a ten-branch ceiling": ".max_open_prs_for_new_task == 0" in intake and ".max_branch_refs_for_new_task == 10" in intake,
               "branch intake requires owner emulator report and explicit native fallback": "owner_test_gate_marker" in intake and "owner_test_gate_decision" in intake and "NATIVE_FALLBACK" in intake,
-              "all AI provider workflows share the single-writer lock": all("group: boonta-single-writer" in workflow for workflow in (gemini, openrouter, groq)),
+              "all AI provider workflows share the single-writer lock": all("group: boonta-single-writer" in workflow for workflow in (gemini_execute, openrouter, groq)),
               "branch intake and retirement share the single-writer lock": all("group: boonta-single-writer" in workflow for workflow in (intake, retirement, verified_retirement)),
               "red line is above 20 branches": "BRANCH_REDLINE = 20" in governance,
               "active branch target is 10": "ACTIVE_BRANCH_TARGET = 10" in governance,
