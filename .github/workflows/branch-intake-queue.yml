@@ -61,7 +61,7 @@ jobs:
           repo_owner="$(gh api "repos/$GH_REPO" --jq '.owner.login')"
           owner_report="$(jq -r --arg owner "$repo_owner" --arg marker "$owner_marker" --arg decision "$owner_decision" '
             any(.[]; .user.login == $owner and
-              ((.body // "") | split("\\n") | index($marker) != null) and
+              ((.body // "") | split("\n") | index($marker) != null) and
               ((.body // "") | test("(?im)^Emulator\\s*:")) and
               ((.body // "") | test("(?im)^Platform\\s*:")) and
               ((.body // "") | test("(?im)^Graphics plugin\\s*:")) and
