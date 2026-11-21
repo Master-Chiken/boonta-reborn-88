@@ -12,7 +12,6 @@ on:
         type: choice
         options:
           - "1"
-          - "2"
 
 permissions:
   actions: write
@@ -38,8 +37,8 @@ jobs:
         run: |
           set -euo pipefail
           case "$MAX_PRS" in
-            1|2) ;;
-            *) echo "::error::max_prs must be 1 or 2"; exit 1 ;;
+            1) ;;
+            *) echo "::error::max_prs must be exactly 1"; exit 1 ;;
           esac
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
