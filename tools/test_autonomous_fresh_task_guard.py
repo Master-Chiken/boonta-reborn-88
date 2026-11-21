@@ -245,6 +245,42 @@ cases = [
         "expected_allowed": False,
     },
     {
+        "name": "branch budget boundary of ten refs still permits a selected task when all other gates pass",
+        "task_id": valid_active["task_id"],
+        "branch": "main",
+        "ledger": summary([valid_active]),
+        "open_prs": [],
+        "branch_count": 10,
+        "expected_allowed": True,
+    },
+    {
+        "name": "eleven branch refs fail closed",
+        "task_id": valid_active["task_id"],
+        "branch": "main",
+        "ledger": summary([valid_active]),
+        "open_prs": [],
+        "branch_count": 11,
+        "expected_allowed": False,
+    },
+    {
+        "name": "missing owner emulator report fails closed",
+        "task_id": valid_active["task_id"],
+        "branch": "main",
+        "ledger": summary([valid_active]),
+        "open_prs": [],
+        "emulator_report": false,
+        "expected_allowed": False,
+    },
+    {
+        "name": "emulator accepted decision keeps native provider path closed",
+        "task_id": valid_active["task_id"],
+        "branch": "main",
+        "ledger": summary([valid_active]),
+        "open_prs": [],
+        "owner_decision": "EMULATOR_ACCEPTED",
+        "expected_allowed": False,
+    },
+    {
         "name": "open PR inventory ceiling fails closed",
         "task_id": valid_active["task_id"],
         "branch": "main",
@@ -293,6 +329,32 @@ async function runCase(testCase) {{
               content: Buffer.from(JSON.stringify(testCase.ledger), "utf8").toString("base64")
             }}
           }};
+        }},
+        listBranches: async (options) => {{
+          if (options.per_page !== 100 || options.page !== 1) {{
+            throw new Error("unexpected branch inventory request");
+          }}
+          const count = testCase.branch_count === undefined ? 1 : testCase.branch_count;
+          return {{ data: Array.from({{ length: count }}, (_value, index) => ({{ name: "test/branch-" + index }})) }};
+        }}
+      }},
+      issues: {{
+        listComments: async (options) => {{
+          if (options.issue_number !== 459 || options.per_page !== 100 || options.page !== 1) {{
+            throw new Error("unexpected owner emulator-report query");
+          }}
+          if (testCase.emulator_report === false) return {{ data: [] }};
+          const decision = testCase.owner_decision || "NATIVE_FALLBACK";
+          const body = [
+            "Emulator: Wii64 1.5.0",
+            "Platform: Dolphin on macOS",
+            "Graphics plugin: glN64",
+            "ROM region: NTSC-U",
+            "Full race: FAIL",
+            "Owner decision: " + decision,
+            "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->"
+          ].join("\\n");
+          return {{ data: [{{ user: {{ login: "Master-Chiken" }}, body }}] }};
         }}
       }},
       pulls: {{
