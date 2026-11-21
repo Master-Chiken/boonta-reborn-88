@@ -97,6 +97,7 @@ Tool selection must follow the artifact:
 ## 5. One responsible writer, no branch sprawl
 
 - Use **one write-capable AI/agent at a time**. Read-only research can be parallelized only when it has non-overlapping, explicit questions; to avoid overload, prefer one investigator and one synthesis.
+- Gemini, OpenRouter, Groq, manual branch intake and branch-retirement workflows share the repository-wide `boonta-single-writer` concurrency group with `cancel-in-progress: false`. The parent scheduler keeps a separate lock so it never holds the child writer lock while waiting for a provider workflow.
 - The autonomous selector is fail-closed for new work: it requires zero existing open PRs, no more than ten total branch refs, and the owner-authored structured emulator report marker plus explicit `Owner decision: NATIVE_FALLBACK` on issue #459. Any missing API data, malformed marker/report, duplicate task/PR identity, or exceeded inventory ceiling means stop without a provider write.
 - Existing trusted PR resumption is limited to the exact same task, repository, base, branch and head SHA. It may not create another branch/PR or switch tasks. A generic open PR such as #458 is not resumable unless it carries the complete verified task identity.
 - Do not delete, archive, force-move or rename any branch automatically. Above the branch budget, report the inventory and wait for human disposition; branch deletion requires file-level uniqueness/reachability and recovery checks.
