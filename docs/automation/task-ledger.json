@@ -1,10 +1,15 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-18",
+  "updated_at": "2026-11-21",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
-    "rule": "One active task; preserve evidence and platform boundaries; an open PR is in_review, never completed."
+    "rule": "One active writer; no new task unless there are zero other open PRs, at most ten branch refs, and an owner-authored structured original-game emulator test report on issue #459 explicitly chooses NATIVE_FALLBACK. Preserve evidence and platform boundaries; an open PR is in_review, never completed.",
+    "max_open_prs_for_new_task": 0,
+    "max_branch_refs_for_new_task": 10,
+    "owner_test_gate_issue": 459,
+    "owner_test_gate_marker": "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+    "owner_test_gate_decision": "NATIVE_FALLBACK"
   },
   "tasks": [
     {
@@ -243,7 +248,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "blocked",
+      "status": "superseded",
       "question": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
       "acceptance_criteria": [
         "Ledger validator and regression tests pass in CI",
@@ -406,8 +411,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42823713444",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42823726550"
       ],
-      "next_action": "Merged and validated: #374 owner re-evaluation gate; #375 direct preflight-owned delivery; #377 Groq four-step/1,152+384/three-tool profile; #378 supported temperature 0.2; #373 order-independent rival avoidance. Mainline checks passed. The 2026-11-10 UTC Gemini/OpenRouter/Groq cooldowns are active and scheduled loops correctly skipped provider calls. Next: after 2026-11-11 UTC reset, require one actual €0 provider invocation, a same-task PR and exact-head CI before completing this task. Only after the activation gate clears, perform the owner-directed Phase 1 cross-platform reuse/compatibility decision using #279 evidence in #226; defer #307 until the race slice is coherent.",
-      "updated_at": "2026-11-10",
+      "next_action": "Superseded on 2026-11-21 by the owner-prioritized original-game feasibility gate in issue #459. Do not reactivate provider-loop infrastructure work unless the owner explicitly reopens it after the game delivery path is established.",
+      "updated_at": "2026-11-21",
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
@@ -911,8 +916,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710922112",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570"
       ],
-      "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
-      "updated_at": "2026-11-07",
+      "next_action": "Blocked pending issue #459 and #458 reconciliation. The prior local parser probe already recorded structural counts; do not ask the owner to install .NET or rerun it. Revisit local-only asset/material graph extraction only if native fallback is chosen. Keep all ROM-derived bytes local; do not claim GX export until validated.",
+      "updated_at": "2026-11-21",
       "target_branch": "main",
       "owner_role_id": "research",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
@@ -1011,7 +1016,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "blocked",
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
       "read_paths": [
@@ -1066,8 +1071,8 @@
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
       "evidence": [],
-      "next_action": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps.",
-      "updated_at": "2026-11-18",
+      "next_action": "Blocked on 2026-11-21 pending exact-scope reconciliation with open PR #458. That HOLD PR already contains generic rival-route cursor/normalized-progress work in the same subsystem; do not create a duplicate branch or PR. After issue #459 emulator testing, compare #458 changed files and exact diff against this task's acceptance criteria, then reuse, narrow, supersede or explicitly unblock only after owner review. Synthetic Canyon Run/Fork Run content is not original Racer.",
+      "updated_at": "2026-11-21",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [

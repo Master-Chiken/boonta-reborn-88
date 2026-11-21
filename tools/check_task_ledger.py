@@ -54,8 +54,21 @@ def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: 
     if not _is_date(data.get("updated_at")):
         errors.append("updated_at must be an ISO date")
     policy = data.get("policy")
-    if not isinstance(policy, dict) or policy.get("max_active_tasks") != 1:
-        errors.append("policy.max_active_tasks must equal 1")
+    if not isinstance(policy, dict):
+        errors.append("policy must be an object")
+    else:
+        if policy.get("max_active_tasks") != 1:
+            errors.append("policy.max_active_tasks must equal 1")
+        if policy.get("max_open_prs_for_new_task") != 0:
+            errors.append("policy.max_open_prs_for_new_task must equal 0 (no competing open PR)")
+        if policy.get("max_branch_refs_for_new_task") != 10:
+            errors.append("policy.max_branch_refs_for_new_task must equal 10")
+        if policy.get("owner_test_gate_issue") != 459:
+            errors.append("policy.owner_test_gate_issue must equal 459")
+        if policy.get("owner_test_gate_marker") != "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->":
+            errors.append("policy.owner_test_gate_marker must be the exact owner emulator-test report marker")
+        if policy.get("owner_test_gate_decision") != "NATIVE_FALLBACK":
+            errors.append("policy.owner_test_gate_decision must be NATIVE_FALLBACK")
     tasks = data.get("tasks")
     if not isinstance(tasks, list):
         return errors + ["tasks must be an array"]

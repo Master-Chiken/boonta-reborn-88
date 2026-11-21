@@ -1141,8 +1141,8 @@ if 'outputs.queue_state !== testCase.expected_queue_state' not in task_preflight
     errors.append("Offline task-preflight tests must assert the queue-state output")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
-if '"name": "open PR for a different task does not block activation"' not in task_preflight_tests:
-    errors.append("Offline task-preflight tests must prove unrelated task markers do not block the selected task")
+if '"name": "unrelated open PR blocks new activation under zero-PR policy"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove any unrelated open PR blocks new task selection under the zero-PR policy")
 if '"name": "100 open PRs fail closed at the bounded inventory ceiling"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove the open-PR inventory ceiling fails closed")
 if 'options.state !== "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests or "options.page !== 1" not in task_preflight_tests:

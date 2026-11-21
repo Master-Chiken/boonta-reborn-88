@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-18",
+  "updated_at": "2026-11-21",
   "completed_task_ids": [
     "RE002-SYSTEM-MATRIX",
     "RE001-SYSTEM-MATRIX",
@@ -16,67 +16,14 @@
   ],
   "policy": {
     "max_active_tasks": 1,
-    "completed_requires_merged_pr": true
+    "completed_requires_merged_pr": true,
+    "max_open_prs_for_new_task": 0,
+    "max_branch_refs_for_new_task": 10,
+    "owner_test_gate_issue": 459,
+    "owner_test_gate_marker": "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+    "owner_test_gate_decision": "NATIVE_FALLBACK"
   },
   "tasks": [
-    {
-      "task_id": "AUTOMATION-LEDGER-ACTIVATION",
-      "title": "Activate and validate persistent autonomous task tracking",
-      "owner_role_id": "chief-of-staff",
-      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
-      "depends_on": [],
-      "owner_approved": false,
-      "queue": "#226",
-      "platform_scope": [
-        "automation"
-      ],
-      "status": "blocked",
-      "target_branch": "main",
-      "read_paths": [
-        "tools/check_task_ledger.py",
-        "tools/test_check_task_ledger.py",
-        "tools/check_task_ledger_summary.py",
-        ".github/workflows/boonta-autonomous-loop.yml"
-      ],
-      "read_ranges": [
-        {
-          "path": "tools/check_task_ledger.py",
-          "start_line": 48,
-          "end_line": 94
-        },
-        {
-          "path": "tools/test_check_task_ledger.py",
-          "start_line": 46,
-          "end_line": 82
-        },
-        {
-          "path": "tools/check_task_ledger_summary.py",
-          "start_line": 20,
-          "end_line": 62
-        },
-        {
-          "path": ".github/workflows/boonta-autonomous-loop.yml",
-          "start_line": 156,
-          "end_line": 199
-        },
-        {
-          "path": ".github/workflows/boonta-autonomous-loop.yml",
-          "start_line": 217,
-          "end_line": 246
-        }
-      ],
-      "question_excerpt": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
-      "acceptance_criteria_total": 15,
-      "acceptance_criteria_excerpt": [
-        "Ledger validator and regression tests pass in CI",
-        "Gemini and OpenRouter prompts both reconcile the ledger with live GitHub state",
-        "One active task maximum is enforced",
-        "A post-merge cycle records exact PR state and continues the next unanswered research question"
-      ],
-      "pr_url": null,
-      "head_sha": null,
-      "next_action_excerpt": "after 2026-11-11 UTC reset, require one actual €0 provider invocation, a same-task PR and exact-head CI before completing this task. Only…"
-    },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
       "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
@@ -103,7 +50,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone…"
+      "next_action_excerpt": "Blocked pending issue #459 and #458 reconciliation. The prior local parser probe already recorded structural counts; do not ask the owner…"
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
@@ -119,7 +66,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "queued",
+      "status": "blocked",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/rival_ai.h",
@@ -173,7 +120,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Verified main.c@b2006e43 lines 136-235: reset initializes staggered cursors; advance validates a candidate, then commits route distance/progress only on success. Review gaps."
+      "next_action_excerpt": "Blocked pending exact-scope reconciliation with open PR #458; no duplicate rival-route branch/PR until owner review and emulator test #459."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",

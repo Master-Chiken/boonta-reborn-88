@@ -518,105 +518,33 @@ with tempfile.TemporaryDirectory() as temp:
     assert "line 3" in context and "line 11" in context
 
 
-# Production smoke test: the real activation task must remain fail-closed
-# until its single owner-reviewed policy entry is merged separately in PR #409.
+# Production smoke test: superseded/blocked tasks must not retain provider write scopes.
 with (ROOT / "docs/automation/task-ledger-summary.json").open(encoding="utf-8") as handle:
     production_summary = json.load(handle)
-activation = next(
-    task for task in production_summary["tasks"]
+inactive_ids = {"AUTOMATION-LEDGER-ACTIVATION", "GC-RIVAL-ROUTE-PROGRESSION"}
+if any(task["task_id"] == "AUTOMATION-LEDGER-ACTIVATION" for task in production_summary["tasks"]):
+    raise AssertionError("Superseded automation-loop activation must not remain in the provider task summary")
+with (ROOT / "docs/automation/task-ledger.json").open(encoding="utf-8") as handle:
+    production_ledger = json.load(handle)
+activation_record = next(
+    task for task in production_ledger["tasks"]
     if task["task_id"] == "AUTOMATION-LEDGER-ACTIVATION"
 )
+if activation_record["status"] != "superseded":
+    raise AssertionError("Unrelated automation-loop activation must be explicitly superseded")
+rival = next(
+    task for task in production_summary["tasks"]
+    if task["task_id"] == "GC-RIVAL-ROUTE-PROGRESSION"
+)
+if rival["status"] != "blocked" or "PR #458" not in rival["next_action_excerpt"]:
+    raise AssertionError("Rival-route task must remain blocked until PR #458 is reconciled")
 policy_path = ROOT / "docs/automation/patch-path-allowlist.json"
 with policy_path.open(encoding="utf-8") as handle:
     production_policy = json.load(handle)
-activation_entries = [
-    entry for entry in production_policy.get("tasks", [])
-    if isinstance(entry, dict) and entry.get("task_id") == activation["task_id"]
-]
-production_handoff = "\n".join([
-    "Task ID: " + activation["task_id"],
-    "Title: " + activation["title"],
-    "Target branch: " + activation["target_branch"],
-    "Question: " + activation["question_excerpt"],
-    f"Acceptance criteria ({activation['acceptance_criteria_total']}; first 5):",
-    *("- " + item for item in activation["acceptance_criteria_excerpt"]),
-    "Next: " + activation["next_action_excerpt"],
-    "Read-only source paths (select at most one): " + ", ".join(activation["read_paths"]),
-])
-if len(activation_entries) == 1:
-    production_context = MODULE.build_context(
-        ROOT,
-        activation["task_id"],
-        activation["title"],
-        activation["target_branch"],
-        production_handoff,
-        max_chars=3100,
-        max_task_context=1600,
-        max_criteria=4,
-        max_next_action=100,
-        source_root=ROOT,
-        max_source_chars=1350,
-    )
-    assert len(production_context) <= 3100
-    assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
-    assert all(f"[{path}:" in production_context for path in activation["read_paths"])
-    assert "Exact owner-reviewed write paths (no others):" in production_context
-elif len(activation_entries) == 0:
-    try:
-        MODULE.build_context(
-            ROOT,
-            activation["task_id"],
-            activation["title"],
-            activation["target_branch"],
-            production_handoff,
-            max_chars=3100,
-            max_task_context=1600,
-            max_criteria=4,
-            max_next_action=100,
-            source_root=ROOT,
-            max_source_chars=1350,
-        )
-    except MODULE.ContextBuildError as exc:
-        assert "no unique owner-reviewed exact-path entry" in str(exc)
-    else:
-        raise AssertionError("Activation must fail closed until PR #409 supplies its exact owner-reviewed paths")
-else:
-    raise AssertionError("Activation policy contains duplicate task entries; exactly one is allowed")
-
-# Regression for the actual queued gameplay task that previously exceeded
-# the 1,100-character provider handoff ceiling before inference.
-with (ROOT / "docs/automation/task-ledger-summary.json").open(encoding="utf-8") as handle:
-    current_summary = json.load(handle)
-rival = next(
-    task for task in current_summary["tasks"]
-    if task["task_id"] == "GC-RIVAL-ROUTE-PROGRESSION"
-)
-rival_handoff = "\n".join([
-    "Task ID: " + rival["task_id"],
-    "Title: " + rival["title"],
-    "Target branch: " + rival["target_branch"],
-    "Read-only source paths (select at most one): " + ", ".join(rival["read_paths"]),
-    "Question: " + rival["question_excerpt"],
-    f"Acceptance criteria ({rival['acceptance_criteria_total']}; first 5):",
-    *("- " + item for item in rival["acceptance_criteria_excerpt"][:5]),
-    "Next: " + rival["next_action_excerpt"],
-])
-rival_context = MODULE.build_context(
-    ROOT,
-    rival["task_id"],
-    rival["title"],
-    rival["target_branch"],
-    rival_handoff,
-    max_chars=3100,
-    max_task_context=1600,
-    max_criteria=4,
-    max_next_action=100,
-    source_root=ROOT,
-    max_source_chars=1350,
-)
-assert len(rival_context) <= 3100
-assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
-assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
-assert "Exact owner-reviewed write paths (no others):" in rival_context
+if any(
+    isinstance(entry, dict) and entry.get("task_id") in inactive_ids
+    for entry in production_policy.get("tasks", [])
+):
+    raise AssertionError("Superseded or blocked tasks must have no exact provider write-path authorization")
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")

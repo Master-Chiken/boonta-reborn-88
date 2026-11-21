@@ -747,16 +747,18 @@ cases = [
         "reason_contains": "open PR #356",
     },
     {
-        "name": "open PR for a different task does not block activation",
+        "name": "unrelated open PR blocks new activation under zero-PR policy",
         "tasks": [activation],
         "marker_day_offset": None,
         "open_task_prs": [{
             "number": 123,
-            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\nBOONTA_TASK_TARGET_BRANCH: main"
+            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\\nBOONTA_TASK_TARGET_BRANCH: main"
         }],
-        "expected_ready": True,
-        "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
+        "expected_ready": False,
+        "expected_task_id": "",
         "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "open PR count 1 exceeds allowed 0",
     },
     {
         "name": "100 open PRs fail closed at the bounded inventory ceiling",
@@ -936,6 +938,50 @@ cases = [
         "expected_error": "duplicate task IDs",
     },
     {
+        "name": "branch ceiling blocks new task selection",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "branch_count": 11,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "branch count 11 exceeds allowed 10",
+    },
+    {
+        "name": "missing owner emulator report blocks new task selection",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "emulator_report": False,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "owner emulator report with NATIVE_FALLBACK decision is missing",
+    },
+    {
+        "name": "accepted emulator result keeps native implementation parked",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "owner_decision": "EMULATOR_ACCEPTED",
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "owner emulator report with NATIVE_FALLBACK decision is missing",
+    },
+    {
+        "name": "competing open PR blocks new task selection",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "open_pr_count": 1,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "NEW_TASK_GATES_BLOCKED",
+        "reason_contains": "open PR count 1 exceeds allowed 0",
+    },
+    {
         "name": "legacy summary schema fails closed",
         "tasks": [valid_active],
         "marker_day_offset": None,
@@ -981,16 +1027,45 @@ async function runCase(testCase) {{
     schema_version: testCase.schema_version === undefined ? 2 : testCase.schema_version,
     source: "docs/automation/task-ledger.json",
     updated_at: todayUtc,
-    policy: {{ max_active_tasks: 1 }},
+    policy: {{
+      max_active_tasks: 1,
+      max_open_prs_for_new_task: 0,
+      max_branch_refs_for_new_task: 10,
+      owner_test_gate_issue: 459,
+      owner_test_gate_marker: "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->",
+      owner_test_gate_decision: "NATIVE_FALLBACK"
+    }},
     completed_task_ids: testCase.completed_task_ids || [],
     tasks: testCase.tasks
   }};
   const github = {{
     paginate: async (_endpoint, options) => {{
-      if (options.issue_number !== 226 || options.since !== todayUtc + "T00:00:00Z") {{
-        throw new Error("unexpected issue-comment query");
+      if (_endpoint === github.rest.repos.listBranches) {{
+        const branchCount = testCase.branch_count === undefined ? 1 : testCase.branch_count;
+        return Array.from({{ length: branchCount }}, (_value, index) => ({{ name: "test/branch-" + index }}));
       }}
-      return comments;
+      if (_endpoint === github.rest.issues.listComments) {{
+        if (options.issue_number === 226 && options.since === todayUtc + "T00:00:00Z") {{
+          return comments;
+        }}
+        if (options.issue_number === 459 && options.since === undefined) {{
+          if (testCase.emulator_report === false) return [];
+          const decision = testCase.owner_decision || "NATIVE_FALLBACK";
+          return [{{
+            user: {{ login: "Master-Chiken" }},
+            body: [
+              "Emulator: Wii64 1.5.0",
+              "Platform: Dolphin on macOS",
+              "Graphics plugin: glN64",
+              "ROM region: NTSC-U",
+              "Full race: FAIL",
+              "Owner decision: " + decision,
+              "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->"
+            ].join("\\n")
+          }}];
+        }}
+      }}
+      throw new Error("unexpected paginated query");
     }},
     rest: {{
       issues: {{ listComments: async () => ({{ data: comments }}) }},
@@ -999,7 +1074,11 @@ async function runCase(testCase) {{
           if (options.state !== "open" || options.per_page !== 100 || options.page !== 1) {{
             throw new Error("unexpected open-PR query");
           }}
-          return {{ data: testCase.open_task_prs || [] }};
+          const openPrs = testCase.open_task_prs || Array.from(
+            {{ length: testCase.open_pr_count || 0 }},
+            (_value, index) => ({{ number: 900 + index, body: "Unrelated open PR" }})
+          );
+          return {{ data: openPrs }};
         }},
         listFiles: async (options) => {{
           const expectedPullNumber = Number(testCase.expected_resume_pr_number || "388");
@@ -1010,6 +1089,7 @@ async function runCase(testCase) {{
         }}
       }},
       repos: {{
+        listBranches: async () => ({{ data: [] }}),
         getContent: async (options) => {{
           if (options.ref !== "main") throw new Error("unexpected canonical file ref");
           if (options.path === "docs/automation/task-ledger-summary.json") {{

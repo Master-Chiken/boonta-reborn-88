@@ -158,9 +158,9 @@ jobs:
             echo "- Open pull requests: **$OPEN_PRS**"
             echo
             echo "### Required actions"
-            echo "1. Keep only main, dev, the protected recovery archive, and branches needed by live pull requests."
+            echo "1. Keep only main, dev, the protected recovery archives, and branches needed by live pull requests."
             echo "2. Turn on automatic deletion of merged PR head branches in **Settings → General → Pull Requests**."
-            echo "3. Review stale branches without an open PR. Preserve history in the recovery archive; do not bulk-delete unverified refs."
+            echo "3. Review stale branches without an open PR. Preserve history in a protected recovery archive; do not bulk-delete unverified refs."
             echo
             echo "This is an alert, not a hard block: GitHub Actions runs after a branch is created and cannot retroactively prevent that creation. This audit does not delete branches."
             echo

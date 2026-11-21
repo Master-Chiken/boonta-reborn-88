@@ -27,7 +27,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: retire-archived-branch-refs
+  group: boonta-single-writer
   cancel-in-progress: false
 
 jobs:

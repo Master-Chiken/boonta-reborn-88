@@ -238,6 +238,11 @@ jobs:
               ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
               !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
               ledgerSummary.policy?.max_active_tasks !== 1 ||
+              ledgerSummary.policy?.max_open_prs_for_new_task !== 0 ||
+              ledgerSummary.policy?.max_branch_refs_for_new_task !== 10 ||
+              ledgerSummary.policy?.owner_test_gate_issue !== 459 ||
+              ledgerSummary.policy?.owner_test_gate_marker !== '<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->' ||
+              ledgerSummary.policy?.owner_test_gate_decision !== 'NATIVE_FALLBACK' ||
               !Array.isArray(ledgerSummary.tasks) ||
               !Array.isArray(ledgerSummary.completed_task_ids) ||
               ledgerSummary.completed_task_ids.some((id) => typeof id !== 'string' || !id.trim()) ||
@@ -325,6 +330,57 @@ jobs:
               failClosed('open PR inventory reached the 100-item safety ceiling');
               return;
             }
+
+            // Defense in depth: direct autonomous provider dispatch must not bypass
+            // the global selector's original-game, PR and branch-budget gates.
+            const { data: branchRefs } = await github.rest.repos.listBranches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+              page: 1
+            });
+            if (!Array.isArray(branchRefs) || branchRefs.length >= 100) {
+              failClosed('branch inventory is missing or reached the 100-ref safety ceiling');
+              return;
+            }
+
+            const { data: emulatorTestComments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ledgerSummary.policy.owner_test_gate_issue,
+              per_page: 100,
+              page: 1
+            });
+            if (!Array.isArray(emulatorTestComments) || emulatorTestComments.length >= 100) {
+              failClosed('owner emulator-test report inventory is missing or reached the 100-comment safety ceiling');
+              return;
+            }
+            const emulatorMarker = ledgerSummary.policy.owner_test_gate_marker;
+            const emulatorDecision = ledgerSummary.policy.owner_test_gate_decision;
+            const ownerEmulatorReportRecorded = emulatorTestComments.some((comment) => {
+              const body = typeof comment.body === 'string' ? comment.body : '';
+              const lines = body.split(/\r?\n/).map((line) => line.trim());
+              return comment.user?.login === context.repo.owner &&
+                lines.includes(emulatorMarker) &&
+                lines.some((line) => /^Emulator\s*:/i.test(line)) &&
+                lines.some((line) => /^Platform\s*:/i.test(line)) &&
+                lines.some((line) => /^Graphics plugin\s*:/i.test(line)) &&
+                lines.some((line) => /^ROM region\s*:/i.test(line)) &&
+                lines.some((line) => /^Full race\s*:/i.test(line)) &&
+                lines.includes('Owner decision: ' + emulatorDecision);
+            });
+            if (
+              openPullRequests.length > ledgerSummary.policy.max_open_prs_for_new_task ||
+              branchRefs.length > ledgerSummary.policy.max_branch_refs_for_new_task ||
+              !ownerEmulatorReportRecorded
+            ) {
+              failClosed(
+                'project-wide writer gates are closed: require zero open PRs, at most ten branches, ' +
+                'and an owner-authored emulator report on issue #459 selecting NATIVE_FALLBACK'
+              );
+              return;
+            }
+
             const markerLine = 'BOONTA_TASK_ID: ' + taskId;
             const duplicate = openPullRequests.find((pull) =>
               (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)

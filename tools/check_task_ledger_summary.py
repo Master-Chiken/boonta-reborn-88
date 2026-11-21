@@ -37,6 +37,11 @@ def build_summary(ledger: dict) -> dict:
         ],
         "policy": {
             "max_active_tasks": ledger.get("policy", {}).get("max_active_tasks", 1),
+            "max_open_prs_for_new_task": ledger.get("policy", {}).get("max_open_prs_for_new_task", 0),
+            "max_branch_refs_for_new_task": ledger.get("policy", {}).get("max_branch_refs_for_new_task", 10),
+            "owner_test_gate_issue": ledger.get("policy", {}).get("owner_test_gate_issue", 459),
+            "owner_test_gate_marker": ledger.get("policy", {}).get("owner_test_gate_marker", "<!-- BOONTA_ORIGINAL_RACER_TEST: COMPLETE -->"),
+            "owner_test_gate_decision": ledger.get("policy", {}).get("owner_test_gate_decision", "NATIVE_FALLBACK"),
             "completed_requires_merged_pr": True,
         },
         "tasks": [
