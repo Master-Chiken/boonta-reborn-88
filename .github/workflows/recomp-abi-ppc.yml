@@ -119,3 +119,102 @@ jobs:
             echo "$readelf_header" | grep -E 'Class:|Data:|Machine:'
             echo "::endgroup::"
           done
+
+      - name: Build a native GameCube DOL that executes the N64 memory helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$DEVKITPPC/bin:$PATH"
+          cd "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe"
+          make clean
+          make N64RECOMP_INCLUDE="$RUNNER_TEMP/N64Recomp/include"
+          python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/pad_dol.py" recomp_memory_probe.dol
+          test -s recomp_memory_probe.dol
+          test -s recomp_memory_probe.elf
+          python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/validate_artifacts.py" recomp_memory_probe.dol recomp_memory_probe.elf
+
+      - name: Upload the native PowerPC memory-probe DOL
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned actions/upload-artifact v7.0.2
+        with:
+          name: recomp-powerpc-memory-probe
+          path: tests/recomp-abi/runtime-probe/recomp_memory_probe.dol
+          if-no-files-found: error
+          retention-days: 3
+
+  run-powerpc-memory-probe-in-dolphin:
+    name: Execute the native PowerPC memory probe in Dolphin
+    needs: [cross-compile-upstream-header]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Download the GameCube DOL
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned actions/download-artifact v4.3.0
+        with:
+          name: recomp-powerpc-memory-probe
+          path: memory-probe-artifact
+
+      - name: Install Dolphin and headless display dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth qt6-qpa-plugins
+
+      - name: Run the PowerPC DOL and verify memory-operation results
+        shell: bash
+        run: |
+          set -euo pipefail
+          dol="$(find "$GITHUB_WORKSPACE/memory-probe-artifact" -type f -name recomp_memory_probe.dol -print -quit)"
+          test -n "$dol"
+          export HOME=/tmp/recomp-dolphin-home
+          mkdir -p "$HOME" /tmp/recomp-dolphin-user
+          chmod 700 "$HOME"
+          set +e
+          timeout --signal=TERM --kill-after=5s 12s xvfb-run -a dolphin-emu \
+            --batch --video_backend=Null \
+            --exec="$dol" \
+            --user=/tmp/recomp-dolphin-user \
+            -C Logger.Options.WriteToFile=True \
+            -C Logger.Options.WriteToConsole=False \
+            -C Logger.Options.Verbosity=4 \
+            -C Logger.Logs.OSREPORT=True \
+            -C Logger.Logs.OSREPORT_HLE=False \
+            -C Dolphin.Interface.UsePanicHandlers=False \
+            -C Dolphin.Interface.ConfirmStop=False \
+            > /tmp/recomp-dolphin-stdout.log 2>&1
+          dolphin_status=$?
+          set -e
+          cat /tmp/recomp-dolphin-stdout.log
+          log_file=/tmp/recomp-dolphin-user/Logs/dolphin.log
+          if [[ ! -s "$log_file" ]]; then
+            find /tmp/recomp-dolphin-user -maxdepth 4 -type f -print
+            echo "::error::Dolphin did not create the expected OSReport log."
+            exit 1
+          fi
+          cat "$log_file"
+          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:PASS" "$log_file"; then
+            echo "::error::The native PowerPC memory probe did not report PASS (Dolphin status $dolphin_status)."
+            exit 1
+          fi
+          if grep -Fq "RECOMP_PPC_MEMORY_PROBE:FAIL" "$log_file"; then
+            echo "::error::The native PowerPC memory probe reported a memory mismatch."
+            exit 1
+          fi
+          if [[ "$dolphin_status" -ne 124 && "$dolphin_status" -ne 137 && "$dolphin_status" -ne 143 ]]; then
+            echo "::error::Dolphin did not remain in the expected test loop (status $dolphin_status)."
+            exit 1
+          fi
+
+      - name: Upload Dolphin OSReport and startup logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned actions/upload-artifact v7.0.2
+        with:
+          name: recomp-powerpc-memory-probe-logs
+          path: |
+            /tmp/recomp-dolphin-user/Logs/dolphin.log
+            /tmp/recomp-dolphin-stdout.log
+          if-no-files-found: warn
+          retention-days: 3
