@@ -57,6 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${DEVKITPPC:-}"
+          export PATH="$DEVKITPPC/bin:$PATH"
           command -v powerpc-eabi-g++
           powerpc-eabi-g++ --version
           test "$(powerpc-eabi-g++ -dumpmachine)" = "powerpc-eabi"
@@ -79,6 +80,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PATH="$DEVKITPPC/bin:$PATH"
           mkdir -p "$RUNNER_TEMP/recomp-abi-build"
           header_dir="$RUNNER_TEMP/N64Recomp/include"
           source_file="$GITHUB_WORKSPACE/tests/recomp-abi/recomp_header_compile.cpp"
