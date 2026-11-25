@@ -187,15 +187,17 @@ jobs:
           EXI = True
           CORE = True
           EOF
-          echo "Dolphin version (Qt offscreen):"
-          QT_QPA_PLATFORM=offscreen dolphin-emu --version
-          echo "Dolphin command-line options (Qt offscreen):"
-          QT_QPA_PLATFORM=offscreen dolphin-emu --help
+          echo "Dolphin NoGUI executable:"
+          command -v dolphin-emu-nogui
+          echo "Dolphin NoGUI version:"
+          dolphin-emu-nogui --version
+          echo "Dolphin NoGUI command-line options:"
+          dolphin-emu-nogui --help
           echo "Configured Logger.ini:"
           cat /tmp/recomp-dolphin-user/Config/Logger.ini
           set +e
-          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dolphin-emu \
-            --batch --video_backend=Null \
+          timeout --signal=TERM --kill-after=5s 25s dolphin-emu-nogui \
+            --platform=headless --video_backend=Null \
             --exec="$dol" \
             --user=/tmp/recomp-dolphin-user \
             -C Logger.Options.WriteToFile=True \
