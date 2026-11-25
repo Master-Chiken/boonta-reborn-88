@@ -122,8 +122,11 @@ int main(void)
     /* The TO_PTR bridge maps full objects in all host-backed RAM segments. */
     object = N64_RECOMP_TO_PTR(guest_object, token, N64_ADDR(0x80000200));
     assert(object == (guest_object *)(void *)(rdram + 0x200));
-    object->first = UINT32_C(0xCAFEBABE);
-    object->second = UINT32_C(0x0BADF00D);
+    /* Host is little-endian: use typed N64 stores, not native struct writes. */
+    assert(n64_recomp_store_u32(token, N64_ADDR(0x80000200),
+                                UINT32_C(0xCAFEBABE)) == N64_SEGMENTED_OK);
+    assert(n64_recomp_store_u32(token, N64_ADDR(0x80000204),
+                                UINT32_C(0x0BADF00D)) == N64_SEGMENTED_OK);
     assert(n64_recomp_load_u32(token, N64_ADDR(0x80000200)) ==
            UINT32_C(0xCAFEBABE));
     assert(n64_recomp_load_u32(token, N64_ADDR(0x80000204)) ==
