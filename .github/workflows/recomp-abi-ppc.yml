@@ -134,10 +134,11 @@ jobs:
           python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/validate_artifacts.py" recomp_memory_probe.dol recomp_memory_probe.elf
           symbols_file=recomp_memory_probe.symbols
           : > "$symbols_file"
-          for symbol in g_probe_stage g_probe_failure_code g_probe_failure_label; do
+          for symbol in g_probe_stage g_probe_failure_code g_probe_failure_label g_probe_failure_actual g_probe_failure_expected; do
             address="$(powerpc-eabi-nm -n recomp_memory_probe.elf | awk -v wanted="$symbol" '$3 == wanted { print $1; found = 1 } END { if (!found) exit 1 }')"
             printf '%s %s\n' "$symbol" "$address" >> "$symbols_file"
           done
+          powerpc-eabi-nm -n recomp_memory_probe.elf | awk 'NF == 3 && $2 ~ /^[tT]$/ { print $3, $1 }' >> "$symbols_file"
           cat "$symbols_file"
 
       - name: Upload the native PowerPC memory-probe DOL and symbols
