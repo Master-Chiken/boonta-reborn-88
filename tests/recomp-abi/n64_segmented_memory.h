@@ -39,7 +39,8 @@ typedef enum n64_segmented_result {
     N64_SEGMENTED_UNSUPPORTED_WIDTH,
     N64_SEGMENTED_CALLBACK_MISSING,
     N64_SEGMENTED_CALLBACK_FAILED,
-    N64_SEGMENTED_HOST_POINTER_UNMAPPED
+    N64_SEGMENTED_HOST_POINTER_UNMAPPED,
+    N64_SEGMENTED_NOT_RAM_BACKED
 } n64_segmented_result;
 
 typedef enum n64_segmented_region_kind {
@@ -487,6 +488,50 @@ static inline n64_segmented_result n64_segmented_write(
 
     case N64_SEGMENTED_REGION_ROM:
         return N64_SEGMENTED_READ_ONLY;
+
+    default:
+        return N64_SEGMENTED_UNMAPPED_ADDRESS;
+    }
+}
+
+/*
+ * Resolve a guest address to a host pointer only when the entire range is
+ * backed by one RAM segment. This is the safe replacement primitive for
+ * libultra's TO_PTR(type, address). It refuses MMIO and ROM, which must be
+ * reached via typed callbacks rather than arbitrary C pointer dereferences.
+ */
+static inline n64_segmented_result n64_segmented_host_pointer_for_guest(
+    const n64_segmented_memory *memory,
+    uint64_t n64_address,
+    size_t length,
+    n64_segmented_access access,
+    uint8_t **host_pointer)
+{
+    n64_segmented_span span;
+    n64_segmented_result result;
+
+    if (memory == NULL || host_pointer == NULL) {
+        return N64_SEGMENTED_INVALID_ARGUMENT;
+    }
+    *host_pointer = NULL;
+
+    result = n64_segmented_memory_validate(memory);
+    if (result != N64_SEGMENTED_OK) return result;
+
+    result = n64_segmented_resolve(memory, n64_address, length, access, &span);
+    if (result != N64_SEGMENTED_OK) return result;
+
+    switch (span.kind) {
+    case N64_SEGMENTED_REGION_RDRAM:
+    case N64_SEGMENTED_REGION_EXTENDED:
+    case N64_SEGMENTED_REGION_MOD_RAM:
+    case N64_SEGMENTED_REGION_HEAP:
+        *host_pointer = span.host_pointer;
+        return N64_SEGMENTED_OK;
+
+    case N64_SEGMENTED_REGION_MMIO:
+    case N64_SEGMENTED_REGION_ROM:
+        return N64_SEGMENTED_NOT_RAM_BACKED;
 
     default:
         return N64_SEGMENTED_UNMAPPED_ADDRESS;
