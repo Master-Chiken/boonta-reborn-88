@@ -242,6 +242,11 @@ static inline n64_segmented_result n64_segmented_resolve(
         return N64_SEGMENTED_INVALID_ARGUMENT;
     }
 
+    if (access != N64_SEGMENTED_ACCESS_READ &&
+        access != N64_SEGMENTED_ACCESS_WRITE) {
+        return N64_SEGMENTED_INVALID_ARGUMENT;
+    }
+
     address = (uint32_t)n64_address;
     if (n64_address != n64_segmented_sign_extend(address)) {
         return N64_SEGMENTED_NONCANONICAL_ADDRESS;
@@ -320,12 +325,10 @@ static inline n64_segmented_result n64_segmented_resolve(
 
     if (address >= N64_SEGMENTED_MMIO_BASE &&
         address < N64_SEGMENTED_MMIO_END) {
+        remaining = (size_t)(N64_SEGMENTED_MMIO_END - address);
+        if (length > remaining) return N64_SEGMENTED_RANGE_CROSSES_REGION;
         if (!n64_segmented_width_supported(length)) {
             return N64_SEGMENTED_UNSUPPORTED_WIDTH;
-        }
-        if (access != N64_SEGMENTED_ACCESS_READ &&
-            access != N64_SEGMENTED_ACCESS_WRITE) {
-            return N64_SEGMENTED_INVALID_ARGUMENT;
         }
         span->kind = N64_SEGMENTED_REGION_MMIO;
         return N64_SEGMENTED_OK;
@@ -385,6 +388,9 @@ static inline n64_segmented_result n64_segmented_read(
     if (memory == NULL || value == NULL) return N64_SEGMENTED_INVALID_ARGUMENT;
     if (!n64_segmented_width_supported(width)) return N64_SEGMENTED_UNSUPPORTED_WIDTH;
 
+    result = n64_segmented_memory_validate(memory);
+    if (result != N64_SEGMENTED_OK) return result;
+
     result = n64_segmented_resolve(
         memory, n64_address, width, N64_SEGMENTED_ACCESS_READ, &span);
     if (result != N64_SEGMENTED_OK) return result;
@@ -432,6 +438,9 @@ static inline n64_segmented_result n64_segmented_write(
 
     if (memory == NULL) return N64_SEGMENTED_INVALID_ARGUMENT;
     if (!n64_segmented_width_supported(width)) return N64_SEGMENTED_UNSUPPORTED_WIDTH;
+
+    result = n64_segmented_memory_validate(memory);
+    if (result != N64_SEGMENTED_OK) return result;
 
     result = n64_segmented_resolve(
         memory, n64_address, width, N64_SEGMENTED_ACCESS_WRITE, &span);
