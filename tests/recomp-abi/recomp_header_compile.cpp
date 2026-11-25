@@ -13,15 +13,10 @@
 #error "This probe must be compiled for the big-endian PowerPC target"
 #endif
 
-#ifndef __SIZEOF_INT128__
-#error "The pinned recompiler header requires compiler support for __int128"
-#endif
-
 static_assert(sizeof(void *) == 4, "Wii/GameCube target pointers must be 32-bit");
 static_assert(sizeof(uintptr_t) == 4, "Wii/GameCube uintptr_t must be 32-bit");
 static_assert(sizeof(gpr) == 8, "N64 general-purpose register slots are 64-bit");
 static_assert(sizeof(fpr) == 8, "N64 floating-point register slots are 64-bit");
-static_assert(sizeof(__int128) == 16, "128-bit intermediate arithmetic is required");
 static_assert(offsetof(recomp_context, hi) == 512, "Unexpected recomp_context HI offset");
 static_assert(offsetof(recomp_context, lo) == 520, "Unexpected recomp_context LO offset");
 static_assert(offsetof(recomp_context, f_odd) == 528, "Unexpected recomp_context pointer offset");
