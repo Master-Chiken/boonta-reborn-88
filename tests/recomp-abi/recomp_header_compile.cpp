@@ -1,6 +1,7 @@
 #include <recomp.h>
 
 #include "n64_memory_be.h"
+#include "ppc_memory_lane_compat.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -12,6 +13,13 @@
 #if __BYTE_ORDER__ != __ORDER_BIG_ENDIAN__
 #error "This probe must be compiled for the big-endian PowerPC target"
 #endif
+
+#if !RECOMP_MEM_HOST_IS_BIG_ENDIAN
+#error "The patched N64 memory macros must select natural big-endian byte lanes"
+#endif
+
+static_assert(RECOMP_MEM_BYTE_LANE(0x100) == 0x100, "PowerPC byte lanes must not be XOR-adjusted");
+static_assert(RECOMP_MEM_HALF_LANE(0x100) == 0x100, "PowerPC halfword lanes must not be XOR-adjusted");
 
 static_assert(sizeof(void *) == 4, "Wii/GameCube target pointers must be 32-bit");
 static_assert(sizeof(uintptr_t) == 4, "Wii/GameCube uintptr_t must be 32-bit");
