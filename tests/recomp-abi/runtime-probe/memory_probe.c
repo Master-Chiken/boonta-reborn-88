@@ -13,9 +13,69 @@
 
 #include <recomp.h>
 #include "n64_memory_be.h"
+#include "n64_segmented_memory.h"
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
+
+/*
+ * Small, physically separate backing windows for the segmented-map PPC probe.
+ * The guest-visible addresses still use the real N64 8 MiB/8 MiB logical
+ * windows; only the portions touched by this bounded test are backed.
+ */
+static uint8_t segmented_rdram[0x1000] ATTRIBUTE_ALIGN(32);
+static uint8_t segmented_extended[0x2000] ATTRIBUTE_ALIGN(32);
+static uint8_t segmented_mod_ram[0x100] ATTRIBUTE_ALIGN(32);
+static uint8_t segmented_heap[0x200] ATTRIBUTE_ALIGN(32);
+static uint8_t segmented_rom[16] ATTRIBUTE_ALIGN(32);
+
+typedef struct segmented_probe_callbacks {
+    uint32_t mmio_address;
+    uint8_t mmio_width;
+    n64_segmented_access mmio_access;
+    uint64_t mmio_written_value;
+} segmented_probe_callbacks;
+
+static int segmented_rom_read(
+    void *context, uint32_t rom_offset, uint8_t *destination, size_t length)
+{
+    (void)context;
+    if (rom_offset > sizeof(segmented_rom) ||
+        length > sizeof(segmented_rom) - rom_offset) {
+        return -1;
+    }
+    memcpy(destination, segmented_rom + rom_offset, length);
+    return 0;
+}
+
+static int segmented_mmio_access(
+    void *context,
+    uint32_t virtual_address,
+    uint8_t width,
+    n64_segmented_access access,
+    uint64_t *value)
+{
+    segmented_probe_callbacks *callbacks =
+        (segmented_probe_callbacks *)context;
+
+    callbacks->mmio_address = virtual_address;
+    callbacks->mmio_width = width;
+    callbacks->mmio_access = access;
+    if (access == N64_SEGMENTED_ACCESS_READ) {
+        *value = width == 8
+            ? UINT64_C(0xA1B2C3D4E5F60718)
+            : UINT32_C(0xA1B2C3D4);
+    } else {
+        callbacks->mmio_written_value = *value;
+    }
+    return 0;
+}
+
+#define CHECK_SEGMENTED(label, expression, expected_value) do { \
+    const uint32_t actual_value = (uint32_t)(expression); \
+    const uint32_t expected_u32 = (uint32_t)(expected_value); \
+    if (actual_value != expected_u32) return fail_u32((label), actual_value, expected_u32); \
+} while (0)
 
 /*
  * GDB-readable execution state. Byte arrays deliberately avoid endian
@@ -281,11 +341,132 @@ static __attribute__((noinline, noipa)) int run_memory_probe(void) {
     return 1;
 }
 
+static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
+    n64_segmented_memory memory;
+    segmented_probe_callbacks callbacks;
+    uint64_t value = 0;
+    uint64_t guest_address = 0;
+
+    memset(&memory, 0, sizeof(memory));
+    memset(&callbacks, 0, sizeof(callbacks));
+    memset(segmented_rdram, 0, sizeof(segmented_rdram));
+    memset(segmented_extended, 0, sizeof(segmented_extended));
+    memset(segmented_mod_ram, 0, sizeof(segmented_mod_ram));
+    memset(segmented_heap, 0, sizeof(segmented_heap));
+
+    segmented_rom[0] = 0xDE;
+    segmented_rom[1] = 0xAD;
+    segmented_rom[2] = 0xBE;
+    segmented_rom[3] = 0xEF;
+    segmented_rom[4] = 0x10;
+    segmented_rom[5] = 0x20;
+    segmented_rom[6] = 0x30;
+    segmented_rom[7] = 0x40;
+
+    memory.rdram = segmented_rdram;
+    memory.rdram_size = sizeof(segmented_rdram);
+    memory.extended = segmented_extended;
+    memory.extended_size = sizeof(segmented_extended);
+    memory.mod_ram = segmented_mod_ram;
+    memory.mod_ram_size = sizeof(segmented_mod_ram);
+    memory.heap = segmented_heap;
+    memory.heap_size = sizeof(segmented_heap);
+    memory.rom_size = sizeof(segmented_rom);
+    memory.rom_read = segmented_rom_read;
+    memory.mmio_access = segmented_mmio_access;
+    memory.callback_context = &callbacks;
+
+    CHECK_SEGMENTED("SEG_VALIDATE", n64_segmented_memory_validate(&memory),
+                    N64_SEGMENTED_OK);
+
+    CHECK_SEGMENTED("SEG_RDRAM_WRITE",
+        n64_segmented_write(&memory, UINT64_C(0xFFFFFFFF80000040), 4,
+                            UINT32_C(0x12345678)),
+        N64_SEGMENTED_OK);
+    CHECK_SEGMENTED("SEG_RDRAM_READ",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFF80000040), 4, &value),
+        N64_SEGMENTED_OK);
+    CHECK_U32("SEG_RDRAM_VALUE", value, UINT32_C(0x12345678));
+    CHECK_SEGMENTED("SEG_KSEG1_ALIAS",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFFA0000040), 4, &value),
+        N64_SEGMENTED_OK);
+    CHECK_U32("SEG_KSEG1_VALUE", value, UINT32_C(0x12345678));
+
+    CHECK_SEGMENTED("SEG_EXTENDED_WRITE",
+        n64_segmented_write(&memory, UINT64_C(0xFFFFFFFF80800000), 4,
+                            UINT32_C(0x80800000)),
+        N64_SEGMENTED_OK);
+    CHECK_SEGMENTED("SEG_EXTENDED_READ",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFF80800000), 4, &value),
+        N64_SEGMENTED_OK);
+    CHECK_U32("SEG_EXTENDED_VALUE", value, UINT32_C(0x80800000));
+
+    CHECK_SEGMENTED("SEG_PATCH_WRITE",
+        n64_segmented_write(&memory, UINT64_C(0xFFFFFFFF80801000), 4,
+                            UINT32_C(0x50415443)),
+        N64_SEGMENTED_OK);
+    CHECK_SEGMENTED("SEG_MOD_WRITE",
+        n64_segmented_write(&memory, UINT64_C(0xFFFFFFFF81000000), 4,
+                            UINT32_C(0x4D4F4421)),
+        N64_SEGMENTED_OK);
+    CHECK_SEGMENTED("SEG_HEAP_WRITE",
+        n64_segmented_write(&memory, UINT64_C(0xFFFFFFFF81000100), 8,
+                            UINT64_C(0x1029384756ABCDEF)),
+        N64_SEGMENTED_OK);
+    CHECK_SEGMENTED("SEG_HEAP_READ",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFF81000100), 8, &value),
+        N64_SEGMENTED_OK);
+    CHECK_U64("SEG_HEAP_VALUE", value, UINT64_C(0x1029384756ABCDEF));
+
+    CHECK_SEGMENTED("SEG_REVERSE_HEAP",
+        n64_segmented_guest_from_host(&memory, segmented_heap + 0x10, 8,
+                                      &guest_address),
+        N64_SEGMENTED_OK);
+    CHECK_U64("SEG_REVERSE_HEAP_ADDRESS", guest_address,
+              UINT64_C(0xFFFFFFFF81000110));
+
+    CHECK_SEGMENTED("SEG_MMIO_READ",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFFA4600010), 4, &value),
+        N64_SEGMENTED_OK);
+    CHECK_U32("SEG_MMIO_VALUE", value, UINT32_C(0xA1B2C3D4));
+    CHECK_U32("SEG_MMIO_ADDRESS", callbacks.mmio_address, UINT32_C(0xA4600010));
+    CHECK_U32("SEG_MMIO_WIDTH", callbacks.mmio_width, 4);
+    CHECK_SEGMENTED("SEG_MMIO_WRITE",
+        n64_segmented_write(&memory, UINT64_C(0xFFFFFFFFA4600010), 4,
+                            UINT32_C(0xBEEF1234)),
+        N64_SEGMENTED_OK);
+    CHECK_U64("SEG_MMIO_WRITTEN", callbacks.mmio_written_value,
+              UINT32_C(0xBEEF1234));
+
+    CHECK_SEGMENTED("SEG_ROM_READ",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFFB0000004), 4, &value),
+        N64_SEGMENTED_OK);
+    CHECK_U32("SEG_ROM_VALUE", value, UINT32_C(0x10203040));
+    CHECK_SEGMENTED("SEG_ROM_WRITE",
+        n64_segmented_write(&memory, UINT64_C(0xFFFFFFFFB0000004), 4, 0),
+        N64_SEGMENTED_READ_ONLY);
+
+    CHECK_SEGMENTED("SEG_RDRAM_PARTIAL_END",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFF80000FFF), 2, &value),
+        N64_SEGMENTED_RANGE_CROSSES_REGION);
+    CHECK_SEGMENTED("SEG_UNBACKED_RDRAM",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFF80001000), 4, &value),
+        N64_SEGMENTED_UNMAPPED_ADDRESS);
+    CHECK_SEGMENTED("SEG_UNBACKED_KSEG1",
+        n64_segmented_read(&memory, UINT64_C(0xFFFFFFFFA0001000), 4, &value),
+        N64_SEGMENTED_UNMAPPED_ADDRESS);
+    CHECK_SEGMENTED("SEG_NONCANONICAL",
+        n64_segmented_read(&memory, UINT64_C(0x0000000080000000), 4, &value),
+        N64_SEGMENTED_NONCANONICAL_ADDRESS);
+
+    return 1;
+}
+
 int main(void) {
     set_probe_stage('S', 'T', 'A', 'R');
     probe_start_marker();
 
-    if (!run_memory_probe()) {
+    if (!run_memory_probe() || !run_segmented_probe()) {
         set_probe_stage('F', 'A', 'I', 'L');
         probe_fail_marker();
         for (;;) {
