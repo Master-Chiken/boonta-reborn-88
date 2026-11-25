@@ -72,7 +72,9 @@ static n64_segmented_memory make_memory(callback_state *state)
 
     memset(&memory, 0, sizeof(memory));
     memory.rdram = test_rdram;
+    memory.rdram_size = sizeof(test_rdram);
     memory.extended = test_extended;
+    memory.extended_size = sizeof(test_extended);
     memory.mod_ram = test_mod_ram;
     memory.mod_ram_size = sizeof(test_mod_ram);
     memory.heap = test_heap;
@@ -103,6 +105,16 @@ static void test_configuration_validation(callback_state *state)
 
     invalid = memory;
     invalid.rom_read = NULL;
+    assert(n64_segmented_memory_validate(&invalid) ==
+           N64_SEGMENTED_INVALID_CONFIGURATION);
+
+    invalid = memory;
+    invalid.rdram_size = 0;
+    assert(n64_segmented_memory_validate(&invalid) ==
+           N64_SEGMENTED_INVALID_CONFIGURATION);
+
+    invalid = memory;
+    invalid.extended_size = N64_SEGMENTED_EXTENDED_SIZE + 1;
     assert(n64_segmented_memory_validate(&invalid) ==
            N64_SEGMENTED_INVALID_CONFIGURATION);
 
@@ -164,6 +176,34 @@ static void test_rdram_boundaries(const n64_segmented_memory *memory)
 
     /* The KSEG1 mirror ends at 0xA0800000; it does not mirror extended RAM. */
     assert(n64_segmented_read(memory, N64_ADDR(0xA0800000), 4, &value) ==
+           N64_SEGMENTED_UNMAPPED_ADDRESS);
+}
+
+static void test_partial_backing_ranges(const n64_segmented_memory *memory)
+{
+    n64_segmented_memory partial = *memory;
+    uint64_t value = 0;
+
+    partial.rdram_size = 0x1000;
+    partial.extended_size = 0x2000;
+
+    assert(n64_segmented_memory_validate(&partial) == N64_SEGMENTED_OK);
+    assert(n64_segmented_write(&partial, N64_ADDR(0x80000FFC), 4,
+                               UINT32_C(0x11223344)) == N64_SEGMENTED_OK);
+    assert(n64_segmented_read(&partial, N64_ADDR(0x80000FFC), 4, &value) ==
+           N64_SEGMENTED_OK);
+    assert(value == UINT32_C(0x11223344));
+    assert(n64_segmented_read(&partial, N64_ADDR(0x80001000), 4, &value) ==
+           N64_SEGMENTED_UNMAPPED_ADDRESS);
+    assert(n64_segmented_read(&partial, N64_ADDR(0xA0001000), 4, &value) ==
+           N64_SEGMENTED_UNMAPPED_ADDRESS);
+
+    assert(n64_segmented_write(&partial, N64_ADDR(0x80801FFC), 4,
+                               UINT32_C(0x55667788)) == N64_SEGMENTED_OK);
+    assert(n64_segmented_read(&partial, N64_ADDR(0x80801FFC), 4, &value) ==
+           N64_SEGMENTED_OK);
+    assert(value == UINT32_C(0x55667788));
+    assert(n64_segmented_read(&partial, N64_ADDR(0x80802000), 4, &value) ==
            N64_SEGMENTED_UNMAPPED_ADDRESS);
 }
 
@@ -330,6 +370,7 @@ int main(void)
     test_configuration_validation(&callbacks);
     test_rdram_and_kseg1_alias(&memory);
     test_rdram_boundaries(&memory);
+    test_partial_backing_ranges(&memory);
     test_extended_mod_and_heap(&memory);
     test_reverse_host_mapping(&memory);
     test_canonical_addresses(&memory);
