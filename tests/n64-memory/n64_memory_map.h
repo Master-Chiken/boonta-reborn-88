@@ -23,9 +23,8 @@ extern "C" {
 #define N64_MEMORY_RUNTIME_SIZE           UINT32_C(0x00800000)
 #define N64_MEMORY_MEM1_HEAP_GUEST_BASE   UINT32_C(0x81000000)
 #define N64_MEMORY_MEM1_HEAP_SIZE         UINT32_C(0x00800000)
-#define N64_MEMORY_MEM2_HEAP_GUEST_BASE   UINT32_C(0x90000000)
+#define N64_MEMORY_MEM2_HEAP_GUEST_BASE   UINT32_C(0x81800000)
 #define N64_MEMORY_MEM2_HEAP_SIZE         UINT32_C(0x04000000)
-#define N64_MEMORY_KSEG1_MEM2_BASE        UINT32_C(0xB0000000)
 #define N64_MEMORY_MEM1_TOTAL_SIZE        UINT32_C(0x01800000)
 #define N64_MEMORY_MEM2_TOTAL_SIZE        UINT32_C(0x04000000)
 
@@ -135,8 +134,10 @@ N64MemoryStatus n64_memory_write(
 /*
  * Convert an allocation/backing pointer to its canonical guest address.
  * This is the reverse mapping required when recomp_alloc returns memory
- * from either MEM1 or MEM2. The returned address is the region's configured
- * KSEG0 base, never an uncached alias.
+ * from either MEM1 or MEM2. MEM2 is host backing storage assigned a distinct
+ * guest KSEG0 extension (0x81800000 onward); it is not mapped to 0x90000000 or
+ * to the N64 KSEG1/ROM window. The returned address is the region's configured
+ * canonical KSEG0 address, never an uncached alias.
  */
 N64MemoryStatus n64_memory_host_to_guest(
     const N64MemoryMap *map,
