@@ -136,13 +136,17 @@ The following files were inspected at the same immutable N64ModernRuntime revisi
 
 The pointer subtraction is invalid for an opaque context token. Use the allocator's host-to-guest reverse map, typed string writes (or a checked bulk write), and heap-only free validation.
 
-### RSP task loading and DMEM
+### RSP task loading, DMEM and IMEM
 
 `librecomp/src/sp.cpp` and `librecomp/src/rsp.cpp` are a separate raw-memory path:
 - `osSpTaskStartGo_recomp()` obtains `OSTask*` through `TO_PTR`, optionally dumps microcode by reading `rdram[i ^ 3]`, then calls `ultramodern::submit_rsp_task(rdram, task)`.
-- `recomp::rsp::run_task()` calls `dma_rdram_to_dmem(rdram, ...)` to copy microcode data into DMEM, then calls the recompiled RSP ucode with `rdram`.
+- `recomp::rsp::run_task()` copies the `OSTask` to the 4 KiB `dmem` array, then calls `dma_rdram_to_dmem(rdram, ...)` to copy microcode data into DMEM, and finally calls the recompiled RSP ucode with `rdram`.
+- `librecomp/include/librecomp/rsp.hpp` defines DMA helpers that copy each byte through `MEM_B` lvalue reads/writes between RDRAM and DMEM.
+- The same header defines `RSP_MEM_B/BU` with an unconditional `^ 3` lane transform, and constructs halfword/word operations by rearranging host byte addresses. `rsp_vu_impl.hpp` uses these primitives extensively for vector loads/stores.
 
 The RSP adapter must read RDRAM via checked spans or a bounded copy API before the ucode is executed. The microcode dump must use the same path. It must not index the opaque token or assume all source bytes live in the first host buffer. DMEM/IMEM remain separate fixed-size RSP memory windows.
+
+**Separate endian gate:** the current DOL validates the CPU-side N64 byte-lane adapter, but it does not execute RSP vector code. The unconditional RSP DMEM `^ 3` lane transform is a second host-endian assumption and must be reviewed for big-endian PowerPC independently. Add byte/halfword/word RSP DMEM vectors on host and Dolphin before enabling any RSP microcode.
 
 ### libultra / controller / flash helpers
 
@@ -157,8 +161,8 @@ The current inspection is a targeted static audit of the named files, not a comp
 
 - [x] Host tests for the logical 8 MiB RDRAM / 8 MiB extension ranges, aliases, bounds, callbacks and reverse mapping.
 - [x] PPC/Dolphin probe of bounded discontiguous RDRAM, extension, mod, heap, MMIO, ROM and reverse-mapping behavior (run #59).
-- [x] Host tests for the RAM-only `TO_PTR` replacement and opaque memory API: RDRAM, KSEG1, extension, mod and heap produce host pointers; MMIO/ROM are refused; typed scalar loads/stores and bounds/errors are checked (run #65).
-- [x] Dolphin PPC execution of the opaque `uint8_t* rdram` context token, typed read/write API and RAM-only `TO_PTR` adapter, alongside the segmented mapping tests (run [#65](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687258977)).
+- [x] Host tests for the RAM-only `TO_PTR` replacement and opaque memory API: RDRAM, KSEG1, extension, mod and heap produce host pointers; MMIO/ROM are refused; typed scalar loads/stores and bounds/errors are checked. Error state clears after the next successful read/write.
+- [x] Dolphin PPC execution of the opaque `uint8_t* rdram` context token, typed read/write API, RAM-only `TO_PTR` adapter and success-after-error recovery, alongside the segmented mapping tests (run [#65](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687258977) and [#66](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687846361)).
 - [ ] Integrate the opaque context into the runtime helpers; do not pass it into current upstream code before the raw-pointer consumers listed above are migrated.
 - [ ] Migrate generated scalar/unaligned stores to callback-capable typed writes.
 - [ ] Port the heap and Racer-specific direct-access call sites.
