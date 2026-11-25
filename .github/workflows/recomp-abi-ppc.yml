@@ -1,0 +1,101 @@
+name: Recompiler PowerPC ABI probe
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/recomp-abi-ppc.yml"
+      - "tests/recomp-abi/**"
+      - "docs/RECOMP_PPC_ABI_PROBE.md"
+  push:
+    branches: [main, dev]
+    paths:
+      - ".github/workflows/recomp-abi-ppc.yml"
+      - "tests/recomp-abi/**"
+      - "docs/RECOMP_PPC_ABI_PROBE.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recomp-abi-ppc-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-big-endian-memory-model:
+    name: Host tests for the N64 big-endian memory contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compile and run synthetic big-endian memory tests
+        run: |
+          set -euo pipefail
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_n64_memory_be.c \
+            -o /tmp/test_n64_memory_be
+          /tmp/test_n64_memory_be
+
+  cross-compile-upstream-header:
+    name: Compile pinned N64Recomp header for GameCube and Wii
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: devkitpro/devkitppc:20261102
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify PowerPC toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${DEVKITPPC:-}"
+          command -v powerpc-eabi-g++
+          powerpc-eabi-g++ --version
+          test "$(powerpc-eabi-g++ -dumpmachine)" = "powerpc-eabi"
+
+      - name: Fetch the exact N64Recomp header revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo_dir="$RUNNER_TEMP/N64Recomp"
+          mkdir -p "$repo_dir"
+          git -C "$repo_dir" init
+          git -C "$repo_dir" remote add origin https://github.com/dguillot-gh/N64Recomp.git
+          git -C "$repo_dir" fetch --depth=1 origin 36286fb9a96f325a64b3c600131ba00af44654fc
+          git -C "$repo_dir" checkout --detach FETCH_HEAD
+          test "$(git -C "$repo_dir" rev-parse HEAD)" = "36286fb9a96f325a64b3c600131ba00af44654fc"
+          test -s "$repo_dir/include/recomp.h"
+          echo "Pinned N64Recomp header: $(git -C "$repo_dir" rev-parse HEAD)"
+
+      - name: Cross-compile ABI probe for GameCube and Wii
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/recomp-abi-build"
+          header_dir="$RUNNER_TEMP/N64Recomp/include"
+          source_file="$GITHUB_WORKSPACE/tests/recomp-abi/recomp_header_compile.cpp"
+          for target in gamecube wii; do
+            case "$target" in
+              gamecube) platform_flag="-mogc" ;;
+              wii) platform_flag="-mrvl" ;;
+            esac
+            echo "::group::Compile upstream recomp.h for $target ($platform_flag)"
+            powerpc-eabi-g++ \
+              -std=gnu++20 -O2 -Wall -Wextra -Werror \
+              -frounding-math -fno-fast-math \
+              -mcpu=750 "$platform_flag" \
+              -I"$header_dir" -I"$GITHUB_WORKSPACE/tests/recomp-abi" \
+              -c "$source_file" \
+              -o "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o"
+            powerpc-eabi-readelf -h "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o" \
+              | grep -E 'Class:.*ELF32|Data:.*big endian|Machine:.*PowerPC'
+            echo "::endgroup::"
+          done
