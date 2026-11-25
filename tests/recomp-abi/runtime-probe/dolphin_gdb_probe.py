@@ -96,8 +96,10 @@ class RSPClient:
         return self.read_packet()
 
     def continue_execution(self) -> None:
+        # The RSP "c" command is asynchronous: the stub replies with a stop
+        # packet only after the target halts, not with an ordinary ACK.
+        # read_packet() handles an optional ACK before that stop packet.
         self.send_packet("c")
-        self.read_ack()
 
     def interrupt(self) -> str:
         self.sock.sendall(b"\x03")
@@ -118,9 +120,6 @@ def load_symbols(path: Path) -> dict[str, int]:
         "g_probe_failure_label",
         "g_probe_failure_actual",
         "g_probe_failure_expected",
-        "probe_start_marker",
-        "probe_pass_marker",
-        "probe_fail_marker",
     }
     missing = required - result.keys()
     if missing:
@@ -241,57 +240,70 @@ def main() -> int:
             supported = rsp.command("qSupported:multiprocess+;swbreak+;hwbreak+")
             print(f"GDB qSupported: {supported}", flush=True)
 
-            marker_names = ("probe_start_marker", "probe_pass_marker", "probe_fail_marker")
-            phase = "GDB software breakpoint setup"
-            for name in marker_names:
-                address = symbols[name]
-                response = rsp.command(f"Z0,{address:08x},4")
-                print(f"GDB breakpoint {name} @ 0x{address:08x}: {response}", flush=True)
-                if response != "OK":
-                    raise RuntimeError(f"Dolphin rejected software breakpoint for {name}: {response!r}")
+            phase = "running the PowerPC memory probe"
+            print(f"GDB: resuming DOL for up to {args.run_seconds * 5:.1f}s", flush=True)
+            rsp.continue_execution()
 
-            def wait_for_marker(expected_names: tuple[str, ...]) -> tuple[str, int]:
-                nonlocal phase
-                phase = "waiting for Dolphin software breakpoint"
-                stop_reply = rsp.read_packet()
+            stage = ""
+            stop_reply = ""
+            pc = None
+            for attempt in range(5):
+                time.sleep(args.run_seconds)
+                phase = "interrupting Dolphin and reading guest state"
+                stop_reply = rsp.interrupt()
                 print(f"GDB stop reply: {stop_reply}", flush=True)
                 pc_match = re.search(r"40:([0-9a-fA-F]{8})", stop_reply)
                 pc = int(pc_match.group(1), 16) if pc_match else None
-                if pc is None:
-                    raise RuntimeError(f"GDB stop reply did not contain a PowerPC PC: {stop_reply!r}")
-                print(f"PowerPC PC at breakpoint: 0x{pc:08x}", flush=True)
-                for marker in expected_names:
-                    marker_address = symbols[marker]
-                    if marker_address <= pc < marker_address + 16:
-                        return marker, pc
-                location = nearest_text_symbol(symbols, pc)
-                detail = f"{location[0]}+0x{location[1]:x}" if location else "unknown symbol"
-                raise RuntimeError(
-                    f"Dolphin stopped at unexpected PC 0x{pc:08x} ({detail}); "
-                    f"expected one of {expected_names}"
+                stage = read_memory(rsp, symbols["g_probe_stage"], 4).decode(
+                    "ascii", errors="replace"
                 )
+                print(f"RECOMP_PPC_MEMORY_PROBE:STAGE {stage!r}", flush=True)
 
-            phase = "GDB continue to main-entry marker"
-            print("GDB: continue to probe_start_marker", flush=True)
-            rsp.continue_execution()
-            marker, pc = wait_for_marker(("probe_start_marker", "probe_fail_marker", "probe_pass_marker"))
-            if marker == "probe_fail_marker":
-                raise RuntimeError("Probe failed before its start marker")
-            if marker == "probe_pass_marker":
-                print("RECOMP_PPC_MEMORY_PROBE:PASS (breakpoint reached before start marker)", flush=True)
+                if stage in ("PASS", "FAIL"):
+                    break
+                if stage != "STAR":
+                    location = nearest_text_symbol(symbols, pc) if pc is not None else None
+                    detail = (
+                        f"{location[0]}+0x{location[1]:x}" if location else "unknown location"
+                    )
+                    raise RuntimeError(
+                        f"DOL did not reach main/probe execution: stage={stage!r}, "
+                        f"PC={f'0x{pc:08x}' if pc is not None else 'unknown'} ({detail})"
+                    )
+                if attempt < 4:
+                    print(
+                        f"Probe still running; resuming for another {args.run_seconds:.1f}s",
+                        flush=True,
+                    )
+                    rsp.continue_execution()
+
+            if stage == "PASS":
+                print("RECOMP_PPC_MEMORY_PROBE:PASS (guest memory tests completed)", flush=True)
                 return 0
-            print("RECOMP_PPC_MEMORY_PROBE:START (main-entry breakpoint)", flush=True)
 
-            phase = "GDB continue through memory tests to PASS/FAIL marker"
-            print("GDB: continue through memory-operation tests", flush=True)
-            rsp.continue_execution()
-            marker, pc = wait_for_marker(("probe_pass_marker", "probe_fail_marker"))
-            if marker == "probe_fail_marker":
-                print(f"RECOMP_PPC_MEMORY_PROBE:FAIL at PC 0x{pc:08x}", flush=True)
+            if stage == "FAIL":
+                failure_code = int.from_bytes(
+                    read_memory(rsp, symbols["g_probe_failure_code"], 4), "big"
+                )
+                label = read_memory(rsp, symbols["g_probe_failure_label"], 24)
+                label_text = label.split(b"\0", 1)[0].decode("ascii", errors="replace")
+                actual = int.from_bytes(
+                    read_memory(rsp, symbols["g_probe_failure_actual"], 8), "big"
+                )
+                expected = int.from_bytes(
+                    read_memory(rsp, symbols["g_probe_failure_expected"], 8), "big"
+                )
+                print(
+                    "RECOMP_PPC_MEMORY_PROBE:FAIL "
+                    f"code={failure_code} label={label_text!r} "
+                    f"actual=0x{actual:016x} expected=0x{expected:016x}",
+                    flush=True,
+                )
                 return 1
 
-            print("RECOMP_PPC_MEMORY_PROBE:PASS (Dolphin software breakpoint)", flush=True)
-            return 0
+            raise RuntimeError(
+                f"Probe did not finish within {args.run_seconds * 5:.1f}s; last stage={stage!r}"
+            )
     finally:
         if sock is not None:
             try:
