@@ -323,6 +323,30 @@ def main() -> int:
                 f"RECOMP_PPC_MEMORY_PROBE:FAIL (software breakpoint at 0x{pc:08x})",
                 flush=True,
             )
+            phase = "reading the failed memory assertion details"
+            try:
+                code = int.from_bytes(
+                    read_memory(rsp, symbols["g_probe_failure_code"], 4), "big"
+                )
+                label = read_memory(rsp, symbols["g_probe_failure_label"], 24)
+                label_text = label.split(b"\\0", 1)[0].decode("ascii", errors="replace")
+                actual = int.from_bytes(
+                    read_memory(rsp, symbols["g_probe_failure_actual"], 8), "big"
+                )
+                expected = int.from_bytes(
+                    read_memory(rsp, symbols["g_probe_failure_expected"], 8), "big"
+                )
+                print(
+                    "Memory assertion details: "
+                    f"code={code} label={label_text!r} "
+                    f"actual=0x{actual:016x} expected=0x{expected:016x}",
+                    flush=True,
+                )
+            except Exception as diagnostic_error:
+                print(
+                    f"Could not read failure details over GDB: {diagnostic_error}",
+                    flush=True,
+                )
             return 1
     finally:
         if sock is not None:
