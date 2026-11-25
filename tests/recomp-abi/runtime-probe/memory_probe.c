@@ -14,6 +14,7 @@
 #include <recomp.h>
 #include "n64_memory_be.h"
 #include "n64_segmented_memory.h"
+#include "n64_recomp_memory_api.h"
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
@@ -343,7 +344,9 @@ static __attribute__((noinline, noipa)) int run_memory_probe(void) {
 
 static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     n64_segmented_memory memory;
+    n64_recomp_memory_handle opaque_handle;
     segmented_probe_callbacks callbacks;
+    uint8_t *rdram_token;
     uint64_t value = 0;
     uint64_t guest_address = 0;
     uint8_t *host_pointer = NULL;
@@ -379,6 +382,45 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
 
     CHECK_SEGMENTED("SEG_VALIDATE", n64_segmented_memory_validate(&memory),
                     N64_SEGMENTED_OK);
+
+    /*
+     * Exercise the proposed generated-function ABI: the legacy uint8_t*
+     * argument is now only an opaque memory-context token, not a byte-array
+     * base. This is a probe of the adapter contract, not an upstream patch.
+     */
+    n64_recomp_memory_handle_init(&opaque_handle, &memory, NULL, NULL);
+    rdram_token = n64_recomp_memory_token(&opaque_handle);
+    CHECK_SEGMENTED("CTX_RDRAM_STORE",
+        n64_recomp_store_u32(rdram_token, UINT64_C(0xFFFFFFFF80000050),
+                             UINT32_C(0xCAFEBABE)),
+        N64_SEGMENTED_OK);
+    CHECK_U32("CTX_RDRAM_LOAD",
+        n64_recomp_load_u32(rdram_token, UINT64_C(0xFFFFFFFF80000050)),
+        UINT32_C(0xCAFEBABE));
+    if (N64_RECOMP_TO_PTR_VOID(rdram_token,
+                               UINT64_C(0xFFFFFFFF80000050)) !=
+        segmented_rdram + 0x50) {
+        return fail_u32("CTX_TO_PTR_RDRAM", 0, 1);
+    }
+    if (N64_RECOMP_TO_PTR(uint32_t, rdram_token,
+                          UINT64_C(0xFFFFFFFF80800000)) !=
+        (uint32_t *)(void *)segmented_extended) {
+        return fail_u32("CTX_TO_PTR_EXTENSION", 0, 1);
+    }
+    if (N64_RECOMP_TO_PTR_VOID(rdram_token,
+                               UINT64_C(0xFFFFFFFFA4600010)) != NULL) {
+        return fail_u32("CTX_TO_PTR_MMIO_NULL", 1, 0);
+    }
+    CHECK_SEGMENTED("CTX_TO_PTR_MMIO_ERROR",
+        n64_recomp_memory_last_error(rdram_token),
+        N64_SEGMENTED_NOT_RAM_BACKED);
+    n64_recomp_memory_clear_error(rdram_token);
+    CHECK_U32("CTX_MMIO_LOAD",
+        n64_recomp_load_u32(rdram_token, UINT64_C(0xFFFFFFFFA4600010)),
+        UINT32_C(0xA1B2C3D4));
+    CHECK_SEGMENTED("CTX_NO_ERROR_AFTER_LOAD",
+        n64_recomp_memory_last_error(rdram_token),
+        N64_SEGMENTED_OK);
 
     CHECK_SEGMENTED("SEG_RDRAM_WRITE",
         n64_segmented_write(&memory, UINT64_C(0xFFFFFFFF80000040), 4,
