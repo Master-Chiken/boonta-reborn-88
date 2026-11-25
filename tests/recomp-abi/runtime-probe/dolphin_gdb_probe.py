@@ -192,6 +192,7 @@ def main() -> int:
         "-C", "Logger.Logs.GDB_STUB=True",
         "-C", "Logger.Logs.BOOT=True",
         "-C", "Logger.Logs.CORE=True",
+        "-C", "Dolphin.Interface.DebugModeEnabled=True",
         "-C", "Dolphin.Interface.UsePanicHandlers=False",
         "-C", "Dolphin.Interface.ConfirmStop=False",
     ]
