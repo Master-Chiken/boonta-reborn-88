@@ -147,7 +147,7 @@ def tail_file(path: Path, line_count: int = 40) -> str:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return ""
-    return "\\n".join(lines[-line_count:])
+    return "\n".join(lines[-line_count:])
 
 
 def main() -> int:
@@ -210,14 +210,14 @@ def main() -> int:
             if sock is None:
                 stdout_tail = tail_file(args.stdout_log)
                 dolphin_log_tail = tail_file(args.user_dir / "Logs" / "dolphin.log")
-                diagnostics = "\\n".join(
+                diagnostics = "\n".join(
                     part for part in (
-                        "Dolphin stdout/stderr tail:\\n" + stdout_tail if stdout_tail else "",
-                        "Dolphin log tail:\\n" + dolphin_log_tail if dolphin_log_tail else "",
+                        "Dolphin stdout/stderr tail:\n" + stdout_tail if stdout_tail else "",
+                        "Dolphin log tail:\n" + dolphin_log_tail if dolphin_log_tail else "",
                     ) if part
                 )
                 raise TimeoutError(
-                    f"Could not connect to Dolphin GDB port {args.port}: {last_error}\\n{diagnostics}"
+                    f"Could not connect to Dolphin GDB port {args.port}: {last_error}\n{diagnostics}"
                 )
 
             rsp = RSPClient(sock)
