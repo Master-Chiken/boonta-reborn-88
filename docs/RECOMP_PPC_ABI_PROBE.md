@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, Dolphin GDB client unit tests, GameCube/Wii cross-compilation, DOL linking, and synthetic PowerPC memory execution under Dolphin all pass** in runs [45681454118](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118) and [45682077821](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45682077821). Latest source commit: `36d3fb59b52cc6972e15327a4d7386736e159a21`. This is emulated GameCube DOL evidence for the listed helper operations only; no original Racer generated code, full runtime, GX renderer, physical Wii, or physical GameCube has been tested.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map execution, opaque-context/typed-access execution, and Dolphin GDB probes all pass** in runs [#59](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45685312494), [#65](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45687258977), and [#66](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45687846361). Latest source commit: `ebe29240367461f62563f02386a4546e01459e58`. This is synthetic GameCube DOL evidence under Dolphin for the enumerated helpers and reference API only; the upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full runtime, GX renderer, RSP endian path, audio or controller integration has been validated.
 
 ## Question
 
@@ -242,11 +242,30 @@ GDB stopped at:
 
 The segmented PPC probe uses small but distinct backing buffers (4 KiB RDRAM, 8 KiB extended window, 256 bytes of mod RAM, and 512 bytes of heap) mapped at the real N64 guest base addresses. It executes the RDRAM and KSEG1 alias, extended PI/patch addresses, mod/heap boundary, reverse mapping, MMIO callback, ROM callback, and unbacked/noncanonical rejection paths. The host tests separately cover the complete 8 MiB logical boundaries. This is a proof of the current adapter's bounded mapping logic on big-endian PPC emulated by Dolphin; it is not a full 8 MiB physical-memory stress test.
 
+### Opaque RDRAM token and typed access API — runs 65 and 66
+
+The clean-room prototype `tests/recomp-abi/n64_recomp_memory_api.h` tests the proposed way to preserve the generated ABI `void(uint8_t* rdram, recomp_context* ctx)` while making the `rdram` value an opaque memory-context token rather than a pointer to a contiguous 512 MiB byte array.
+
+The API currently includes:
+- typed guest-address loads for signed/unsigned 8-, 16-, 32- and 64-bit values;
+- typed 8-, 16-, 32- and 64-bit stores routed through the segmented map and MMIO callback;
+- RAM-only `TO_PTR` equivalents requiring an object size, plus a separate one-byte `void*` form;
+- host-to-guest reverse mapping in the underlying segmented model;
+- a last-error value and optional fault callback.
+
+Host run [#65](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687258977) passed the opaque-token adapter tests. Dolphin run [#66](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45687846361) passed the same API exercised from the big-endian PPC DOL. It additionally verifies that the error state clears when a subsequent read/write succeeds after a previous rejected pointer/range operation.
+
+GDB again stopped at `probe_start_marker` (PC `0x80003488`) then `probe_pass_marker` (PC `0x8000349c`); `probe_fail_marker` was not reached. The CI host also passed the little-/big-endian lane tests, segmented memory API tests, and GDB RSP unit tests; the pinned header cross-compiled for GameCube and Wii and the standalone DOL linked and validated.
+
+**Important limit:** the opaque context is still a reference adapter only. Current upstream `TO_PTR`, heap, RSP, libultra and Racer callbacks continue to assume `rdram` is a real byte-array base. Do not pass the opaque token into the unmodified runtime.
+
 ### Still not integrated or proven
 
 - The pinned upstream `recomp.h` still has its original direct pointer arithmetic. Generated Racer code does not yet call this segmented resolver.
-- Existing runtime helpers that calculate `rdram + offset` directly need to be audited and adapted; changing only the scalar `MEM_*` hook would not be enough.
-- `recomp_alloc` must use the reverse map instead of subtracting a single contiguous host RDRAM base.
+- The direct-pointer audit is maintained in [`SEGMENTED_MEMORY_INTEGRATION_AUDIT.md`](SEGMENTED_MEMORY_INTEGRATION_AUDIT.md). It records the remaining `TO_PTR`, heap, mod-config, Racer SI/PI/VI, RSP DMA, SP dump, audio-buffer and thread/libultra consumers.
+- `recomp_alloc/free` and mod-config string allocations must use the heap backing plus reverse map instead of subtracting a single contiguous host RDRAM base.
+- The pinned RSP header has its own unconditional `RSP_MEM_B/BU` `^ 3` DMEM lane mapping. Add a separate big-endian RSP byte/halfword/word test before enabling RSP microcode on PPC.
+- The code generator must emit typed stores for `SW/SH/SB/SWC1/SD` and rewrite the unaligned store helpers. Pointer-lvalue `MEM_*` assignments cannot invoke MMIO callbacks.
 - The MMIO callback is currently a test double, not a set of working SP/DP/MI/VI/AI/PI/SI device models.
 - The ROM callback is currently a test fixture, not the Racer cartridge/PI DMA implementation.
 - The 512 MiB logical KSEG0 window is not an allocation request. A Wii implementation must use bounded physical buffers in its real MEM1/MEM2 budget; it cannot assume a contiguous 512 MiB host region.
