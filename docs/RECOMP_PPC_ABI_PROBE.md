@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, and the synthetic PowerPC memory probe under Dolphin all pass** in run [45681454118](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118), commit `316ef641238e309f518e3eef9cddd81f0f0397b4`. This is emulated GameCube DOL evidence for the listed helper operations only; no original Racer generated code, full runtime, GX renderer, physical Wii, or physical GameCube has been tested.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, Dolphin GDB client unit tests, GameCube/Wii cross-compilation, DOL linking, and synthetic PowerPC memory execution under Dolphin all pass** in runs [45681454118](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118) and [45682077821](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45682077821). Latest source commit: `36d3fb59b52cc6972e15327a4d7386736e159a21`. This is emulated GameCube DOL evidence for the listed helper operations only; no original Racer generated code, full runtime, GX renderer, physical Wii, or physical GameCube has been tested.
 
 ## Question
 
@@ -62,7 +62,7 @@ The workflow compiles the same source twice: once with `-mogc` and once with `-m
 
 `tests/recomp-abi/n64_memory_be.h` is a separate clean-room reference model for N64 big-endian byte layout. Its host tests cover 8/16/32/64-bit reads and writes, unaligned reads, and signed scalar extension. It is not a production replacement for N64Recomp's memory macros.
 
-## Target-endian memory adapter: compile-time evidence only
+## Target-endian memory adapter: compile-time and Dolphin execution evidence
 
 The pinned upstream header uses little-endian host lane adjustments for:
 - `MEM_B` and `MEM_BU`: `address ^ 3`;
@@ -72,11 +72,17 @@ The local adapter now selects:
 - **little-endian host:** retain those XOR adjustments unchanged;
 - **big-endian host:** use the N64 address directly for byte and halfword accesses.
 
-`MEM_W` already dereferences the aligned address directly and is not changed. The `SD`/`LD` word order is also not changed; on a big-endian target its high word at offset 0 and low word at offset 4 should match N64 byte layout, but this still needs runtime verification.
+`MEM_W` remains a direct aligned access. The `SD`/`LD` word order was not changed; the DOL checks that the high word appears at offset 0 and the low word at offset 4 on big-endian PowerPC.
 
-The PowerPC compile probe checks that the compiler selects the big-endian branch and that its byte/halfword lane transforms are identity operations. A host test checks the selector in both little- and forced-big-endian modes. These tests verify the selector and preprocessor wiring, **not actual PPC memory dereferences**.
+Host tests verify the selector in little-endian and forced-big-endian modes. In addition, the standalone GameCube DOL now executes the actual patched upstream `MEM_B/H/HU/BU/W`, `SD/LD`, and the upstream MIPS unaligned helpers on a 32-bit big-endian PowerPC CPU emulated by Dolphin.
 
-A native big-endian execution test remains necessary for byte, halfword, word, doubleword, and unaligned MIPS load/store behavior, including `LWL/LWR/SWL/SWR/LDL/LDR/SDL/SDR`. Do not claim these operations are fully correct until that test runs on an actual PowerPC target or a suitable big-endian emulator.
+The passing vectors cover:
+- signed and unsigned byte/halfword reads, including 64-bit sign extension into `gpr`;
+- word/doubleword reads and writes, including the `SD/LD` word layout;
+- every byte lane of `LWL/LWR/SWL/SWR` and `LDL/LDR/SDL/SDR`;
+- explicit negative-result sign-extension cases for `LWL/LWR`.
+
+This is real guest-code execution under Dolphin's GameCube emulation, not a native hardware result. It validates only the helpers and synthetic backing memory used by this DOL; it does not validate a complete N64 RDRAM map, PI/MMIO, heap, or original Racer code.
 
 ## Acceptance and limits
 
@@ -131,20 +137,27 @@ Commit: `87cabba1c900bdde7b6b36426f39d25b85a6182f`
 
 The workflow now uses the correct configuration token. This was a test-harness configuration error; it is not evidence of a memory-helper failure or a successful DOL execution.
 
-## GDB-visible DOL execution marker
+## GDB-visible DOL execution markers
 
-The current probe exports five diagnostic globals from its ELF:
-- `g_probe_stage`: four ASCII bytes, initially `INIT`, set to `STAR` at the first instruction of `main()`, then `FAIL` or `PASS`;
-- `g_probe_failure_code`: identifies whether a 32-bit or 64-bit assertion failed;
-- `g_probe_failure_label`: the label of the first failed assertion;
-- `g_probe_failure_actual` and `g_probe_failure_expected`: the first mismatched values, stored as 64-bit integers.
+The DOL retains diagnostic globals in its ELF:
+- `g_probe_stage`: four ASCII bytes, initially `INIT`, then `STAR`, `FAIL`, or `PASS`;
+- `g_probe_failure_code`: identifies a 32-bit or 64-bit assertion;
+- `g_probe_failure_label`: the first failed assertion's name;
+- `g_probe_failure_actual` and `g_probe_failure_expected`: the mismatching values stored as 64-bit integers.
 
-The cross-compile job extracts these global addresses and all text-symbol addresses with `powerpc-eabi-nm`, then uploads them alongside the DOL. The Dolphin job checks out the Python RSP client, enables Dolphin's built-in GDB server on localhost port 55000 using the CLI config name `Dolphin.General.GDBPort`, lets the guest run, interrupts it, and reads the marker bytes through GDB remote memory commands. The client handles partial TCP reads and resolves the interrupted PC to its nearest function symbol when the stage is not `PASS`. This avoids relying on the EXI debug UART and gives a direct memory observation of the guest program state.
+The DOL also exports three distinct noinline functions: `probe_start_marker`, `probe_pass_marker`, and `probe_fail_marker`. Each writes a different value to a volatile marker sink so the linker cannot fold their addresses together. The cross-compile job extracts their addresses and text symbols with `powerpc-eabi-nm`, then uploads them alongside the DOL.
+
+The Dolphin job enables the built-in GDB server on localhost port 55000 using `Dolphin.General.GDBPort`, and enables `Dolphin.Interface.DebugModeEnabled` so Dolphin's JIT checks software breakpoints. The host RSP client sets GDB `Z0` breakpoints at the three marker functions, continues the guest, and waits for stop packets:
+1. `probe_start_marker` proves the DOL reached `main()`;
+2. `probe_pass_marker` proves all enumerated memory assertions completed;
+3. `probe_fail_marker` identifies an assertion failure; the client then reads the failure code, label, actual value, and expected value via GDB memory reads.
+
+The pass/fail decision therefore depends on the guest's actual PowerPC execution path, not emulator uptime or EXI debug UART output. The host also runs unit tests for the RSP packet/ACK handling, including asynchronous continue and stop replies.
 
 Acceptance remains strict:
-- `PASS` proves the DOL reached the end of the enumerated memory tests under Dolphin's GameCube emulation.
-- `FAIL` identifies the failed assertion and reports the actual and expected 64-bit values; investigate before claiming compatibility.
-- `STAR`, `INIT`, a GDB timeout, or any other state is **not** a successful memory test.
+- `PASS` proves the DOL reached the end of the enumerated helper tests under Dolphin's GameCube emulation.
+- `FAIL` identifies a test failure; fix the test oracle or helper only after checking the exact upstream semantics and actual/expected values.
+- no marker, a timeout, or a stop at an unexpected PC is **not** a successful memory test.
 
 This is emulator evidence only, not a physical GameCube or Wii hardware test, and it does not validate the full N64 runtime, renderer, scheduler, audio or input integration.
 
@@ -161,19 +174,20 @@ Commit: `6cf119f8406b613aafbf5701d48141db7f1c2995`
 
 The next workflow revision writes the expected `Logger.ini` settings explicitly before launch, prints Dolphin's version and CLI help, and allows a longer bounded run. This is a logging/launch diagnostic, not a relaxation of the test's acceptance criteria.
 
-## Successful synthetic execution under Dolphin — run 45681454118
+## Successful synthetic execution under Dolphin — runs 47 and 50
 
-- Workflow: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118
-- Tested commit: `316ef641238e309f518e3eef9cddd81f0f0397b4`
-- The host memory-model job passed.
-- The pinned N64Recomp header compiled for both `-mogc` and `-mrvl`.
-- A standalone GameCube DOL was linked and passed structural validation.
-- Dolphin 2512 reached the guest `probe_start_marker`, then `probe_pass_marker`. The guest test therefore ran to completion under Dolphin's GameCube emulation.
-- The probe covers signed and unsigned byte/halfword/word access, doubleword access, SD/LD, and every byte lane of LWL/LWR/SWL/SWR/LDL/LDR/SDL/SDR with synthetic memory only.
+- Run 47: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118  
+  Tested memory-vector commit: `316ef641238e309f518e3eef9cddd81f0f0397b4`
+- Run 50: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45682077821  
+  Documentation and host-client-test commit: `36d3fb59b52cc6972e15327a4d7386736e159a21`
 
-The first DOL execution exposed a test-oracle error for LWR sign extension. The guest returned `0xFFFFFFFFAABBCC11`; the old expected value was `0x00000000AABBCC11`. The reference vector was corrected to match the MIPS64 helper's sign-extended 64-bit result, without modifying the N64Recomp memory helper. The corrected run reached `PASS`.
+Both runs passed the host memory-model tests, GameCube/Wii cross-compilation, DOL link/structure checks, and Dolphin guest execution. Run 50 additionally passed all four host tests of the Dolphin GDB RSP client.
 
-The workflow now also runs the four host unit tests for the GDB RSP client. Those were added after run 45681454118, so the next CI run is the first one that will validate this extra test step.
+Dolphin 2512 accepted all three GDB software breakpoints. It stopped first at `probe_start_marker` (PC `0x800033a4`) and then at `probe_pass_marker` (PC `0x800033b8`). It did not reach `probe_fail_marker`. This proves that the synthetic DOL executed the enumerated memory assertions to completion in Dolphin's GameCube core.
+
+The first DOL execution exposed a test-oracle error for `LWR` sign extension. The guest returned `0xFFFFFFFFAABBCC11`; the former expected value was `0x00000000AABBCC11`. The exact pinned MIPS64 helper explicitly casts the merged 32-bit result through `int32_t`, so the test vector was corrected to expect sign extension across the full 64-bit `gpr`. The helper implementation itself was not modified. Both run 47 and run 50 reached `PASS` with the corrected vectors.
+
+The backing memory in the DOL is synthetic and bounded to a small test array. These runs validate only the explicitly enumerated memory helpers and vectors, not the complete N64 address space or original Racer code.
 
 ## Next gate — segmented N64 memory model
 
