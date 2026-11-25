@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local, tested fallback is now used for the probe. The final CI result is the evidence gate.
+Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. CI cross-compilation has passed; PPC execution remains pending.
 
 ## Question
 
@@ -34,6 +34,12 @@ The compiler itself was found and identified as `powerpc-eabi-g++ (devkitPPC) 16
 ## The bounded fallback
 
 `tests/recomp-abi/ppc_int128_compat.h` supplies only `DMULT` and `DMULTU` using four 32x32-bit products and explicit carry accumulation. The signed version obtains the two's-complement 128-bit product by applying the high-word corrections when either operand is negative.
+
+`tests/recomp-abi/ppc_memory_lane_compat.h` adds a compile-time lane selector:
+- big-endian targets (including Broadway PowerPC) use the address unchanged for byte and halfword accesses;
+- little-endian targets retain the original XOR 3 / XOR 2 adjustments.
+
+The patcher rewrites only the two byte and two halfword lane expressions in the fetched header, then injects this local adapter before the memory macros. The PowerPC compile probe has static assertions that the big-endian branch is selected and that these lane transforms are identity operations. A separate host test compiles both selector branches, including a force-big-endian test mode; that mode tests the selector only, not native big-endian pointer dereferences.
 
 `tests/recomp-abi/test_ppc_mul64.c` checks edge cases and 10,000 deterministic operand pairs. On host builds where `__int128` is available, the result is compared with a compiler-provided 128-bit reference. The compatibility implementation itself does not use `__int128`.
 
@@ -83,7 +89,7 @@ It does **not** mean that:
 - a DOL or ELF was linked against libogc;
 - generated Racer game functions were compiled;
 - the full runtime, bounded RDRAM map, scheduler, graphics, audio or input works;
-- the upstream `MEM_B/H` lane adjustments are correct on PowerPC;
+- the byte/halfword semantics have been executed on actual big-endian PowerPC; the current CI checks compile-time selection and the host reference model only;
 - the multiplication fallback has been validated through all MIPS instruction paths;
 - a ROM or any ROM-derived content was used.
 
