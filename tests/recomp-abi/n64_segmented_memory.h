@@ -498,7 +498,7 @@ static inline n64_segmented_result n64_segmented_guest_from_host(
     do { \
         if ((region_size) != 0 && n64_segmented_host_range_valid((base_ptr), (region_size))) { \
             region_start = (uintptr_t)(base_ptr); \
-            if (pointer >= region_start && pointer - region_start <= (region_size)) { \
+            if (pointer >= region_start && pointer - region_start < (region_size)) { \
                 offset = (size_t)(pointer - region_start); \
                 if (offset < (region_size) && length <= (region_size) - offset) { \
                     guest_base = (guest_base_value); \
