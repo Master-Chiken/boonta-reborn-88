@@ -186,7 +186,7 @@ def main() -> int:
             stop_reply = rsp.interrupt()
             print(f"GDB stop reply: {stop_reply}", flush=True)
 
-            pc_match = re.search(r"(?:^|;)40:([0-9a-fA-F]{8})(?:;|$)", stop_reply)
+            pc_match = re.search(r"40:([0-9a-fA-F]{8})", stop_reply)
             pc = int(pc_match.group(1), 16) if pc_match else None
             if pc is not None:
                 print(f"PowerPC PC at interrupt: 0x{pc:08x}", flush=True)
