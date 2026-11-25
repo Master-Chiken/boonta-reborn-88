@@ -346,6 +346,7 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     segmented_probe_callbacks callbacks;
     uint64_t value = 0;
     uint64_t guest_address = 0;
+    uint8_t *host_pointer = NULL;
 
     memset(&memory, 0, sizeof(memory));
     memset(&callbacks, 0, sizeof(callbacks));
@@ -424,6 +425,47 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
         N64_SEGMENTED_OK);
     CHECK_U64("SEG_REVERSE_HEAP_ADDRESS", guest_address,
               UINT64_C(0xFFFFFFFF81000110));
+
+    CHECK_SEGMENTED("SEG_TO_PTR_RDRAM",
+        n64_segmented_host_pointer_for_guest(
+            &memory, UINT64_C(0xFFFFFFFF80000040), 4,
+            N64_SEGMENTED_ACCESS_READ, &host_pointer),
+        N64_SEGMENTED_OK);
+    if (host_pointer != segmented_rdram + 0x40) {
+        return fail_u32("SEG_TO_PTR_RDRAM_HOST", 0, 1);
+    }
+    CHECK_SEGMENTED("SEG_TO_PTR_EXTENDED",
+        n64_segmented_host_pointer_for_guest(
+            &memory, UINT64_C(0xFFFFFFFF80800000), 4,
+            N64_SEGMENTED_ACCESS_READ, &host_pointer),
+        N64_SEGMENTED_OK);
+    if (host_pointer != segmented_extended) {
+        return fail_u32("SEG_TO_PTR_EXTENDED_HOST", 0, 1);
+    }
+    CHECK_SEGMENTED("SEG_TO_PTR_HEAP",
+        n64_segmented_host_pointer_for_guest(
+            &memory, UINT64_C(0xFFFFFFFF81000100), 8,
+            N64_SEGMENTED_ACCESS_WRITE, &host_pointer),
+        N64_SEGMENTED_OK);
+    if (host_pointer != segmented_heap) {
+        return fail_u32("SEG_TO_PTR_HEAP_HOST", 0, 1);
+    }
+    CHECK_SEGMENTED("SEG_TO_PTR_MMIO_REJECT",
+        n64_segmented_host_pointer_for_guest(
+            &memory, UINT64_C(0xFFFFFFFFA4600010), 4,
+            N64_SEGMENTED_ACCESS_READ, &host_pointer),
+        N64_SEGMENTED_NOT_RAM_BACKED);
+    if (host_pointer != NULL) {
+        return fail_u32("SEG_TO_PTR_MMIO_NULL", 1, 0);
+    }
+    CHECK_SEGMENTED("SEG_TO_PTR_ROM_REJECT",
+        n64_segmented_host_pointer_for_guest(
+            &memory, UINT64_C(0xFFFFFFFFB0000004), 4,
+            N64_SEGMENTED_ACCESS_READ, &host_pointer),
+        N64_SEGMENTED_NOT_RAM_BACKED);
+    if (host_pointer != NULL) {
+        return fail_u32("SEG_TO_PTR_ROM_NULL", 1, 0);
+    }
 
     CHECK_SEGMENTED("SEG_MMIO_READ",
         n64_segmented_read(&memory, UINT64_C(0xFFFFFFFFA4600010), 4, &value),
