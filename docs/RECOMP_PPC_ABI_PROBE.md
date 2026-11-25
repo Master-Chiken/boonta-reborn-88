@@ -189,17 +189,65 @@ The first DOL execution exposed a test-oracle error for `LWR` sign extension. Th
 
 The backing memory in the DOL is synthetic and bounded to a small test array. These runs validate only the explicitly enumerated memory helpers and vectors, not the complete N64 address space or original Racer code.
 
-## Next gate — segmented N64 memory model
+## Segmented N64 address-space model — host and Dolphin proof
 
-The ABI/memory-helper gate is now **PASS in Dolphin**, but this does not yet run original Racer code. The next engineering task is a bounded, host-testable memory adapter to replace the desktop runtime's contiguous 512 MiB RDRAM allocation and 4 GiB virtual reservation.
+The next adapter is now implemented as a standalone clean-room reference model in
+`tests/recomp-abi/n64_segmented_memory.h`. It deliberately does **not** replace the
+pinned upstream `MEM_*` macros yet.
 
-The adapter must:
+### Logical layout represented
 
-1. translate N64 virtual addresses into checked, bounded backing regions instead of assuming `rdram + offset` is valid for the full 512 MiB range;
-2. model the N64 cached/uncached aliases deliberately, with host tests for valid and invalid ranges;
-3. route MMIO, PI and ROM reads through explicit callbacks rather than returning arbitrary pointers;
-4. keep the original N64 virtual address semantics separate from host pointers;
-5. provide a reverse mapping for heap pointers returned by `recomp_alloc`, because the upstream heap helper currently calculates an N64 address by subtracting the single contiguous RDRAM base;
-6. keep Wii memory constraints explicit: 24 MiB MEM1 + 64 MiB MEM2 on Wii, not a hypothetical contiguous 512 MiB region.
+- `0x80000000–0x807fffff`: 8 MiB N64 RDRAM.
+- `0x80800000–0x80ffffff`: 8 MiB runtime extension, used by the pinned runtime for PI handles at `0x80800000` and patch data beginning at `0x80801000`.
+- `0x81000000`: beginning of mod RAM; the heap starts immediately after the mod data, matching pinned `librecomp::init_heap()`.
+- KSEG1 `0xA0000000–0xA07fffff`: alias of the first 8 MiB of RDRAM only.
+- MMIO is routed through an explicit callback (the current prototype uses a coarse `0xA3f00000–0xA4ffffff` window; production must refine this to device register ranges).
+- Cartridge ROM at `0xB0000000` is read through a callback and is read-only.
 
-Do not begin the full runtime or GX renderer until this memory adapter has host tests and a small PPC/Dolphin proof. The next adapter should preserve the pinned upstream behavior where possible, with every target-specific divergence covered by synthetic tests.
+Each RAM window has its own host pointer and explicit backing length. Production setup must provide the complete 8 MiB RDRAM and 8 MiB extension buffers. Smaller backing lengths are allowed only to run bounded adapter probes without allocating large static arrays in a GameCube DOL. Any access outside the supplied backing is rejected rather than falling through to another region or into host memory.
+
+The model also separates the 32-bit N64 virtual address from host pointers. It validates canonical sign-extended guest addresses, checks all ranges and backing-buffer overlaps, routes ROM/MMIO through callbacks rather than fake pointers, and reverse-maps host allocations to canonical KSEG0 addresses. The reverse mapping is the operation needed to replace the pinned heap helper's current `host_pointer - rdram_base` assumption.
+
+### Host test coverage
+
+`tests/recomp-abi/test_n64_segmented_memory.c` passes under strict C11 warnings. It exercises:
+
+- full logical 8 MiB RDRAM and 8 MiB extension windows, including end-of-region and crossing accesses;
+- KSEG1 aliasing and rejection of its address immediately beyond the 8 MiB mirror;
+- PI/patch extension addresses, mod RAM, and heap immediately after mod RAM;
+- host-pointer-to-guest-address reverse mappings for all RAM-backed segments;
+- noncanonical pointer rejection and unmapped/unsupported accesses;
+- MMIO callback reads/writes and region-end checks;
+- read-only ROM callback reads and ROM range failures;
+- partial backing buffers, including the distinction between a valid logical window and an unbacked host range.
+
+The same CI job also passes the pre-existing big-endian byte-layout tests, little-/big-endian lane-selector tests, the portable 64x64-to-128 multiply vectors, and four host tests for the Dolphin GDB RSP client.
+
+### PowerPC execution under Dolphin
+
+Workflow run [#59](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45685312494)  
+Commit: `eea15a5d1733d933e6310f7591bbe110c015a614`
+
+- Host tests: **passed**.
+- Patched pinned N64Recomp header cross-compilation for GameCube and Wii: **passed**.
+- Standalone GameCube DOL build, structural validation and GDB symbol extraction: **passed**.
+- Dolphin 2512 GameCube emulation: **passed**.
+
+GDB stopped at:
+- `probe_start_marker`, PC `0x80003488` — DOL main-entry reached;
+- `probe_pass_marker`, PC `0x8000349c` — both the original memory-helper vectors and the new segmented-map probe completed;
+- `probe_fail_marker` was not reached.
+
+The segmented PPC probe uses small but distinct backing buffers (4 KiB RDRAM, 8 KiB extended window, 256 bytes of mod RAM, and 512 bytes of heap) mapped at the real N64 guest base addresses. It executes the RDRAM and KSEG1 alias, extended PI/patch addresses, mod/heap boundary, reverse mapping, MMIO callback, ROM callback, and unbacked/noncanonical rejection paths. The host tests separately cover the complete 8 MiB logical boundaries. This is a proof of the current adapter's bounded mapping logic on big-endian PPC emulated by Dolphin; it is not a full 8 MiB physical-memory stress test.
+
+### Still not integrated or proven
+
+- The pinned upstream `recomp.h` still has its original direct pointer arithmetic. Generated Racer code does not yet call this segmented resolver.
+- Existing runtime helpers that calculate `rdram + offset` directly need to be audited and adapted; changing only the scalar `MEM_*` hook would not be enough.
+- `recomp_alloc` must use the reverse map instead of subtracting a single contiguous host RDRAM base.
+- The MMIO callback is currently a test double, not a set of working SP/DP/MI/VI/AI/PI/SI device models.
+- The ROM callback is currently a test fixture, not the Racer cartridge/PI DMA implementation.
+- The 512 MiB logical KSEG0 window is not an allocation request. A Wii implementation must use bounded physical buffers in its real MEM1/MEM2 budget; it cannot assume a contiguous 512 MiB host region.
+- No original Racer generated functions, scheduler, GX renderer, audio, controller input, or physical Wii/GameCube hardware has been tested.
+
+The next engineering gate is to integrate the resolver at the N64 memory-hook boundary and audit every helper that directly derives a host pointer from an N64 address. Keep the current reference tests as the acceptance contract. Do not start the GX renderer or full runtime bring-up until those call sites and the reverse heap mapping use the segmented memory context.
