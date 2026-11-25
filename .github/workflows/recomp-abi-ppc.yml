@@ -39,6 +39,10 @@ jobs:
             tests/recomp-abi/test_n64_memory_be.c \
             -o /tmp/test_n64_memory_be
           /tmp/test_n64_memory_be
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_ppc_mul64.c \
+            -o /tmp/test_ppc_mul64
+          /tmp/test_ppc_mul64
 
   cross-compile-upstream-header:
     name: Compile pinned N64Recomp header for GameCube and Wii
@@ -75,6 +79,8 @@ jobs:
           test "$(git -C "$repo_dir" rev-parse HEAD)" = "36286fb9a96f325a64b3c600131ba00af44654fc"
           test -s "$repo_dir/include/recomp.h"
           echo "Pinned N64Recomp header: $(git -C "$repo_dir" rev-parse HEAD)"
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/patch_recomp_header_for_ppc.py" \
+            "$repo_dir/include/recomp.h"
 
       - name: Cross-compile ABI probe for GameCube and Wii
         shell: bash
