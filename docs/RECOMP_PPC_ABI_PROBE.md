@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map execution, opaque-context/typed-access execution, and Dolphin GDB probes all pass** in runs [#59](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45685312494), [#65](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45687258977), and [#66](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45687846361). Latest source commit: `ebe29240367461f62563f02386a4546e01459e58`. This is synthetic GameCube DOL evidence under Dolphin for the enumerated helpers and reference API only; the upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full runtime, GX renderer, RSP endian path, audio or controller integration has been validated.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map execution, opaque-context/typed-access execution, and Dolphin GDB probes all pass** in runs [#59](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45685312494), [#65](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687258977), [#66](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687846361), and the documentation recheck [#67](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45688266530). Latest source commit: `1a9a743e1075c789602833d8d79432edb7793e1a`. This is synthetic GameCube DOL evidence under Dolphin for the enumerated helpers and reference API only; the upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full runtime, GX renderer, RSP endian path, audio or controller integration has been validated.
 
 ## Question
 
@@ -268,7 +268,8 @@ GDB again stopped at `probe_start_marker` (PC `0x80003488`) then `probe_pass_mar
 - The code generator must emit typed stores for `SW/SH/SB/SWC1/SD` and rewrite the unaligned store helpers. Pointer-lvalue `MEM_*` assignments cannot invoke MMIO callbacks.
 - The MMIO callback is currently a test double, not a set of working SP/DP/MI/VI/AI/PI/SI device models.
 - The ROM callback is currently a test fixture, not the Racer cartridge/PI DMA implementation.
+- The runtime's RSP DMEM has its own unconditional XOR-3 byte-lane accessors and little-endian-oriented vector-register indexing; this separate RSP data path is not covered by the current DOL and requires its own big-endian tests.
 - The 512 MiB logical KSEG0 window is not an allocation request. A Wii implementation must use bounded physical buffers in its real MEM1/MEM2 budget; it cannot assume a contiguous 512 MiB host region.
-- No original Racer generated functions, scheduler, GX renderer, audio, controller input, or physical Wii/GameCube hardware has been tested.
+- No original Racer generated functions, scheduler, GX renderer, RSP microcode, audio, controller input, or physical Wii/GameCube hardware has been tested.
 
 The next engineering gate is to integrate the resolver at the N64 memory-hook boundary and audit every helper that directly derives a host pointer from an N64 address. Keep the current reference tests as the acceptance contract. Do not start the GX renderer or full runtime bring-up until those call sites and the reverse heap mapping use the segmented memory context.
