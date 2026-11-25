@@ -132,12 +132,21 @@ jobs:
           test -s recomp_memory_probe.dol
           test -s recomp_memory_probe.elf
           python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/validate_artifacts.py" recomp_memory_probe.dol recomp_memory_probe.elf
+          symbols_file=recomp_memory_probe.symbols
+          : > "$symbols_file"
+          for symbol in g_probe_stage g_probe_failure_code g_probe_failure_label; do
+            address="$(powerpc-eabi-nm -n recomp_memory_probe.elf | awk -v wanted="$symbol" '$3 == wanted { print $1; found = 1 } END { if (!found) exit 1 }')"
+            printf '%s %s\n' "$symbol" "$address" >> "$symbols_file"
+          done
+          cat "$symbols_file"
 
-      - name: Upload the native PowerPC memory-probe DOL
+      - name: Upload the native PowerPC memory-probe DOL and symbols
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned actions/upload-artifact v7.0.2
         with:
           name: recomp-powerpc-memory-probe
-          path: tests/recomp-abi/runtime-probe/recomp_memory_probe.dol
+          path: |
+            tests/recomp-abi/runtime-probe/recomp_memory_probe.dol
+            tests/recomp-abi/runtime-probe/recomp_memory_probe.symbols
           if-no-files-found: error
           retention-days: 3
 
@@ -156,94 +165,36 @@ jobs:
           name: recomp-powerpc-memory-probe
           path: memory-probe-artifact
 
-      - name: Install Dolphin and headless display dependencies
+      - name: Install Dolphin headless dependencies
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth qt6-qpa-plugins
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu
 
-      - name: Run the PowerPC DOL and verify memory-operation results
+      - name: Run the PowerPC DOL and inspect its stage over GDB
         shell: bash
         run: |
           set -euo pipefail
           dol="$(find "$GITHUB_WORKSPACE/memory-probe-artifact" -type f -name recomp_memory_probe.dol -print -quit)"
+          symbols="$(find "$GITHUB_WORKSPACE/memory-probe-artifact" -type f -name recomp_memory_probe.symbols -print -quit)"
           test -n "$dol"
-          export HOME=/tmp/recomp-dolphin-home
-          mkdir -p "$HOME" /tmp/recomp-dolphin-user/Logs /tmp/recomp-dolphin-user/Config
-          chmod 700 "$HOME"
-          mkdir -p "$GITHUB_WORKSPACE/recomp-probe-logs"
-          cat > /tmp/recomp-dolphin-user/Config/Logger.ini <<'EOF'
-          [Options]
-          WriteToFile = True
-          WriteToConsole = True
-          WriteToWindow = False
-          Verbosity = 4
-          [Logs]
-          OSREPORT = True
-          OSREPORT_HLE = True
-          MASTER = True
-          BOOT = True
-          EXI = True
-          CORE = True
-          EOF
-          echo "Dolphin NoGUI executable:"
+          test -n "$symbols"
           command -v dolphin-emu-nogui
-          echo "Dolphin NoGUI version:"
           dolphin-emu-nogui --version
-          echo "Dolphin NoGUI command-line options:"
-          dolphin-emu-nogui --help
-          echo "Configured Logger.ini:"
-          cat /tmp/recomp-dolphin-user/Config/Logger.ini
-          set +e
-          timeout --signal=TERM --kill-after=5s 25s dolphin-emu-nogui \
-            --platform=headless --video_backend=Null \
-            --exec="$dol" \
-            --user=/tmp/recomp-dolphin-user \
-            -C Logger.Options.WriteToFile=True \
-            -C Logger.Options.WriteToConsole=True \
-            -C Logger.Options.Verbosity=4 \
-            -C Logger.Logs.OSREPORT=True \
-            -C Logger.Logs.OSREPORT_HLE=True \
-            -C Logger.Logs.MASTER=True \
-            -C Logger.Logs.BOOT=True \
-            -C Logger.Logs.EXI=True \
-            -C Logger.Logs.CORE=True \
-            -C Dolphin.Interface.UsePanicHandlers=False \
-            -C Dolphin.Interface.ConfirmStop=False \
-            > /tmp/recomp-dolphin-stdout.log 2>&1
-          dolphin_status=$?
-          set -e
+          mkdir -p "$GITHUB_WORKSPACE/recomp-probe-logs" /tmp/recomp-dolphin-user
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe/dolphin_gdb_probe.py" \
+            --dolphin dolphin-emu-nogui \
+            --dol "$dol" \
+            --symbols "$symbols" \
+            --user-dir /tmp/recomp-dolphin-user \
+            --stdout-log /tmp/recomp-dolphin-stdout.log \
+            --port 55000 \
+            --run-seconds 1.5 \
+            --connect-timeout 30
           cat /tmp/recomp-dolphin-stdout.log
-          log_file=/tmp/recomp-dolphin-user/Logs/dolphin.log
-          logger_config=/tmp/recomp-dolphin-user/Config/Logger.ini
-          dolphin_config=/tmp/recomp-dolphin-user/Config/Dolphin.ini
-          if [[ -s "$log_file" ]]; then cat "$log_file"; fi
-          if [[ -s "$logger_config" ]]; then cat "$logger_config"; fi
-          mkdir -p "$GITHUB_WORKSPACE/recomp-probe-logs"
           cp /tmp/recomp-dolphin-stdout.log "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin-stdout.log"
-          cp "$log_file" "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin.log" 2>/dev/null || true
-          cp "$logger_config" "$GITHUB_WORKSPACE/recomp-probe-logs/Logger.ini" 2>/dev/null || true
-          cp "$dolphin_config" "$GITHUB_WORKSPACE/recomp-probe-logs/Dolphin.ini" 2>/dev/null || true
-          combined_log=/tmp/recomp-dolphin-combined.log
-          cat /tmp/recomp-dolphin-stdout.log "$log_file" 2>/dev/null > "$combined_log" || true
-          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:START" "$combined_log"; then
-            find /tmp/recomp-dolphin-user -maxdepth 4 -type f -print
-            echo "::error::Dolphin did not capture the DOL's direct SYS_Report START marker (status $dolphin_status)."
-            exit 1
-          fi
-          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:PASS" "$combined_log"; then
-            echo "::error::The native PowerPC memory probe started but did not report PASS (Dolphin status $dolphin_status)."
-            exit 1
-          fi
-          if grep -Fq "RECOMP_PPC_MEMORY_PROBE:FAIL" "$combined_log"; then
-            echo "::error::The native PowerPC memory probe reported a memory mismatch."
-            exit 1
-          fi
-          if [[ "$dolphin_status" -ne 124 && "$dolphin_status" -ne 137 && "$dolphin_status" -ne 143 ]]; then
-            echo "::error::Dolphin did not remain in the expected test loop (status $dolphin_status)."
-            exit 1
-          fi
+          cp /tmp/recomp-dolphin-user/Logs/dolphin.log "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin.log" 2>/dev/null || true
 
       - name: Collect Dolphin startup logs
         if: always()
