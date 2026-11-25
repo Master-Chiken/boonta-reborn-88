@@ -6,7 +6,9 @@ ifeq ($(strip $(DEVKITPPC)),)
 $(error "DEVKITPPC is not set. Use the devkitpro/devkitppc container.")
 endif
 ifeq ($(strip $(N64RECOMP_INCLUDE)),)
+ifneq ($(filter clean,$(MAKECMDGOALS)),clean)
 $(error "N64RECOMP_INCLUDE must point to the locally patched upstream N64Recomp include directory.")
+endif
 endif
 
 include $(DEVKITPPC)/gamecube_rules
