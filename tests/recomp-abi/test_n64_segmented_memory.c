@@ -245,6 +245,52 @@ static void test_extended_mod_and_heap(const n64_segmented_memory *memory)
            N64_SEGMENTED_UNMAPPED_ADDRESS);
 }
 
+static void test_host_pointer_for_guest(const n64_segmented_memory *memory)
+{
+    uint8_t *host = NULL;
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0x80000100), 16,
+               N64_SEGMENTED_ACCESS_READ, &host) == N64_SEGMENTED_OK);
+    assert(host == test_rdram + 0x100);
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0xA0000100), 16,
+               N64_SEGMENTED_ACCESS_WRITE, &host) == N64_SEGMENTED_OK);
+    assert(host == test_rdram + 0x100);
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0x80800100), 16,
+               N64_SEGMENTED_ACCESS_READ, &host) == N64_SEGMENTED_OK);
+    assert(host == test_extended + 0x100);
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0x81000020), 16,
+               N64_SEGMENTED_ACCESS_READ, &host) == N64_SEGMENTED_OK);
+    assert(host == test_mod_ram + 0x20);
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0x81001010), 16,
+               N64_SEGMENTED_ACCESS_READ, &host) == N64_SEGMENTED_OK);
+    assert(host == test_heap + 0x10);
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0xA4600010), 4,
+               N64_SEGMENTED_ACCESS_READ, &host) == N64_SEGMENTED_NOT_RAM_BACKED);
+    assert(host == NULL);
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0xB0000004), 4,
+               N64_SEGMENTED_ACCESS_READ, &host) == N64_SEGMENTED_NOT_RAM_BACKED);
+    assert(host == NULL);
+
+    assert(n64_segmented_host_pointer_for_guest(
+               memory, N64_ADDR(0x80000FFF), 2,
+               N64_SEGMENTED_ACCESS_READ, &host) ==
+           N64_SEGMENTED_RANGE_CROSSES_REGION);
+    assert(host == NULL);
+}
+
 static void test_reverse_host_mapping(const n64_segmented_memory *memory)
 {
     uint64_t guest = 0;
@@ -372,6 +418,7 @@ int main(void)
     test_rdram_boundaries(&memory);
     test_partial_backing_ranges(&memory);
     test_extended_mod_and_heap(&memory);
+    test_host_pointer_for_guest(&memory);
     test_reverse_host_mapping(&memory);
     test_canonical_addresses(&memory);
     test_mmio(&callbacks, &memory);
