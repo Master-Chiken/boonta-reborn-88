@@ -130,9 +130,14 @@ static __attribute__((noinline, noipa)) int run_memory_probe(void) {
         UINT32_C(0x11223344), UINT32_C(0x223344DD),
         UINT32_C(0x3344CCDD), UINT32_C(0x44BBCCDD)
     };
-    static const uint32_t lwr_expected[4] = {
-        UINT32_C(0xAABBCC11), UINT32_C(0xAABB1122),
-        UINT32_C(0xAA112233), UINT32_C(0x11223344)
+    /*
+     * N64Recomp's MIPS64 LWR helper sign-extends the merged 32-bit result.
+     * The upper word therefore follows bit 31 of the merged value; it must
+     * not be expected to stay zero when the retained bytes have bit 31 set.
+     */
+    static const uint64_t lwr_expected[4] = {
+        UINT64_C(0xFFFFFFFFAABBCC11), UINT64_C(0xFFFFFFFFAABB1122),
+        UINT64_C(0xFFFFFFFFAA112233), UINT64_C(0x0000000011223344)
     };
     static const uint32_t swl_expected[4] = {
         UINT32_C(0x11223344), UINT32_C(0xAA112233),
