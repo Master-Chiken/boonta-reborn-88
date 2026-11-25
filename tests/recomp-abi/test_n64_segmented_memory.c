@@ -57,7 +57,9 @@ static int test_mmio_access(
     }
 
     if (access == N64_SEGMENTED_ACCESS_READ) {
-        *value = UINT64_C(0xA1B2C3D4E5F60718);
+        *value = (width == 8)
+            ? UINT64_C(0xA1B2C3D4E5F60718)
+            : UINT32_C(0xA1B2C3D4);
     } else {
         state->mmio_value = *value;
     }
