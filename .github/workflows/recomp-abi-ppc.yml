@@ -178,7 +178,7 @@ jobs:
             --exec="$dol" \
             --user=/tmp/recomp-dolphin-user \
             -C Logger.Options.WriteToFile=True \
-            -C Logger.Options.WriteToConsole=False \
+            -C Logger.Options.WriteToConsole=True \
             -C Logger.Options.Verbosity=4 \
             -C Logger.Logs.OSREPORT=True \
             -C Logger.Logs.OSREPORT_HLE=False \
@@ -189,20 +189,23 @@ jobs:
           set -e
           cat /tmp/recomp-dolphin-stdout.log
           log_file=/tmp/recomp-dolphin-user/Logs/dolphin.log
-          if [[ ! -s "$log_file" ]]; then
-            find /tmp/recomp-dolphin-user -maxdepth 4 -type f -print
-            echo "::error::Dolphin did not create the expected OSReport log."
-            exit 1
-          fi
-          cat "$log_file"
+          logger_config=/tmp/recomp-dolphin-user/Config/Logger.ini
+          dolphin_config=/tmp/recomp-dolphin-user/Config/Dolphin.ini
+          if [[ -s "$log_file" ]]; then cat "$log_file"; fi
+          if [[ -s "$logger_config" ]]; then cat "$logger_config"; fi
           mkdir -p "$GITHUB_WORKSPACE/recomp-probe-logs"
-          cp "$log_file" "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin.log"
           cp /tmp/recomp-dolphin-stdout.log "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin-stdout.log"
-          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:PASS" "$log_file"; then
+          cp "$log_file" "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin.log" 2>/dev/null || true
+          cp "$logger_config" "$GITHUB_WORKSPACE/recomp-probe-logs/Logger.ini" 2>/dev/null || true
+          cp "$dolphin_config" "$GITHUB_WORKSPACE/recomp-probe-logs/Dolphin.ini" 2>/dev/null || true
+          combined_log=/tmp/recomp-dolphin-combined.log
+          cat /tmp/recomp-dolphin-stdout.log "$log_file" 2>/dev/null > "$combined_log" || true
+          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:PASS" "$combined_log"; then
+            find /tmp/recomp-dolphin-user -maxdepth 4 -type f -print
             echo "::error::The native PowerPC memory probe did not report PASS (Dolphin status $dolphin_status)."
             exit 1
           fi
-          if grep -Fq "RECOMP_PPC_MEMORY_PROBE:FAIL" "$log_file"; then
+          if grep -Fq "RECOMP_PPC_MEMORY_PROBE:FAIL" "$combined_log"; then
             echo "::error::The native PowerPC memory probe reported a memory mismatch."
             exit 1
           fi
