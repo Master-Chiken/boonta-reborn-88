@@ -88,8 +88,9 @@ The production adapter therefore needs a coordinated change to the recompiled lo
 ## Next validation gates
 
 - [x] Host tests for the logical 8 MiB RDRAM / 8 MiB extension ranges, aliases, bounds, callbacks and reverse mapping.
-- [x] PPC/Dolphin probe of bounded discontiguous RDRAM, extension, mod, heap, MMIO, ROM and reverse-mapping behavior.
-- [ ] Add host/PPC tests for the RAM-only `TO_PTR` resolver rejection of MMIO/ROM (the resolver is now present; the latest CI run must confirm its added tests).
+- [x] PPC/Dolphin probe of bounded discontiguous RDRAM, extension, mod, heap, MMIO, ROM and reverse-mapping behavior (run #59).
+- [x] Host tests for the RAM-only `TO_PTR` replacement: RDRAM, KSEG1, extension, mod and heap produce host pointers; MMIO/ROM are refused; boundary-crossing requests are rejected (run #63 host job).
+- [ ] Dolphin PPC probe of the new RAM-only `TO_PTR` replacement tests (run [#63](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45686484362) is compiling the revised DOL; emulator result pending).
 - [ ] Implement an opaque memory-context contract for runtime helpers while keeping generated code's ABI under review.
 - [ ] Migrate generated scalar/unaligned stores to callback-capable typed writes.
 - [ ] Port the heap and Racer-specific direct-access call sites.
