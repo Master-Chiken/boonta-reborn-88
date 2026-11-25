@@ -46,6 +46,23 @@ static void set_failure_label(const char *label) {
     __asm__ volatile("" ::: "memory");
 }
 
+/*
+ * These noinline marker functions are GDB software-breakpoint targets.
+ * The breakpoint stops Dolphin at a known guest PC, avoiding unreliable
+ * host Ctrl-C polling and remote reads of DOL data addresses.
+ */
+__attribute__((noinline, used)) void probe_start_marker(void) {
+    __asm__ volatile("" ::: "memory");
+}
+
+__attribute__((noinline, used)) void probe_pass_marker(void) {
+    __asm__ volatile("" ::: "memory");
+}
+
+__attribute__((noinline, used)) void probe_fail_marker(void) {
+    __asm__ volatile("" ::: "memory");
+}
+
 void *rdram_mmio_write(uint32_t offset) {
     (void)offset;
     return mmio_scratch;
@@ -243,15 +260,18 @@ static int run_memory_probe(void) {
 
 int main(void) {
     set_probe_stage('S', 'T', 'A', 'R');
+    probe_start_marker();
 
     if (!run_memory_probe()) {
         set_probe_stage('F', 'A', 'I', 'L');
+        probe_fail_marker();
         for (;;) {
             __asm__ volatile("nop");
         }
     }
 
     set_probe_stage('P', 'A', 'S', 'S');
+    probe_pass_marker();
     for (;;) {
         __asm__ volatile("nop");
     }
