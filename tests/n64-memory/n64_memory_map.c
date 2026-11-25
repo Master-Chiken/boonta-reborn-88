@@ -47,10 +47,9 @@ static int n64_memory_region_contains(
     return start >= region_start && end <= region_end;
 }
 
-static const N64MemoryRegion *n64_memory_find_region(
+static const N64MemoryRegion *n64_memory_find_region_start(
     const N64MemoryMap *map,
-    uint32_t address,
-    size_t width) {
+    uint32_t address) {
     size_t i;
 
     if (map == NULL || (map->region_count != 0u && map->regions == NULL)) {
@@ -58,8 +57,10 @@ static const N64MemoryRegion *n64_memory_find_region(
     }
 
     for (i = 0u; i < map->region_count; ++i) {
-        if (n64_memory_region_contains(&map->regions[i], address, width)) {
-            return &map->regions[i];
+        const N64MemoryRegion *region = &map->regions[i];
+        if (address >= region->guest_base &&
+            (uint64_t)address < (uint64_t)region->guest_base + region->size) {
+            return region;
         }
     }
 
@@ -120,9 +121,12 @@ static N64MemoryStatus n64_memory_decode_address(
      */
     if (address >= N64_MEMORY_KSEG1_BASE && address < N64_MEMORY_KSEG1_RDRAM_END) {
         canonical = N64_MEMORY_KSEG0_BASE + (address - N64_MEMORY_KSEG1_BASE);
-        region = n64_memory_find_region(map, canonical, width);
+        region = n64_memory_find_region_start(map, canonical);
         if (region == NULL || region->kind != N64_MEMORY_REGION_RDRAM) {
             return N64_MEMORY_STATUS_UNMAPPED;
+        }
+        if (!n64_memory_region_contains(region, canonical, width)) {
+            return N64_MEMORY_STATUS_CROSSES_REGION;
         }
     } else if (address >= N64_MEMORY_KSEG1_BASE && address < N64_MEMORY_KSEG1_END) {
         resolved->is_mmio = 1;
@@ -131,9 +135,12 @@ static N64MemoryStatus n64_memory_decode_address(
     } else if (address < N64_MEMORY_RDRAM_SIZE) {
         /* Physical 0..8 MiB is the RDRAM alias. */
         canonical = N64_MEMORY_KSEG0_BASE + address;
-        region = n64_memory_find_region(map, canonical, width);
+        region = n64_memory_find_region_start(map, canonical);
         if (region == NULL || region->kind != N64_MEMORY_REGION_RDRAM) {
             return N64_MEMORY_STATUS_UNMAPPED;
+        }
+        if (!n64_memory_region_contains(region, canonical, width)) {
+            return N64_MEMORY_STATUS_CROSSES_REGION;
         }
     } else if (address < N64_MEMORY_PHYSICAL_LIMIT) {
         /*
@@ -146,9 +153,12 @@ static N64MemoryStatus n64_memory_decode_address(
         return N64_MEMORY_STATUS_MMIO;
     } else if (address >= N64_MEMORY_KSEG0_BASE && address < N64_MEMORY_KSEG0_END) {
         /* Canonical KSEG0 addresses include explicit runtime and heap regions. */
-        region = n64_memory_find_region(map, canonical, width);
+        region = n64_memory_find_region_start(map, canonical);
         if (region == NULL) {
             return N64_MEMORY_STATUS_UNMAPPED;
+        }
+        if (!n64_memory_region_contains(region, canonical, width)) {
+            return N64_MEMORY_STATUS_CROSSES_REGION;
         }
     } else {
         return N64_MEMORY_STATUS_UNMAPPED;
