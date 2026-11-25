@@ -3,8 +3,8 @@
  *
  * This is a standalone GameCube DOL with no game ROM or generated game code.
  * It runs the exact patched MEM_* and MIPS unaligned-load/store helpers on
- * big-endian Broadway-compatible PowerPC, then reports PASS/FAIL to Dolphin's
- * OSReport log through libogc's stderr redirect.
+ * big-endian Broadway-compatible PowerPC, then reports PASS/FAIL through
+ * libogc's Dolphin debug UART (EXI channel 0, device 1).
  */
 #include <gccore.h>
 #include <ogc/system.h>
@@ -116,18 +116,46 @@ static int run_memory_probe(void) {
 
     /* Actual patched byte, halfword and word memory macros on big-endian PPC. */
     CHECK_U32("MEM_BU_0", MEM_BU(0, n64_base), UINT32_C(0x01));
+    CHECK_U32("MEM_BU_1", MEM_BU(0, n64_base + 1), UINT32_C(0x23));
+    CHECK_U32("MEM_BU_2", MEM_BU(0, n64_base + 2), UINT32_C(0x45));
     CHECK_U32("MEM_BU_3", MEM_BU(0, n64_base + 3), UINT32_C(0x67));
-    CHECK_U32("MEM_HU", MEM_HU(0, n64_base), UINT32_C(0x0123));
+    CHECK_U32("MEM_HU_0", MEM_HU(0, n64_base), UINT32_C(0x0123));
+    CHECK_U32("MEM_HU_2", MEM_HU(0, n64_base + 2), UINT32_C(0x4567));
     CHECK_U32("MEM_W", (uint32_t)MEM_W(0, n64_base), UINT32_C(0x01234567));
+
+    /* Signed loads must extend the N64 byte/halfword sign to 32 bits. */
+    test_rdram[24] = 0x80;
+    test_rdram[25] = 0x7F;
+    test_rdram[26] = 0xFF;
+    test_rdram[27] = 0x01;
+    CHECK_U32("MEM_B_NEGATIVE", MEM_B(0, n64_base + 24), UINT32_C(0xFFFFFF80));
+    CHECK_U32("MEM_B_POSITIVE", MEM_B(0, n64_base + 25), UINT32_C(0x0000007F));
+    CHECK_U32("MEM_B_MINUS_ONE", MEM_B(0, n64_base + 26), UINT32_C(0xFFFFFFFF));
+    CHECK_U32("MEM_B_ONE", MEM_B(0, n64_base + 27), UINT32_C(0x00000001));
+    CHECK_U32("MEM_H_NEGATIVE", MEM_H(0, n64_base + 24), UINT32_C(0xFFFF807F));
+    CHECK_U32("MEM_H_NEGATIVE_TWO", MEM_H(0, n64_base + 26), UINT32_C(0xFFFFFF01));
+    CHECK_U32("MEM_HU_HIGH_BIT", MEM_HU(0, n64_base + 24), UINT32_C(0x807F));
+    CHECK_U32("MEM_HU_FF01", MEM_HU(0, n64_base + 26), UINT32_C(0xFF01));
 
     MEM_B(0, n64_base + 8) = (int8_t)0xA5;
     MEM_H(0, n64_base + 10) = (int16_t)0xB6C7;
     MEM_W(0, n64_base + 12) = (int32_t)UINT32_C(0xD8E9FA0B);
+    MEM_B(0, n64_base + 28) = (int8_t)0xD2;
+    MEM_H(0, n64_base + 30) = (int16_t)0xE3F4;
     CHECK_U32("MEM_B_STORE", test_rdram[8], UINT32_C(0xA5));
     CHECK_U32("MEM_H_STORE_HI", test_rdram[10], UINT32_C(0xB6));
     CHECK_U32("MEM_H_STORE_LO", test_rdram[11], UINT32_C(0xC7));
     CHECK_U32("MEM_W_STORE", (uint32_t)MEM_W(0, n64_base + 12),
              UINT32_C(0xD8E9FA0B));
+    CHECK_U32("MEM_B_STORE_EXTRA", test_rdram[28], UINT32_C(0xD2));
+    CHECK_U32("MEM_H_STORE_EXTRA_HI", test_rdram[30], UINT32_C(0xE3));
+    CHECK_U32("MEM_H_STORE_EXTRA_LO", test_rdram[31], UINT32_C(0xF4));
+    CHECK_U32("MEM_B_STORE_SIGNED_READ", MEM_B(0, n64_base + 28),
+             UINT32_C(0xFFFFFFD2));
+    CHECK_U32("MEM_H_STORE_SIGNED_READ", MEM_H(0, n64_base + 30),
+             UINT32_C(0xFFFFE3F4));
+    CHECK_U32("MEM_H_STORE_UNSIGNED_READ", MEM_HU(0, n64_base + 30),
+             UINT32_C(0xE3F4));
 
     SD((gpr)UINT64_C(0x1029384756ABCDEF), 0, n64_base + 16);
     CHECK_U64("SD_LD", LD(0, n64_base + 16), UINT64_C(0x1029384756ABCDEF));
