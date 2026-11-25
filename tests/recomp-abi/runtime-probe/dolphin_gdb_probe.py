@@ -25,6 +25,15 @@ class RSPClient:
     def send_packet(self, payload: str) -> None:
         self.sock.sendall(self.packet(payload.encode("ascii")))
 
+    def read_exact(self, size: int, description: str) -> bytes:
+        data = bytearray()
+        while len(data) < size:
+            chunk = self.sock.recv(size - len(data))
+            if not chunk:
+                raise ConnectionError(f"Dolphin GDB socket closed while reading {description}")
+            data.extend(chunk)
+        return bytes(data)
+
     def read_ack(self) -> None:
         while True:
             value = self.sock.recv(1)
@@ -58,9 +67,7 @@ class RSPClient:
                 break
             payload.extend(value)
 
-        checksum = self.sock.recv(2)
-        if len(checksum) != 2:
-            raise ConnectionError("Incomplete GDB packet checksum")
+        checksum = self.read_exact(2, "packet checksum")
         expected = sum(payload) & 0xFF
         try:
             received = int(checksum.decode("ascii"), 16)
@@ -95,7 +102,13 @@ def load_symbols(path: Path) -> dict[str, int]:
             continue
         name, address = parts
         result[name] = int(address, 16)
-    required = {"g_probe_stage", "g_probe_failure_code", "g_probe_failure_label"}
+    required = {
+        "g_probe_stage",
+        "g_probe_failure_code",
+        "g_probe_failure_label",
+        "g_probe_failure_actual",
+        "g_probe_failure_expected",
+    }
     missing = required - result.keys()
     if missing:
         raise ValueError(f"Missing symbols in {path}: {', '.join(sorted(missing))}")
@@ -115,6 +128,26 @@ def read_memory(rsp: RSPClient, address: int, size: int) -> bytes:
             f"Short memory reply at 0x{address:08x}: {len(data)} bytes, expected {size}"
         )
     return data
+
+
+def nearest_text_symbol(symbols: dict[str, int], address: int) -> tuple[str, int] | None:
+    candidates = [
+        (symbol_address, name)
+        for name, symbol_address in symbols.items()
+        if not name.startswith("g_probe_") and symbol_address <= address
+    ]
+    if not candidates:
+        return None
+    symbol_address, name = max(candidates)
+    return name, address - symbol_address
+
+
+def tail_file(path: Path, line_count: int = 40) -> str:
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    return "\\n".join(lines[-line_count:])
 
 
 def main() -> int:
@@ -139,7 +172,7 @@ def main() -> int:
         "--video_backend=Null",
         f"--exec={args.dol.resolve()}",
         f"--user={args.user_dir.resolve()}",
-        "-C", f"Main.General.GDBPort={args.port}",
+        "-C", f"Dolphin.General.GDBPort={args.port}",
         "-C", "Logger.Options.WriteToFile=True",
         "-C", "Logger.Options.WriteToConsole=True",
         "-C", "Logger.Options.Verbosity=4",
@@ -175,7 +208,17 @@ def main() -> int:
                     last_error = exc
                     time.sleep(0.1)
             if sock is None:
-                raise TimeoutError(f"Could not connect to Dolphin GDB port: {last_error}")
+                stdout_tail = tail_file(args.stdout_log)
+                dolphin_log_tail = tail_file(args.user_dir / "Logs" / "dolphin.log")
+                diagnostics = "\\n".join(
+                    part for part in (
+                        "Dolphin stdout/stderr tail:\\n" + stdout_tail if stdout_tail else "",
+                        "Dolphin log tail:\\n" + dolphin_log_tail if dolphin_log_tail else "",
+                    ) if part
+                )
+                raise TimeoutError(
+                    f"Could not connect to Dolphin GDB port {args.port}: {last_error}\\n{diagnostics}"
+                )
 
             rsp = RSPClient(sock)
             supported = rsp.command("qSupported:multiprocess+;swbreak+;hwbreak+")
@@ -199,10 +242,19 @@ def main() -> int:
                 label_data = read_memory(rsp, symbols["g_probe_failure_label"], 24)
                 code = int.from_bytes(code_data, "big")
                 label = label_data.split(b"\0", 1)[0].decode("ascii", "replace")
+                actual_data = read_memory(rsp, symbols["g_probe_failure_actual"], 8)
+                expected_data = read_memory(rsp, symbols["g_probe_failure_expected"], 8)
+                actual = int.from_bytes(actual_data, "big")
+                expected = int.from_bytes(expected_data, "big")
                 print(f"Probe failure code: {code}", flush=True)
                 print(f"Probe failure label: {label}", flush=True)
+                print(f"Probe actual:   0x{actual:016x}", flush=True)
+                print(f"Probe expected: 0x{expected:016x}", flush=True)
                 return 1
             if stage != "PASS":
+                location = nearest_text_symbol(symbols, pc) if pc is not None else None
+                if location is not None:
+                    print(f"PC symbol: {location[0]}+0x{location[1]:x}", flush=True)
                 raise RuntimeError(
                     f"DOL did not reach PASS (stage={stage!r}, PC={pc!r}); "
                     "the memory operations are not validated"
