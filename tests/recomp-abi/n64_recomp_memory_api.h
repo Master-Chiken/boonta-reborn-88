@@ -103,6 +103,8 @@ static inline uint64_t n64_recomp_load_unsigned(
             handle, result, guest_address, width, N64_SEGMENTED_ACCESS_READ);
         return 0;
     }
+
+    handle->last_error = N64_SEGMENTED_OK;
     return value;
 }
 
@@ -156,6 +158,8 @@ static inline n64_segmented_result n64_recomp_store(
     if (result != N64_SEGMENTED_OK) {
         n64_recomp_memory_record_fault(
             handle, result, guest_address, width, N64_SEGMENTED_ACCESS_WRITE);
+    } else if (handle != NULL) {
+        handle->last_error = N64_SEGMENTED_OK;
     }
     return result;
 }
@@ -210,6 +214,7 @@ static inline void *n64_recomp_to_host_pointer(
             N64_SEGMENTED_ACCESS_READ);
         return NULL;
     }
+    handle->last_error = N64_SEGMENTED_OK;
     return host_pointer;
 }
 
