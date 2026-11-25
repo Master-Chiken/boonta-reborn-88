@@ -85,6 +85,44 @@ The production adapter therefore needs a coordinated change to the recompiled lo
 6. Update Racer-specific SI, PI-handle, VI-state, native boost and crash-reporting helpers to use the context API.
 7. Audit every remaining helper that receives `uint8_t* rdram` or uses `RDRAM_ARG`; the list above covers the exact inspected call sites, not a claim that every file in the upstream runtime has been exhaustively rewritten.
 
+## Concrete N64Recomp code-generation seam
+
+The pinned C generator already separates memory loads from stores:
+
+- `src/cgenerator.cpp` `setup_op()` maps `LW/LWU/LH/LHU/LB/LBU/LD` to value expressions such as `MEM_W`, `MEM_H`, `MEM_BU`, and `LD` ([lines 58–69](https://github.com/dguillot-gh/N64Recomp/blob/36286fb9a96f325a64b3c600131ba00af44654fc/src/cgenerator.cpp#L58-L69)).
+- `CGenerator::process_store_op()` maps `SW/SH/SB/SWC1` to `StoreSyntax::Assignment`, which emits `MEM_W(...)=value`, `MEM_H(...)=value` or `MEM_B(...)=value`. It maps `SD/SDC1` to `SD(...)`, and `SWL/SWR/SDL/SDR` to helper calls that receive `rdram` ([lines 585–660](https://github.com/dguillot-gh/N64Recomp/blob/36286fb9a96f325a64b3c600131ba00af44654fc/src/cgenerator.cpp#L585-L660)).
+- The store instruction classification is already centralized in `include/recompiler/operations.h` and `src/operations.cpp` ([operations.cpp](https://github.com/dguillot-gh/N64Recomp/blob/36286fb9a96f325a64b3c600131ba00af44654fc/src/operations.cpp#L182-L193)).
+
+This is a tractable fork/patch point. The proposed change is to retain the existing load mappings as checked value-returning accessors, but make `process_store_op()` emit checked typed write calls instead of pointer-lvalue assignments:
+
+| MIPS store | Current emission | Required typed emission |
+|---|---|---|
+| `SW` / `SWC1` | `MEM_W(offset, base) = value` | `n64_mem_write32(rdram, base + offset, value)` |
+| `SH` | `MEM_H(offset, base) = value` | `n64_mem_write16(rdram, base + offset, value)` |
+| `SB` | `MEM_B(offset, base) = value` | `n64_mem_write8(rdram, base + offset, value)` |
+| `SD` / `SDC1` | `SD(value, offset, base)` | `n64_mem_write64(rdram, base + offset, value)` or two ordered 32-bit device writes |
+| `SWL/SWR/SDL/SDR` | direct helper calls | helper implementations using checked read/modify/write operations |
+
+The exact 64-bit device behavior must be defined per device: RAM can accept a big-endian 64-bit operation, while MMIO may require two ordered 32-bit writes or reject unsupported widths. It must not be implemented as an unchecked raw pointer store.
+
+### Preserve the generated-function ABI without pretending the handle is RAM
+
+Generated functions have the fixed signature `void(uint8_t* rdram, recomp_context* ctx)` in the pinned header. A practical migration can preserve that C ABI by treating the `rdram` argument as an **opaque pointer to a memory context**, not as the address of a contiguous byte array. Every consumer of that argument must then be audited:
+
+- patched `MEM_*` and typed read/write helpers recover the context handle and resolve a guest address through the segmented map;
+- `TO_PTR(type, guest)` uses the RAM-only resolver with a bounded object size; a `TO_PTR(void, guest)` specialization uses a one-byte validity check or a dedicated free-pointer lookup;
+- `recomp_alloc/free` obtain the heap backing from the context and use host-to-guest reverse mapping;
+- runtime thread, queue, PI, overlay, mod, save and Racer-specific helpers must stop treating the opaque argument as a raw `uint8_t[]`;
+- no helper may perform `rdram + guest_offset` once the pointer becomes opaque.
+
+This approach avoids changing every generated function signature at once, but it is safe only after the complete direct-access audit is implemented. Until then, the current code must continue to receive a real contiguous base pointer; do not pass a context object into the existing upstream runtime.
+
+### Required helper migration
+
+The current `do_swl/swr/sdl/sdr` helpers perform read/modify/write operations using `MEM_W` lvalues. They need to use value-returning reads and explicit writes, preserving the existing masks and sign-extension behavior. `SD` must stop obtaining one pointer and writing two raw words. Hand-written runtime stores in `mods.cpp`, `overlays.cpp`, and `pi.cpp` must be converted from `MEM_* = value` to the matching typed write API. Racer-specific `memset` and direct pointer writes identified above must use a checked bulk-fill or typed access function.
+
+The reference model currently implements the translation and callback semantics, but not yet this production C API, the generator patch, a fault policy, or real PI/MMIO device models. Those remain separate engineering gates.
+
 ## Next validation gates
 
 - [x] Host tests for the logical 8 MiB RDRAM / 8 MiB extension ranges, aliases, bounds, callbacks and reverse mapping.
