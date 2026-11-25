@@ -72,6 +72,15 @@ __attribute__((noinline, used, externally_visible)) void probe_fail_marker(void)
     __asm__ volatile("" ::: "memory");
 }
 
+/*
+ * Keep all marker sections reachable to the linker even if interprocedural
+ * analysis proves one branch unlikely for this fixed test input. The GDB
+ * harness needs every possible outcome address present in the ELF.
+ */
+void (* volatile g_probe_start_marker_ref)(void) __attribute__((used)) = probe_start_marker;
+void (* volatile g_probe_pass_marker_ref)(void) __attribute__((used)) = probe_pass_marker;
+void (* volatile g_probe_fail_marker_ref)(void) __attribute__((used)) = probe_fail_marker;
+
 void *rdram_mmio_write(uint32_t offset) {
     (void)offset;
     return mmio_scratch;
@@ -110,7 +119,7 @@ static int fail_u64(const char *label, uint64_t actual, uint64_t expected) {
     if (actual_value != expected_u64) return fail_u64((label), actual_value, expected_u64); \
 } while (0)
 
-static int run_memory_probe(void) {
+static __attribute__((noinline, noipa)) int run_memory_probe(void) {
     uint8_t *rdram = test_rdram;
     const gpr n64_base = (gpr)UINT64_C(0xFFFFFFFF80000000);
     static const uint8_t initial_word[4] = {0x11, 0x22, 0x33, 0x44};
