@@ -40,6 +40,10 @@ jobs:
             -o /tmp/test_n64_memory_be
           /tmp/test_n64_memory_be
           cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_n64_segmented_memory.c \
+            -o /tmp/test_n64_segmented_memory
+          /tmp/test_n64_segmented_memory
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
             tests/recomp-abi/test_memory_lane_selector.c \
             -o /tmp/test_memory_lane_le
           /tmp/test_memory_lane_le
