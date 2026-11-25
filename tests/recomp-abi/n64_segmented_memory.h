@@ -78,9 +78,15 @@ typedef int (*n64_segmented_mmio_fn)(
     uint64_t *value);
 
 typedef struct n64_segmented_memory {
-    /* Fixed 8 MiB guest RDRAM and fixed 8 MiB extended runtime window. */
+    /*
+     * Fixed logical windows, with explicitly bounded host backing lengths.
+     * Production GameCube/Wii setup supplies the full 8 MiB for each.
+     * Smaller lengths are useful for bounded PPC/Dolphin adapter probes.
+     */
     uint8_t *rdram;
+    size_t rdram_size;
     uint8_t *extended;
+    size_t extended_size;
 
     /*
      * Variable runtime-owned regions:
@@ -168,6 +174,13 @@ static inline n64_segmented_result n64_segmented_memory_validate(
         return N64_SEGMENTED_INVALID_ARGUMENT;
     }
 
+    if (memory->rdram_size == 0 ||
+        memory->rdram_size > N64_SEGMENTED_RDRAM_SIZE ||
+        memory->extended_size == 0 ||
+        memory->extended_size > N64_SEGMENTED_EXTENDED_SIZE) {
+        return N64_SEGMENTED_INVALID_CONFIGURATION;
+    }
+
     if ((memory->mod_ram_size != 0 && memory->mod_ram == NULL) ||
         (memory->heap_size != 0 && memory->heap == NULL)) {
         return N64_SEGMENTED_INVALID_CONFIGURATION;
@@ -183,8 +196,8 @@ static inline n64_segmented_result n64_segmented_memory_validate(
         return N64_SEGMENTED_INVALID_CONFIGURATION;
     }
 
-    if (!n64_segmented_host_range_valid(memory->rdram, N64_SEGMENTED_RDRAM_SIZE) ||
-        !n64_segmented_host_range_valid(memory->extended, N64_SEGMENTED_EXTENDED_SIZE)) {
+    if (!n64_segmented_host_range_valid(memory->rdram, memory->rdram_size) ||
+        !n64_segmented_host_range_valid(memory->extended, memory->extended_size)) {
         return N64_SEGMENTED_INVALID_CONFIGURATION;
     }
 
@@ -199,19 +212,19 @@ static inline n64_segmented_result n64_segmented_memory_validate(
     }
 
     if (n64_segmented_host_ranges_overlap(
-            memory->rdram, N64_SEGMENTED_RDRAM_SIZE,
-            memory->extended, N64_SEGMENTED_EXTENDED_SIZE) ||
+            memory->rdram, memory->rdram_size,
+            memory->extended, memory->extended_size) ||
         n64_segmented_host_ranges_overlap(
-            memory->rdram, N64_SEGMENTED_RDRAM_SIZE,
+            memory->rdram, memory->rdram_size,
             memory->mod_ram, memory->mod_ram_size) ||
         n64_segmented_host_ranges_overlap(
-            memory->rdram, N64_SEGMENTED_RDRAM_SIZE,
+            memory->rdram, memory->rdram_size,
             memory->heap, memory->heap_size) ||
         n64_segmented_host_ranges_overlap(
-            memory->extended, N64_SEGMENTED_EXTENDED_SIZE,
+            memory->extended, memory->extended_size,
             memory->mod_ram, memory->mod_ram_size) ||
         n64_segmented_host_ranges_overlap(
-            memory->extended, N64_SEGMENTED_EXTENDED_SIZE,
+            memory->extended, memory->extended_size,
             memory->heap, memory->heap_size) ||
         n64_segmented_host_ranges_overlap(
             memory->mod_ram, memory->mod_ram_size,
@@ -262,7 +275,10 @@ static inline n64_segmented_result n64_segmented_resolve(
         offset = (uint64_t)address - N64_SEGMENTED_RDRAM_BASE;
 
         if (offset < N64_SEGMENTED_RDRAM_SIZE) {
-            remaining = N64_SEGMENTED_RDRAM_SIZE - (size_t)offset;
+            if (offset >= memory->rdram_size) {
+                return N64_SEGMENTED_UNMAPPED_ADDRESS;
+            }
+            remaining = memory->rdram_size - (size_t)offset;
             if (length > remaining) return N64_SEGMENTED_RANGE_CROSSES_REGION;
             span->kind = N64_SEGMENTED_REGION_RDRAM;
             span->region_offset = (uint32_t)offset;
@@ -274,7 +290,10 @@ static inline n64_segmented_result n64_segmented_resolve(
                      N64_SEGMENTED_EXTENDED_SIZE) {
             size_t extended_offset =
                 (size_t)(offset - N64_SEGMENTED_RDRAM_SIZE);
-            remaining = N64_SEGMENTED_EXTENDED_SIZE - extended_offset;
+            if (extended_offset >= memory->extended_size) {
+                return N64_SEGMENTED_UNMAPPED_ADDRESS;
+            }
+            remaining = memory->extended_size - extended_offset;
             if (length > remaining) return N64_SEGMENTED_RANGE_CROSSES_REGION;
             span->kind = N64_SEGMENTED_REGION_EXTENDED;
             span->region_offset = (uint32_t)extended_offset;
@@ -315,7 +334,10 @@ static inline n64_segmented_result n64_segmented_resolve(
     if (address >= N64_SEGMENTED_KSEG1_BASE &&
         address < N64_SEGMENTED_KSEG1_RDRAM_END) {
         offset = (uint64_t)address - N64_SEGMENTED_KSEG1_BASE;
-        remaining = N64_SEGMENTED_RDRAM_SIZE - (size_t)offset;
+        if (offset >= memory->rdram_size) {
+            return N64_SEGMENTED_UNMAPPED_ADDRESS;
+        }
+        remaining = memory->rdram_size - (size_t)offset;
         if (length > remaining) return N64_SEGMENTED_RANGE_CROSSES_REGION;
         span->kind = N64_SEGMENTED_REGION_RDRAM;
         span->region_offset = (uint32_t)offset;
@@ -511,9 +533,9 @@ static inline n64_segmented_result n64_segmented_guest_from_host(
     } while (0)
 
     N64_SEGMENTED_REVERSE_REGION(
-        memory->rdram, N64_SEGMENTED_RDRAM_SIZE, N64_SEGMENTED_RDRAM_BASE);
+        memory->rdram, memory->rdram_size, N64_SEGMENTED_RDRAM_BASE);
     N64_SEGMENTED_REVERSE_REGION(
-        memory->extended, N64_SEGMENTED_EXTENDED_SIZE, N64_SEGMENTED_EXTENDED_BASE);
+        memory->extended, memory->extended_size, N64_SEGMENTED_EXTENDED_BASE);
     N64_SEGMENTED_REVERSE_REGION(
         memory->mod_ram, memory->mod_ram_size, N64_SEGMENTED_MOD_RAM_BASE);
     N64_SEGMENTED_REVERSE_REGION(
