@@ -329,7 +329,7 @@ def main() -> int:
                     read_memory(rsp, symbols["g_probe_failure_code"], 4), "big"
                 )
                 label = read_memory(rsp, symbols["g_probe_failure_label"], 24)
-                label_text = label.split(b"\\0", 1)[0].decode("ascii", errors="replace")
+                label_text = label.split(bytes([0]), 1)[0].decode("ascii", errors="replace")
                 actual = int.from_bytes(
                     read_memory(rsp, symbols["g_probe_failure_actual"], 8), "big"
                 )
