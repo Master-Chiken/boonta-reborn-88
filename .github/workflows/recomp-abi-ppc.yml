@@ -40,6 +40,15 @@ jobs:
             -o /tmp/test_n64_memory_be
           /tmp/test_n64_memory_be
           cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_memory_lane_selector.c \
+            -o /tmp/test_memory_lane_le
+          /tmp/test_memory_lane_le
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            -DRECOMP_MEMORY_FORCE_BIG_ENDIAN_FOR_TEST=1 \
+            tests/recomp-abi/test_memory_lane_selector.c \
+            -o /tmp/test_memory_lane_be
+          /tmp/test_memory_lane_be
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
             tests/recomp-abi/test_ppc_mul64.c \
             -o /tmp/test_ppc_mul64
           /tmp/test_ppc_mul64
