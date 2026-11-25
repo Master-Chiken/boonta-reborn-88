@@ -280,7 +280,7 @@ static void test_mmio(callback_state *state, const n64_segmented_memory *memory)
     state->fail_mmio = 0;
 }
 
-static void test_rom(callback_state *state, const n64_segmented_memory *memory)
+static void test_rom_callbacks(callback_state *state, const n64_segmented_memory *memory)
 {
     uint64_t value = 0;
 
@@ -332,7 +332,7 @@ int main(void)
     test_reverse_host_mapping(&memory);
     test_canonical_addresses(&memory);
     test_mmio(&callbacks, &memory);
-    test_rom(&callbacks, &memory);
+    test_rom_callbacks(&callbacks, &memory);
 
     puts("Segmented N64 address-space model: PASS");
     return 0;
