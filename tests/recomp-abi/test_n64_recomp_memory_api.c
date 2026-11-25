@@ -151,7 +151,9 @@ int main(void)
     assert(n64_recomp_to_host_pointer(token, N64_ADDR(0xA4600010),
                                       sizeof(uint32_t)) == NULL);
     assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_NOT_RAM_BACKED);
-    n64_recomp_memory_clear_error(token);
+    /* A successful typed MMIO read clears the previous TO_PTR error. */
+    value = n64_recomp_load_u32(token, N64_ADDR(0xA4600010));
+    assert(value == UINT32_C(0xA1B2C3D4));
     assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_OK);
 
     assert(n64_recomp_to_host_pointer(token, N64_ADDR(0xB0000000),
@@ -163,9 +165,17 @@ int main(void)
     assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_UNMAPPED_ADDRESS);
     assert(n64_recomp_load_u32(token, N64_ADDR(0x80004000)) == 0);
     assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_UNMAPPED_ADDRESS);
+    /* A valid read clears the previous failed-load state. */
+    assert(n64_recomp_load_u32(token, N64_ADDR(0x80000100)) ==
+           UINT32_C(0x12345678));
+    assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_OK);
+
     assert(n64_recomp_store_u32(token, N64_ADDR(0x80003FFF), 0x1234) ==
            N64_SEGMENTED_RANGE_CROSSES_REGION);
     assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_RANGE_CROSSES_REGION);
+    assert(n64_recomp_store_u32(token, N64_ADDR(0x80000108), 0x87654321) ==
+           N64_SEGMENTED_OK);
+    assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_OK);
 
     puts("Opaque N64Recomp memory-context adapter: PASS");
     return 0;
