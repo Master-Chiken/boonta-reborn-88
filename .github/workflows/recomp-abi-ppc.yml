@@ -45,7 +45,7 @@ jobs:
           /tmp/test_ppc_mul64
 
   cross-compile-upstream-header:
-    name: Compile pinned N64Recomp header for GameCube and Wii
+    name: Compile pinned N64Recomp header with portable multiply fallback
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
@@ -103,7 +103,10 @@ jobs:
               -I"$header_dir" -I"$GITHUB_WORKSPACE/tests/recomp-abi" \
               -c "$source_file" \
               -o "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o"
-            powerpc-eabi-readelf -h "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o" \
-              | grep -E 'Class:.*ELF32|Data:.*big endian|Machine:.*PowerPC'
+            readelf_header="$(powerpc-eabi-readelf -h "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o")"
+            grep -qE 'Class:.*ELF32' <<< "$readelf_header"
+            grep -qE 'Data:.*big endian' <<< "$readelf_header"
+            grep -qE 'Machine:.*PowerPC' <<< "$readelf_header"
+            echo "$readelf_header" | grep -E 'Class:|Data:|Machine:'
             echo "::endgroup::"
           done
