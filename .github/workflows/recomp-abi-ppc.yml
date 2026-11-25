@@ -56,6 +56,19 @@ jobs:
             -o /tmp/test_rsp_dmem_lane_le
           /tmp/test_rsp_dmem_lane_le
           cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_rsp_vector_register_endian.c \
+            -o /tmp/test_rsp_vector_register_endian
+          /tmp/test_rsp_vector_register_endian
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_rsp_vector_register_lane_selector.c \
+            -o /tmp/test_rsp_vector_lane_le
+          /tmp/test_rsp_vector_lane_le
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            -DN64_RSP_VECTOR_FORCE_BIG_ENDIAN_FOR_TEST=1 \
+            tests/recomp-abi/test_rsp_vector_register_lane_selector.c \
+            -o /tmp/test_rsp_vector_lane_be
+          /tmp/test_rsp_vector_lane_be
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
             -DN64_RSP_FORCE_BIG_ENDIAN_FOR_TEST=1 \
             tests/recomp-abi/test_rsp_dmem_lane_selector.c \
             -o /tmp/test_rsp_dmem_lane_be
