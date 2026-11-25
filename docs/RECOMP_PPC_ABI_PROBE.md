@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. Host tests, GameCube/Wii cross-compilation and the standalone GameCube DOL link have passed. Dolphin NoGUI confirms that its GameCube core is initialized and the DOL boot is requested, but UART markers are not emitted. The current CI revision replaces UART-based success detection with a GDB-readable stage marker; its execution result is pending.
+Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. Host tests, GameCube/Wii cross-compilation and DOL linking pass. Dolphin run #28 reached the GDB test but the server port was not opened because the command-line config used `Main.General.GDBPort`; Dolphin's config parser requires the public system name `Dolphin.General.GDBPort`. That root cause is fixed in the current branch. The probe now also checks signed byte/halfword/word results across the full 64-bit `gpr` and records actual/expected values on failure. The corrected GDB run is pending.
 
 ## Question
 
@@ -117,18 +117,31 @@ Both runs passed host tests, the GameCube/Wii cross-compiles and the DOL build/s
 
 These runs confirm that Dolphin initializes a GameCube core and requests the DOL boot. They do **not** prove that the DOL reached `main()`, nor that any PowerPC memory helper executed.
 
+## Dolphin run 28: GDB port was not enabled by the config token
+
+Workflow run: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45672755100  
+Commit: `87cabba1c900bdde7b6b36426f39d25b85a6182f`
+
+- Host big-endian model/selector/multiply tests passed.
+- The pinned header compiled for GameCube and Wii; the DOL linked, validated and exported its three initial stage/failure symbols.
+- Dolphin NoGUI 2512 installed and launched, but the GDB client could not connect to port 55000 after 30 seconds. The DOL stage was therefore not inspected.
+- Root cause: Dolphin's command-line config parser names the `System::Main` section `Dolphin`, not `Main`. The correct override is `Dolphin.General.GDBPort=55000`; `Main.General.GDBPort` is silently ignored by the parser's recognized system-name map.
+
+The workflow now uses the correct configuration token. This was a test-harness configuration error; it is not evidence of a memory-helper failure or a successful DOL execution.
+
 ## GDB-visible DOL execution marker
 
-The current probe exports three symbols from its ELF:
+The current probe exports five diagnostic globals from its ELF:
 - `g_probe_stage`: four ASCII bytes, initially `INIT`, set to `STAR` at the first instruction of `main()`, then `FAIL` or `PASS`;
 - `g_probe_failure_code`: identifies whether a 32-bit or 64-bit assertion failed;
-- `g_probe_failure_label`: the label of the first failed assertion.
+- `g_probe_failure_label`: the label of the first failed assertion;
+- `g_probe_failure_actual` and `g_probe_failure_expected`: the first mismatched values, stored as 64-bit integers.
 
-The cross-compile job extracts their guest addresses with `powerpc-eabi-nm` and uploads those addresses alongside the DOL. The Dolphin job checks out the Python RSP client, enables Dolphin's built-in GDB server on localhost port 55000, lets the guest run, interrupts it, and reads the marker bytes through the GDB remote memory-read command. This avoids relying on the EXI debug UART and gives a direct memory observation of the guest program state.
+The cross-compile job extracts these global addresses and all text-symbol addresses with `powerpc-eabi-nm`, then uploads them alongside the DOL. The Dolphin job checks out the Python RSP client, enables Dolphin's built-in GDB server on localhost port 55000 using the CLI config name `Dolphin.General.GDBPort`, lets the guest run, interrupts it, and reads the marker bytes through GDB remote memory commands. The client handles partial TCP reads and resolves the interrupted PC to its nearest function symbol when the stage is not `PASS`. This avoids relying on the EXI debug UART and gives a direct memory observation of the guest program state.
 
 Acceptance remains strict:
 - `PASS` proves the DOL reached the end of the enumerated memory tests under Dolphin's GameCube emulation.
-- `FAIL` identifies a failed scalar-width family and label; investigate before claiming compatibility.
+- `FAIL` identifies the failed assertion and reports the actual and expected 64-bit values; investigate before claiming compatibility.
 - `STAR`, `INIT`, a GDB timeout, or any other state is **not** a successful memory test.
 
 This is emulator evidence only, not a physical GameCube or Wii hardware test, and it does not validate the full N64 runtime, renderer, scheduler, audio or input integration.
