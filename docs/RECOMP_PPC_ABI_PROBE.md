@@ -191,6 +191,8 @@ The backing memory in the DOL is synthetic and bounded to a small test array. Th
 
 ## Segmented N64 address-space model — host and Dolphin proof
 
+The direct-pointer audit is maintained separately in [`SEGMENTED_MEMORY_INTEGRATION_AUDIT.md`](SEGMENTED_MEMORY_INTEGRATION_AUDIT.md). It identifies the pinned runtime's contiguous `TO_PTR` conversion, heap base subtraction, and Racer-specific direct `rdram + offset` writes that still need migration.
+
 The next adapter is now implemented as a standalone clean-room reference model in
 `tests/recomp-abi/n64_segmented_memory.h`. It deliberately does **not** replace the
 pinned upstream `MEM_*` macros yet.
