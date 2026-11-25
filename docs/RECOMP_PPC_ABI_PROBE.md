@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. CI cross-compilation has passed; PPC execution remains pending.
+Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. Host tests, GameCube/Wii cross-compilation and the standalone GameCube DOL link have passed. Dolphin execution is still unverified: the first instrumented run launched the emulator process but captured no DOL `START` marker and produced an empty OSReport log.
 
 ## Question
 
@@ -101,6 +101,19 @@ It does **not** mean that:
 
 No ROM, generated functions, extracted assets, emulator binary or APK is part of this probe.
 
+## Dolphin run 16: no execution evidence yet
+
+Workflow run: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45666984369  
+Commit: `6cf119f8406b613aafbf5701d48141db7f1c2995`
+
+- The host tests passed.
+- The exact pinned header cross-compiled for GameCube and Wii; the standalone GameCube DOL linked and passed the DOL/ELF structural validator.
+- Dolphin 2512 installed successfully and remained alive until the 12-second timeout.
+- The DOL's direct `SYS_Report` `START` marker was not captured. The uploaded artifact contained a 659-byte Qt-warning-only stdout file, an empty `dolphin.log`, and an empty `Logger.ini`. There was no `PASS` or `FAIL` marker.
+- Therefore this run does **not** establish whether the DOL started, and it says nothing about the correctness or incorrectness of the memory operations.
+
+The next workflow revision writes the expected `Logger.ini` settings explicitly before launch, prints Dolphin's version and CLI help, and allows a longer bounded run. This is a logging/launch diagnostic, not a relaxation of the test's acceptance criteria.
+
 ## Next gate
 
-After the CI passes, prove the patched memory macros with actual PPC execution (preferably a tiny DOL/ELF and a controlled test on Dolphin, then real hardware). Only then attempt a small sample of locally generated C. Do not start the full Racer runtime or GX renderer based on compile-only evidence.
+Obtain a captured DOL `START` marker and then `PASS` from Dolphin before claiming PPC memory execution. A `FAIL` marker must be traced to its exact operation and corrected. If no marker appears again, isolate Dolphin's DOL launch and OSReport path before changing the memory helpers. After successful emulated execution, test a small generated-code sample; do not start the full Racer runtime or GX renderer based on compile-only evidence.
