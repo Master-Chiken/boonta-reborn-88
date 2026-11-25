@@ -53,6 +53,12 @@ jobs:
             -o /tmp/test_ppc_mul64
           /tmp/test_ppc_mul64
 
+      - name: Test Dolphin GDB Remote Serial Protocol client
+        run: |
+          python3 -m unittest discover \
+            -s tests/recomp-abi/runtime-probe \
+            -p 'test_*.py' -v
+
   cross-compile-upstream-header:
     name: Compile pinned N64Recomp header with portable multiply fallback
     runs-on: ubuntu-latest
