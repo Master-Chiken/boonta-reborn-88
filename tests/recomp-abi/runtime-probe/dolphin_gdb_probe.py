@@ -195,6 +195,7 @@ def main() -> int:
 
     process: subprocess.Popen[bytes] | None = None
     sock: socket.socket | None = None
+    phase = "starting Dolphin"
     try:
         with args.stdout_log.open("wb") as output:
             process = subprocess.Popen(
@@ -230,12 +231,21 @@ def main() -> int:
                     f"Could not connect to Dolphin GDB port {args.port}: {last_error}\n{diagnostics}"
                 )
 
+            phase = "GDB qSupported request"
+            print("GDB: sending qSupported", flush=True)
             rsp = RSPClient(sock)
             supported = rsp.command("qSupported:multiprocess+;swbreak+;hwbreak+")
             print(f"GDB qSupported: {supported}", flush=True)
 
+            phase = "GDB continue packet ACK"
+            print("GDB: sending continue (c)", flush=True)
             rsp.continue_execution()
+            print("GDB: continue ACK received", flush=True)
+
+            phase = f"GDB guest run for {args.run_seconds:.3f}s"
             time.sleep(args.run_seconds)
+            phase = "GDB Ctrl-C and stop reply"
+            print("GDB: sending Ctrl-C", flush=True)
             stop_reply = rsp.interrupt()
             print(f"GDB stop reply: {stop_reply}", flush=True)
 
@@ -244,6 +254,8 @@ def main() -> int:
             if pc is not None:
                 print(f"PowerPC PC at interrupt: 0x{pc:08x}", flush=True)
 
+            phase = "GDB read of g_probe_stage"
+            print("GDB: reading g_probe_stage", flush=True)
             stage = read_memory(rsp, symbols["g_probe_stage"], 4).decode("ascii", "replace")
             print(f"Probe stage: {stage}", flush=True)
 
@@ -292,5 +304,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as error:
-        print(f"ERROR: {error}", file=sys.stderr, flush=True)
+        print(f"ERROR during {locals().get('phase', 'initialization')}: {error}", file=sys.stderr, flush=True)
         raise SystemExit(1)
