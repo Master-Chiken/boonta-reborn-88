@@ -136,6 +136,18 @@ The following files were inspected at the same immutable N64ModernRuntime revisi
 
 The pointer subtraction is invalid for an opaque context token. Use the allocator's host-to-guest reverse map, typed string writes (or a checked bulk write), and heap-only free validation.
 
+### RSP DMEM scalar lane proof
+
+The new reference adapter `tests/recomp-abi/rsp_dmem_endian.h` reproduces the current RSP DMEM scalar memory contract without modifying upstream. It separates the RSP's logical 4 KiB address from the host backing index:
+
+- little-endian hosts use the current word-swizzled byte lane (`address ^ 3`);
+- big-endian PowerPC hosts use the logical byte address unchanged;
+- 16-bit host byte indices and the low-half store-source indices are selected independently, matching the current little-endian implementation's `(i + 2) ^ 3` operations.
+
+Host run [#86](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45689096458) passed DMEM 8/16/32-bit reads/writes, signed byte and halfword extension, low-half writes, address offsets, all byte lanes and 4 KiB wraparound. Its host lane-selector test also compiled the forced big-endian selection branch.
+
+The same DOL then executed the DMEM vectors on big-endian PowerPC in Dolphin. GDB stopped at `probe_start_marker` (PC `0x80003494`) then `probe_pass_marker` (PC `0x800034a8`); `probe_fail_marker` was not reached. This validates the clean-room DMEM scalar adapter under Dolphin, not the upstream RSP vector engine or any RSP microcode.
+
 ### RSP task loading, DMEM and IMEM
 
 `librecomp/src/sp.cpp` and `librecomp/src/rsp.cpp` are a separate raw-memory path:
@@ -166,6 +178,9 @@ The current inspection is a targeted static audit of the named files, not a comp
 - [ ] Integrate the opaque context into the runtime helpers; do not pass it into current upstream code before the raw-pointer consumers listed above are migrated.
 - [ ] Migrate generated scalar/unaligned stores to callback-capable typed writes.
 - [ ] Port the heap and Racer-specific direct-access call sites.
+- [x] Add a clean-room RSP DMEM scalar lane adapter with little-/big-endian host selection and host/PPC tests for 8/16/32-bit access, low-half stores and 4 KiB wrap (run [#86](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45689096458)).
+- [ ] Verify the RSP `r128.byte/element/u8/u16` register-lane mapping on big-endian PowerPC; no vector-register execution is covered yet.
+- [ ] Migrate RSP microcode DMA and debug-dump reads to checked memory-context copies; the current opaque token must never be indexed as raw RDRAM.
 - [ ] Add real PI/MMIO device models and integration tests.
 
 No upstream repository has been modified. No Racer ROM, generated Racer source, assets, or other proprietary content is part of this audit.
