@@ -3,13 +3,10 @@
  *
  * This is a standalone GameCube DOL with no game ROM or generated game code.
  * It runs the exact patched MEM_* and MIPS unaligned-load/store helpers on
- * big-endian Broadway-compatible PowerPC, then reports PASS/FAIL through
- * libogc's Dolphin debug UART (EXI channel 0, device 1).
+ * big-endian Broadway-compatible PowerPC. A global stage marker is read by
+ * Dolphin's built-in GDB stub, avoiding reliance on the optional EXI debug UART.
  */
 #include <gccore.h>
-#include <ogc/system.h>
-#include <ogc/exi.h>
-
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,29 +18,30 @@ static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
 
 /*
- * Emit an OSReport line directly over the Dolphin debug UART. This mirrors
- * libogc's SYS_Report transport but deliberately omits its retail-console
- * presence check, so the probe can distinguish that guard from an EXI/UART
- * problem. The message must end in CR for Dolphin's IPL UART logger.
+ * GDB-readable execution state. Byte arrays deliberately avoid endian
+ * ambiguity when the remote stub reads guest memory.
  */
-static void direct_osreport(const char *message) {
-    u32 command = UINT32_C(0xA0010000);
-    if (!EXI_Lock(EXI_CHANNEL_0, EXI_DEVICE_1, NULL)) {
-        return;
-    }
-    if (!EXI_Select(EXI_CHANNEL_0, EXI_DEVICE_1, EXI_SPEED8MHZ)) {
-        EXI_Unlock(EXI_CHANNEL_0);
-        return;
-    }
+volatile uint8_t g_probe_stage[4] __attribute__((used, aligned(4))) = {
+    'I', 'N', 'I', 'T'
+};
+volatile uint32_t g_probe_failure_code __attribute__((used, aligned(4))) = 0;
+volatile uint8_t g_probe_failure_label[24] __attribute__((used, aligned(4))) = {0};
 
-    const int command_started = EXI_Imm(EXI_CHANNEL_0, &command, 4, EXI_WRITE, NULL);
-    const int command_completed = command_started && EXI_Sync(EXI_CHANNEL_0);
-    if (command_completed) {
-        EXI_ImmEx(EXI_CHANNEL_0, (void *)message, (u32)strlen(message), EXI_WRITE);
-    }
+static void set_probe_stage(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+    g_probe_stage[0] = a;
+    g_probe_stage[1] = b;
+    g_probe_stage[2] = c;
+    g_probe_stage[3] = d;
+    __asm__ volatile("" ::: "memory");
+}
 
-    EXI_Deselect(EXI_CHANNEL_0);
-    EXI_Unlock(EXI_CHANNEL_0);
+static void set_failure_label(const char *label) {
+    size_t i = 0;
+    for (; i < sizeof(g_probe_failure_label) - 1 && label[i] != '\0'; ++i) {
+        g_probe_failure_label[i] = (uint8_t)label[i];
+    }
+    g_probe_failure_label[i] = 0;
+    __asm__ volatile("" ::: "memory");
 }
 
 void *rdram_mmio_write(uint32_t offset) {
@@ -57,19 +55,18 @@ void *rdram_bad_access(uint64_t n64_addr) {
 }
 
 static int fail_u32(const char *label, uint32_t actual, uint32_t expected) {
-    SYS_Report("RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%08x:expected=%08x\\r\\n",
-               label, (unsigned)actual, (unsigned)expected);
-    fprintf(stderr, "RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%08x:expected=%08x\\n",
-            label, (unsigned)actual, (unsigned)expected);
+    (void)actual;
+    (void)expected;
+    g_probe_failure_code = UINT32_C(1);
+    set_failure_label(label);
     return 0;
 }
 
 static int fail_u64(const char *label, uint64_t actual, uint64_t expected) {
-    SYS_Report("RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%016llx:expected=%016llx\\r\\n",
-               label, (unsigned long long)actual, (unsigned long long)expected);
-    fprintf(stderr,
-            "RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%016llx:expected=%016llx\\n",
-            label, (unsigned long long)actual, (unsigned long long)expected);
+    (void)actual;
+    (void)expected;
+    g_probe_failure_code = UINT32_C(2);
+    set_failure_label(label);
     return 0;
 }
 
@@ -231,19 +228,16 @@ static int run_memory_probe(void) {
 }
 
 int main(void) {
-    direct_osreport("RECOMP_PPC_MEMORY_PROBE:START\\r");
-    SYS_STDIO_Report(false);
-    SYS_Report("RECOMP_PPC_MEMORY_PROBE:START\\r\\n");
+    set_probe_stage('S', 'T', 'A', 'R');
 
     if (!run_memory_probe()) {
-        return 1;
+        set_probe_stage('F', 'A', 'I', 'L');
+        for (;;) {
+            __asm__ volatile("nop");
+        }
     }
 
-    direct_osreport("RECOMP_PPC_MEMORY_PROBE:PASS\\r");
-    SYS_Report("RECOMP_PPC_MEMORY_PROBE:PASS\\r\\n");
-    fprintf(stderr, "RECOMP_PPC_MEMORY_PROBE:PASS\\n");
-
-    /* Leave the DOL running long enough for Dolphin CI to read its OSReport log. */
+    set_probe_stage('P', 'A', 'S', 'S');
     for (;;) {
         __asm__ volatile("nop");
     }
