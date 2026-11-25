@@ -172,6 +172,7 @@ jobs:
           export HOME=/tmp/recomp-dolphin-home
           mkdir -p "$HOME" /tmp/recomp-dolphin-user/Logs /tmp/recomp-dolphin-user/Config
           chmod 700 "$HOME"
+          mkdir -p "$GITHUB_WORKSPACE/recomp-probe-logs"
           cat > /tmp/recomp-dolphin-user/Config/Logger.ini <<'EOF'
           [Options]
           WriteToFile = True
@@ -186,10 +187,10 @@ jobs:
           EXI = True
           CORE = True
           EOF
-          echo "Dolphin version:"
-          dolphin-emu --version
-          echo "Dolphin command-line options:"
-          dolphin-emu --help
+          echo "Dolphin version (Qt offscreen):"
+          QT_QPA_PLATFORM=offscreen dolphin-emu --version
+          echo "Dolphin command-line options (Qt offscreen):"
+          QT_QPA_PLATFORM=offscreen dolphin-emu --help
           echo "Configured Logger.ini:"
           cat /tmp/recomp-dolphin-user/Config/Logger.ini
           set +e
