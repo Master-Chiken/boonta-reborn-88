@@ -16,6 +16,7 @@
 #include "n64_segmented_memory.h"
 #include "n64_recomp_memory_api.h"
 #include "rsp_dmem_endian.h"
+#include "rsp_vector_register_endian.h"
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
@@ -31,6 +32,7 @@ static uint8_t segmented_mod_ram[0x100] ATTRIBUTE_ALIGN(32);
 static uint8_t segmented_heap[0x200] ATTRIBUTE_ALIGN(32);
 static uint8_t segmented_rom[16] ATTRIBUTE_ALIGN(32);
 static uint8_t rsp_dmem_probe[N64_RSP_DMEM_SIZE] ATTRIBUTE_ALIGN(32);
+static uint64_t rsp_vector_words[2] ATTRIBUTE_ALIGN(16);
 
 typedef struct segmented_probe_callbacks {
     uint32_t mmio_address;
@@ -611,11 +613,76 @@ static __attribute__((noinline, noipa)) int run_rsp_dmem_probe(void) {
     return 1;
 }
 
+/*
+ * This validates the scalar byte/halfword lane contract of the pinned
+ * RSP::r128 storage layout. The two u64 words are deliberately distinct:
+ * u128[0] is the low 64-bit word and u128[1] is the high 64-bit word.
+ * It does not execute any RSP vector instruction or microcode.
+ */
+static __attribute__((noinline, noipa)) int run_rsp_vector_layout_probe(void) {
+    static const uint8_t expected_bytes[16] = {
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
+    };
+    static const uint16_t expected_halfwords[8] = {
+        0x0011, 0x2233, 0x4455, 0x6677,
+        0x8899, 0xAABB, 0xCCDD, 0xEEFF
+    };
+
+    rsp_vector_words[0] = UINT64_C(0x8899AABBCCDDEEFF);
+    rsp_vector_words[1] = UINT64_C(0x0011223344556677);
+
+    for (uint32_t i = 0; i < 16; ++i) {
+        CHECK_U32("RSP_VREG_BYTE",
+            n64_rsp_vector_load_u8(rsp_vector_words, i),
+            expected_bytes[i]);
+    }
+    for (uint32_t i = 0; i < 8; ++i) {
+        CHECK_U32("RSP_VREG_HALF",
+            n64_rsp_vector_load_u16(rsp_vector_words, i),
+            expected_halfwords[i]);
+    }
+
+    CHECK_U32("RSP_VREG_BYTE_LANE_0_INDEX",
+        n64_rsp_vector_byte_storage_index(0),
+        8);
+    CHECK_U32("RSP_VREG_BYTE_LANE_15_INDEX",
+        n64_rsp_vector_byte_storage_index(15),
+        7);
+    CHECK_U32("RSP_VREG_HALF_LANE_0_INDEX",
+        n64_rsp_vector_half_storage_index(0),
+        4);
+    CHECK_U32("RSP_VREG_HALF_LANE_7_INDEX",
+        n64_rsp_vector_half_storage_index(7),
+        3);
+
+    n64_rsp_vector_store_u8(rsp_vector_words, 0, 0xA0);
+    CHECK_U32("RSP_VREG_STORE_BYTE_HIGH",
+        n64_rsp_vector_load_u8(rsp_vector_words, 0), 0xA0);
+    CHECK_U64("RSP_VREG_STORE_BYTE_HIGH_WORD",
+        rsp_vector_words[1], UINT64_C(0xA011223344556677));
+
+    n64_rsp_vector_store_u8(rsp_vector_words, 15, 0x0F);
+    CHECK_U32("RSP_VREG_STORE_BYTE_LOW",
+        n64_rsp_vector_load_u8(rsp_vector_words, 15), 0x0F);
+    CHECK_U64("RSP_VREG_STORE_BYTE_LOW_WORD",
+        rsp_vector_words[0], UINT64_C(0x8899AABBCCDDEE0F));
+
+    n64_rsp_vector_store_u16(rsp_vector_words, 0, UINT16_C(0x1357));
+    CHECK_U32("RSP_VREG_STORE_HALF_HIGH",
+        n64_rsp_vector_load_u16(rsp_vector_words, 0), UINT32_C(0x1357));
+    n64_rsp_vector_store_u16(rsp_vector_words, 7, UINT16_C(0x2468));
+    CHECK_U32("RSP_VREG_STORE_HALF_LOW",
+        n64_rsp_vector_load_u16(rsp_vector_words, 7), UINT32_C(0x2468));
+
+    return 1;
+}
+
 int main(void) {
     set_probe_stage('S', 'T', 'A', 'R');
     probe_start_marker();
 
-    if (!run_memory_probe() || !run_segmented_probe() || !run_rsp_dmem_probe()) {
+    if (!run_memory_probe() || !run_segmented_probe() || !run_rsp_dmem_probe() || !run_rsp_vector_layout_probe()) {
         set_probe_stage('F', 'A', 'I', 'L');
         probe_fail_marker();
         for (;;) {
