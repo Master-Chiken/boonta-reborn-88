@@ -170,7 +170,7 @@ jobs:
           dol="$(find "$GITHUB_WORKSPACE/memory-probe-artifact" -type f -name recomp_memory_probe.dol -print -quit)"
           test -n "$dol"
           export HOME=/tmp/recomp-dolphin-home
-          mkdir -p "$HOME" /tmp/recomp-dolphin-user
+          mkdir -p "$HOME" /tmp/recomp-dolphin-user/Logs /tmp/recomp-dolphin-user/Config
           chmod 700 "$HOME"
           set +e
           timeout --signal=TERM --kill-after=5s 12s xvfb-run -a dolphin-emu \
@@ -181,7 +181,11 @@ jobs:
             -C Logger.Options.WriteToConsole=True \
             -C Logger.Options.Verbosity=4 \
             -C Logger.Logs.OSREPORT=True \
-            -C Logger.Logs.OSREPORT_HLE=False \
+            -C Logger.Logs.OSREPORT_HLE=True \
+            -C Logger.Logs.MASTER=True \
+            -C Logger.Logs.BOOT=True \
+            -C Logger.Logs.EXI=True \
+            -C Logger.Logs.CORE=True \
             -C Dolphin.Interface.UsePanicHandlers=False \
             -C Dolphin.Interface.ConfirmStop=False \
             > /tmp/recomp-dolphin-stdout.log 2>&1
@@ -200,9 +204,13 @@ jobs:
           cp "$dolphin_config" "$GITHUB_WORKSPACE/recomp-probe-logs/Dolphin.ini" 2>/dev/null || true
           combined_log=/tmp/recomp-dolphin-combined.log
           cat /tmp/recomp-dolphin-stdout.log "$log_file" 2>/dev/null > "$combined_log" || true
-          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:PASS" "$combined_log"; then
+          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:START" "$combined_log"; then
             find /tmp/recomp-dolphin-user -maxdepth 4 -type f -print
-            echo "::error::The native PowerPC memory probe did not report PASS (Dolphin status $dolphin_status)."
+            echo "::error::Dolphin did not capture the DOL's direct SYS_Report START marker (status $dolphin_status)."
+            exit 1
+          fi
+          if ! grep -Fq "RECOMP_PPC_MEMORY_PROBE:PASS" "$combined_log"; then
+            echo "::error::The native PowerPC memory probe started but did not report PASS (Dolphin status $dolphin_status)."
             exit 1
           fi
           if grep -Fq "RECOMP_PPC_MEMORY_PROBE:FAIL" "$combined_log"; then
