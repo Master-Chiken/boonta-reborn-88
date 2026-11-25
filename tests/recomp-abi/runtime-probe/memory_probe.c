@@ -51,15 +51,24 @@ static void set_failure_label(const char *label) {
  * The breakpoint stops Dolphin at a known guest PC, avoiding unreliable
  * host Ctrl-C polling and remote reads of DOL data addresses.
  */
-__attribute__((noinline, used)) void probe_start_marker(void) {
+/*
+ * Distinct volatile stores prevent the linker/compiler from folding the
+ * three noinline breakpoint targets into identical code addresses.
+ */
+volatile uint32_t g_probe_marker_sink __attribute__((used, aligned(4))) = 0;
+
+__attribute__((noinline, used, externally_visible)) void probe_start_marker(void) {
+    g_probe_marker_sink = UINT32_C(0x53544152); /* STAR */
     __asm__ volatile("" ::: "memory");
 }
 
-__attribute__((noinline, used)) void probe_pass_marker(void) {
+__attribute__((noinline, used, externally_visible)) void probe_pass_marker(void) {
+    g_probe_marker_sink = UINT32_C(0x50415353); /* PASS */
     __asm__ volatile("" ::: "memory");
 }
 
-__attribute__((noinline, used)) void probe_fail_marker(void) {
+__attribute__((noinline, used, externally_visible)) void probe_fail_marker(void) {
+    g_probe_marker_sink = UINT32_C(0x4641494C); /* FAIL */
     __asm__ volatile("" ::: "memory");
 }
 
