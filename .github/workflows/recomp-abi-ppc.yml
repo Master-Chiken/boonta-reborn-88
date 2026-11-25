@@ -159,7 +159,12 @@ jobs:
       contents: read
       actions: read
     steps:
-      - name: Download the GameCube DOL
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the GameCube DOL and symbols
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned actions/download-artifact v4.3.0
         with:
           name: recomp-powerpc-memory-probe
