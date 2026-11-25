@@ -139,7 +139,7 @@ jobs:
           printf '%s\n' "$nm_output" | grep -E 'probe_(start|pass|fail)_marker|g_probe_' || true
           for symbol in g_probe_stage g_probe_failure_code g_probe_failure_label g_probe_failure_actual g_probe_failure_expected probe_start_marker probe_pass_marker probe_fail_marker; do
             echo "Resolving required symbol: $symbol"
-            address="$(printf '%s\n' "$nm_output" | awk -v wanted="$symbol" '$NF == wanted { print $(NF-1); found = 1 } END { if (!found) exit 1 }')" || {
+            address="$(printf '%s\n' "$nm_output" | awk -v wanted="$symbol" '$NF == wanted { print $(NF-2); found = 1 } END { if (!found) exit 1 }')" || {
               echo "::error::Required symbol $symbol is missing from recomp_memory_probe.elf"
               exit 1
             }
