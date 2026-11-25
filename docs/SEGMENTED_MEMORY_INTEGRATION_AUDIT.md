@@ -123,13 +123,43 @@ The current `do_swl/swr/sdl/sdr` helpers perform read/modify/write operations us
 
 The reference model currently implements the translation and callback semantics, but not yet this production C API, the generator patch, a fault policy, or real PI/MMIO device models. Those remain separate engineering gates.
 
+## Additional runtime consumers found in the pinned tree
+
+The following files were inspected at the same immutable N64ModernRuntime revision after the first audit. These are further migration obligations; the previous list was not exhaustive.
+
+### Mod configuration strings
+
+`librecomp/src/mod_config_api.cpp`:
+- `return_string()` calls `recomp::alloc(rdram, size)`, subtracts the returned host pointer from `rdram`, and adds the N64 base to synthesize a guest address.
+- It copies the returned string through `MEM_B`.
+- `recomp_free_config_string()` converts the guest pointer back into `rdram + offset` before calling `recomp::free`.
+
+The pointer subtraction is invalid for an opaque context token. Use the allocator's host-to-guest reverse map, typed string writes (or a checked bulk write), and heap-only free validation.
+
+### RSP task loading and DMEM
+
+`librecomp/src/sp.cpp` and `librecomp/src/rsp.cpp` are a separate raw-memory path:
+- `osSpTaskStartGo_recomp()` obtains `OSTask*` through `TO_PTR`, optionally dumps microcode by reading `rdram[i ^ 3]`, then calls `ultramodern::submit_rsp_task(rdram, task)`.
+- `recomp::rsp::run_task()` calls `dma_rdram_to_dmem(rdram, ...)` to copy microcode data into DMEM, then calls the recompiled RSP ucode with `rdram`.
+
+The RSP adapter must read RDRAM via checked spans or a bounded copy API before the ucode is executed. The microcode dump must use the same path. It must not index the opaque token or assume all source bytes live in the first host buffer. DMEM/IMEM remain separate fixed-size RSP memory windows.
+
+### libultra / controller / flash helpers
+
+- `librecomp/src/cont.cpp` resolves message queues, controller status and pad structures through `_arg<T*>`/ `TO_PTR`, and writes controller results through `MEM_H/MEM_B`. This should work with the RAM-only object resolver plus typed writes after the libultra structure helpers are migrated.
+- `librecomp/src/flash.cpp` resolves `OSIoMesg*` through `TO_PTR`, reads/writes guest buffers through `MEM_B`, and forwards `rdram` to save read/write routines. Those save helpers need a context-aware range copy API and must not retain a raw byte-array assumption.
+- `librecomp/src/ai.cpp` passes `rdram` and guest addresses to `ultramodern::queue_audio_buffer()`. That function and any deferred audio consumer must be checked to ensure it copies guest bytes while the memory context is valid, rather than retaining an opaque handle as a raw array.
+- `librecomp/src/vi.cpp` forwards the memory argument to VI helpers. Their implementation and framebuffer pointer handling must use checked guest-to-host conversion where the framebuffer lies in RDRAM; device state itself must not be a raw MMIO pointer.
+
+The current inspection is a targeted static audit of the named files, not a complete proof that every `rdram` consumer in all upstream translation units has been enumerated.
+
 ## Next validation gates
 
 - [x] Host tests for the logical 8 MiB RDRAM / 8 MiB extension ranges, aliases, bounds, callbacks and reverse mapping.
 - [x] PPC/Dolphin probe of bounded discontiguous RDRAM, extension, mod, heap, MMIO, ROM and reverse-mapping behavior (run #59).
-- [x] Host tests for the RAM-only `TO_PTR` replacement: RDRAM, KSEG1, extension, mod and heap produce host pointers; MMIO/ROM are refused; boundary-crossing requests are rejected (run #63 host job).
-- [ ] Dolphin PPC probe of the new RAM-only `TO_PTR` replacement tests (run [#63](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45686484362) is compiling the revised DOL; emulator result pending).
-- [ ] Implement an opaque memory-context contract for runtime helpers while keeping generated code's ABI under review.
+- [x] Host tests for the RAM-only `TO_PTR` replacement and opaque memory API: RDRAM, KSEG1, extension, mod and heap produce host pointers; MMIO/ROM are refused; typed scalar loads/stores and bounds/errors are checked (run #65).
+- [x] Dolphin PPC execution of the opaque `uint8_t* rdram` context token, typed read/write API and RAM-only `TO_PTR` adapter, alongside the segmented mapping tests (run [#65](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687258977)).
+- [ ] Integrate the opaque context into the runtime helpers; do not pass it into current upstream code before the raw-pointer consumers listed above are migrated.
 - [ ] Migrate generated scalar/unaligned stores to callback-capable typed writes.
 - [ ] Port the heap and Racer-specific direct-access call sites.
 - [ ] Add real PI/MMIO device models and integration tests.
