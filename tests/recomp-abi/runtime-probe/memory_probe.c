@@ -30,14 +30,18 @@ void *rdram_bad_access(uint64_t n64_addr) {
 }
 
 static int fail_u32(const char *label, uint32_t actual, uint32_t expected) {
-    fprintf(stderr, "RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%08x:expected=%08x\n",
+    SYS_Report("RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%08x:expected=%08x\\r\\n",
+               label, (unsigned)actual, (unsigned)expected);
+    fprintf(stderr, "RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%08x:expected=%08x\\n",
             label, (unsigned)actual, (unsigned)expected);
     return 0;
 }
 
 static int fail_u64(const char *label, uint64_t actual, uint64_t expected) {
+    SYS_Report("RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%016llx:expected=%016llx\\r\\n",
+               label, (unsigned long long)actual, (unsigned long long)expected);
     fprintf(stderr,
-            "RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%016llx:expected=%016llx\n",
+            "RECOMP_PPC_MEMORY_PROBE:FAIL:%s:actual=%016llx:expected=%016llx\\n",
             label, (unsigned long long)actual, (unsigned long long)expected);
     return 0;
 }
@@ -173,12 +177,14 @@ static int run_memory_probe(void) {
 
 int main(void) {
     SYS_STDIO_Report(false);
+    SYS_Report("RECOMP_PPC_MEMORY_PROBE:START\\r\\n");
 
     if (!run_memory_probe()) {
         return 1;
     }
 
-    fprintf(stderr, "RECOMP_PPC_MEMORY_PROBE:PASS\n");
+    SYS_Report("RECOMP_PPC_MEMORY_PROBE:PASS\\r\\n");
+    fprintf(stderr, "RECOMP_PPC_MEMORY_PROBE:PASS\\n");
 
     /* Leave the DOL running long enough for Dolphin CI to read its OSReport log. */
     for (;;) {
