@@ -8,6 +8,7 @@
  */
 #include <gccore.h>
 #include <ogc/system.h>
+#include <ogc/exi.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -18,6 +19,32 @@
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
+
+/*
+ * Emit an OSReport line directly over the Dolphin debug UART. This mirrors
+ * libogc's SYS_Report transport but deliberately omits its retail-console
+ * presence check, so the probe can distinguish that guard from an EXI/UART
+ * problem. The message must end in CR for Dolphin's IPL UART logger.
+ */
+static void direct_osreport(const char *message) {
+    u32 command = UINT32_C(0xA0010000);
+    if (!EXI_Lock(EXI_CHANNEL_0, EXI_DEVICE_1, NULL)) {
+        return;
+    }
+    if (!EXI_Select(EXI_CHANNEL_0, EXI_DEVICE_1, EXI_SPEED8MHZ)) {
+        EXI_Unlock(EXI_CHANNEL_0);
+        return;
+    }
+
+    const int command_started = EXI_Imm(EXI_CHANNEL_0, &command, 4, EXI_WRITE, NULL);
+    const int command_completed = command_started && EXI_Sync(EXI_CHANNEL_0);
+    if (command_completed) {
+        EXI_ImmEx(EXI_CHANNEL_0, (void *)message, (u32)strlen(message), EXI_WRITE);
+    }
+
+    EXI_Deselect(EXI_CHANNEL_0);
+    EXI_Unlock(EXI_CHANNEL_0);
+}
 
 void *rdram_mmio_write(uint32_t offset) {
     (void)offset;
@@ -204,6 +231,7 @@ static int run_memory_probe(void) {
 }
 
 int main(void) {
+    direct_osreport("RECOMP_PPC_MEMORY_PROBE:START\\r");
     SYS_STDIO_Report(false);
     SYS_Report("RECOMP_PPC_MEMORY_PROBE:START\\r\\n");
 
@@ -211,6 +239,7 @@ int main(void) {
         return 1;
     }
 
+    direct_osreport("RECOMP_PPC_MEMORY_PROBE:PASS\\r");
     SYS_Report("RECOMP_PPC_MEMORY_PROBE:PASS\\r\\n");
     fprintf(stderr, "RECOMP_PPC_MEMORY_PROBE:PASS\\n");
 
