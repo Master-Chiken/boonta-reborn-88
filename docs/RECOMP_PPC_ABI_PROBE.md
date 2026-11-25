@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map execution, opaque-context/typed-access execution, and Dolphin GDB probes all pass** in runs [#59](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45685312494), [#65](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687258977), [#66](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45687846361), and the documentation recheck [#67](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45688266530). Latest source commit: `1a9a743e1075c789602833d8d79432edb7793e1a`. This is synthetic GameCube DOL evidence under Dolphin for the enumerated helpers and reference API only; the upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full runtime, GX renderer, RSP endian path, audio or controller integration has been validated.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map execution, opaque-context/typed-access execution, and RSP DMEM scalar execution all pass** in runs [#59](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45685312494), [#65](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45687258977), [#66](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45687846361), [#67](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45688266530), and [#86](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45689096458). Current source commit: `475436e9f2bce3e11643c72df0cf45b11b33c2bb`. This is synthetic GameCube DOL evidence under Dolphin for the enumerated reference helpers only; the upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full runtime, GX renderer, RSP vector microcode, audio or controller integration has been validated.
 
 ## Question
 
@@ -258,6 +258,14 @@ Host run [#65](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45
 GDB again stopped at `probe_start_marker` (PC `0x80003488`) then `probe_pass_marker` (PC `0x8000349c`); `probe_fail_marker` was not reached. The CI host also passed the little-/big-endian lane tests, segmented memory API tests, and GDB RSP unit tests; the pinned header cross-compiled for GameCube and Wii and the standalone DOL linked and validated.
 
 **Important limit:** the opaque context is still a reference adapter only. Current upstream `TO_PTR`, heap, RSP, libultra and Racer callbacks continue to assume `rdram` is a real byte-array base. Do not pass the opaque token into the unmodified runtime.
+
+### RSP DMEM scalar endian reference — run 86
+
+The audit now includes `tests/recomp-abi/rsp_dmem_endian.h`, a clean-room reference for the 4 KiB RSP DMEM host-byte layout. It preserves the current little-endian word-swizzled layout and selects natural byte lanes on big-endian PowerPC. It tests signed/unsigned byte and halfword reads, word reads/writes, low-half stores, offsets and address wraparound.
+
+Host tests and the same scalar DMEM vectors in the GameCube DOL both passed in workflow run [#86](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45689096458). Dolphin GDB stopped at `probe_start_marker` (PC `0x80003494`) and then `probe_pass_marker` (PC `0x800034a8`); `probe_fail_marker` was not reached.
+
+This is not a test of the upstream RSP vector register implementation. The pinned `rsp_vu.hpp` `RSP::r128` type indexes vector bytes as `15 - index` and 16-bit elements as `7 - index`; the RSP VU state also includes fields marked little-endian. Those representations need a separate PowerPC audit and vector-level tests. Likewise, the RSP microcode DMA helpers and the SP debug dump still need to use the opaque memory context rather than raw `rdram` byte indexing.
 
 ### Still not integrated or proven
 
