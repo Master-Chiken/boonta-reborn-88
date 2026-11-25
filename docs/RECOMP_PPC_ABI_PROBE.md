@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. Host tests, GameCube/Wii cross-compilation and DOL linking pass. Dolphin run #28 reached the GDB test but the server port was not opened because the command-line config used `Main.General.GDBPort`; Dolphin's config parser requires the public system name `Dolphin.General.GDBPort`. That root cause is fixed in the current branch. The probe now also checks signed byte/halfword/word results across the full 64-bit `gpr` and records actual/expected values on failure. The corrected GDB run is pending.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback and target-endian byte-lane adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, and the synthetic PowerPC memory probe under Dolphin all pass** in run [45681454118](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118), commit `316ef641238e309f518e3eef9cddd81f0f0397b4`. This is emulated GameCube DOL evidence for the listed helper operations only; no original Racer generated code, full runtime, GX renderer, physical Wii, or physical GameCube has been tested.
 
 ## Question
 
@@ -85,18 +85,20 @@ A green workflow means:
 1. host tests pass for the big-endian byte-layout reference helpers;
 2. host tests pass for both little-endian and forced-big-endian lane selection;
 3. host tests pass for the portable 64x64-to-128 multiply fallback against a 128-bit reference;
-4. the pinned N64Recomp header, with only the documented multiply and lane-selector changes applied in the ephemeral workspace, compiles for GameCube and Wii;
-5. the two resulting object files have the expected ELF32, big-endian PowerPC identity.
+4. the Dolphin GDB RSP client passes its host protocol tests;
+5. the pinned N64Recomp header, with only the documented multiply and lane-selector changes applied in the ephemeral workspace, compiles for GameCube and Wii;
+6. the two resulting object files have the expected ELF32, big-endian PowerPC identity;
+7. the standalone synthetic GameCube DOL reaches its `PASS` marker under Dolphin after exercising the enumerated scalar and unaligned memory helpers.
+
+Run [45681454118](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118) reached `START` and then `PASS`. The diagnostic run before the LWR reference-vector correction reached `FAIL` at `LWR`; the actual value was `0xFFFFFFFFAABBCC11`, and the test's former zero-extended expected value was incorrect for the N64Recomp MIPS64 helper semantics. The test vector was corrected; the helper implementation was not changed.
 
 It does **not** mean that:
 
 - the unmodified N64Recomp header compiles unchanged (the observed toolchain explicitly rejects its `__int128` path);
-- a PPC object was executed on hardware or an emulator;
-- a DOL or ELF was linked against libogc;
-- generated Racer game functions were compiled;
-- the full runtime, bounded RDRAM map, scheduler, graphics, audio or input works;
-- the actual `MEM_*` and unaligned MIPS load/store semantics have been executed on big-endian PowerPC; the current CI checks compile-time selection and host reference models only;
-- the multiplication fallback has been validated through all MIPS instruction paths;
+- an actual GameCube or Wii executed the DOL; the execution evidence is Dolphin emulation;
+- generated Racer game functions were compiled or run;
+- the full N64 runtime, segmented RDRAM map, PI/ROM reads, scheduler, GX graphics, audio or input works;
+- the probe proves every MIPS instruction path beyond the explicit test vectors;
 - a ROM or any ROM-derived content was used.
 
 No ROM, generated functions, extracted assets, emulator binary or APK is part of this probe.
@@ -159,6 +161,31 @@ Commit: `6cf119f8406b613aafbf5701d48141db7f1c2995`
 
 The next workflow revision writes the expected `Logger.ini` settings explicitly before launch, prints Dolphin's version and CLI help, and allows a longer bounded run. This is a logging/launch diagnostic, not a relaxation of the test's acceptance criteria.
 
-## Next gate
+## Successful synthetic execution under Dolphin — run 45681454118
 
-Obtain a captured DOL `START` marker and then `PASS` from Dolphin before claiming PPC memory execution. A `FAIL` marker must be traced to its exact operation and corrected. If no marker appears again, isolate Dolphin's DOL launch and OSReport path before changing the memory helpers. After successful emulated execution, test a small generated-code sample; do not start the full Racer runtime or GX renderer based on compile-only evidence.
+- Workflow: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45681454118
+- Tested commit: `316ef641238e309f518e3eef9cddd81f0f0397b4`
+- The host memory-model job passed.
+- The pinned N64Recomp header compiled for both `-mogc` and `-mrvl`.
+- A standalone GameCube DOL was linked and passed structural validation.
+- Dolphin 2512 reached the guest `probe_start_marker`, then `probe_pass_marker`. The guest test therefore ran to completion under Dolphin's GameCube emulation.
+- The probe covers signed and unsigned byte/halfword/word access, doubleword access, SD/LD, and every byte lane of LWL/LWR/SWL/SWR/LDL/LDR/SDL/SDR with synthetic memory only.
+
+The first DOL execution exposed a test-oracle error for LWR sign extension. The guest returned `0xFFFFFFFFAABBCC11`; the old expected value was `0x00000000AABBCC11`. The reference vector was corrected to match the MIPS64 helper's sign-extended 64-bit result, without modifying the N64Recomp memory helper. The corrected run reached `PASS`.
+
+The workflow now also runs the four host unit tests for the GDB RSP client. Those were added after run 45681454118, so the next CI run is the first one that will validate this extra test step.
+
+## Next gate — segmented N64 memory model
+
+The ABI/memory-helper gate is now **PASS in Dolphin**, but this does not yet run original Racer code. The next engineering task is a bounded, host-testable memory adapter to replace the desktop runtime's contiguous 512 MiB RDRAM allocation and 4 GiB virtual reservation.
+
+The adapter must:
+
+1. translate N64 virtual addresses into checked, bounded backing regions instead of assuming `rdram + offset` is valid for the full 512 MiB range;
+2. model the N64 cached/uncached aliases deliberately, with host tests for valid and invalid ranges;
+3. route MMIO, PI and ROM reads through explicit callbacks rather than returning arbitrary pointers;
+4. keep the original N64 virtual address semantics separate from host pointers;
+5. provide a reverse mapping for heap pointers returned by `recomp_alloc`, because the upstream heap helper currently calculates an N64 address by subtracting the single contiguous RDRAM base;
+6. keep Wii memory constraints explicit: 24 MiB MEM1 + 64 MiB MEM2 on Wii, not a hypothetical contiguous 512 MiB region.
+
+Do not begin the full runtime or GX renderer until this memory adapter has host tests and a small PPC/Dolphin proof. The next adapter should preserve the pinned upstream behavior where possible, with every target-specific divergence covered by synthetic tests.
