@@ -134,11 +134,19 @@ jobs:
           python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/validate_artifacts.py" recomp_memory_probe.dol recomp_memory_probe.elf
           symbols_file=recomp_memory_probe.symbols
           : > "$symbols_file"
+          nm_output="$(powerpc-eabi-nm -n recomp_memory_probe.elf)"
+          echo "Probe marker symbols reported by nm:"
+          printf '%s\n' "$nm_output" | grep -E 'probe_(start|pass|fail)_marker|g_probe_' || true
           for symbol in g_probe_stage g_probe_failure_code g_probe_failure_label g_probe_failure_actual g_probe_failure_expected probe_start_marker probe_pass_marker probe_fail_marker; do
-            address="$(powerpc-eabi-nm -n recomp_memory_probe.elf | awk -v wanted="$symbol" '$3 == wanted { print $1; found = 1 } END { if (!found) exit 1 }')"
+            echo "Resolving required symbol: $symbol"
+            address="$(printf '%s\n' "$nm_output" | awk -v wanted="$symbol" '$NF == wanted { print $(NF-1); found = 1 } END { if (!found) exit 1 }')" || {
+              echo "::error::Required symbol $symbol is missing from recomp_memory_probe.elf"
+              exit 1
+            }
+            test -n "$address"
             printf '%s %s\n' "$symbol" "$address" >> "$symbols_file"
           done
-          powerpc-eabi-nm -n recomp_memory_probe.elf | awk 'NF == 3 && $2 ~ /^[tT]$/ { print $3, $1 }' >> "$symbols_file"
+          printf '%s\n' "$nm_output" | awk 'NF >= 3 && $NF != "" && $(NF-1) ~ /^[tT]$/ { print $NF, $(NF-2) }' >> "$symbols_file"
           cat "$symbols_file"
 
       - name: Upload the native PowerPC memory-probe DOL and symbols
