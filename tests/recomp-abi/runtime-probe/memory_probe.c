@@ -15,6 +15,7 @@
 #include "n64_memory_be.h"
 #include "n64_segmented_memory.h"
 #include "n64_recomp_memory_api.h"
+#include "rsp_dmem_endian.h"
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
@@ -29,6 +30,7 @@ static uint8_t segmented_extended[0x2000] ATTRIBUTE_ALIGN(32);
 static uint8_t segmented_mod_ram[0x100] ATTRIBUTE_ALIGN(32);
 static uint8_t segmented_heap[0x200] ATTRIBUTE_ALIGN(32);
 static uint8_t segmented_rom[16] ATTRIBUTE_ALIGN(32);
+static uint8_t rsp_dmem_probe[N64_RSP_DMEM_SIZE] ATTRIBUTE_ALIGN(32);
 
 typedef struct segmented_probe_callbacks {
     uint32_t mmio_address;
@@ -546,11 +548,74 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     return 1;
 }
 
+static __attribute__((noinline, noipa)) int run_rsp_dmem_probe(void) {
+    static const uint8_t expected_word[4] = {0x11, 0x22, 0x33, 0x44};
+    memset(rsp_dmem_probe, 0, sizeof(rsp_dmem_probe));
+
+    for (uint32_t i = 0; i < 4; ++i) {
+        n64_rsp_dmem_store_u8(rsp_dmem_probe, 0, 0x100 + i,
+                              expected_word[i]);
+    }
+
+    CHECK_U32("RSP_DMEM_BYTE_0",
+        n64_rsp_dmem_load_u8(rsp_dmem_probe, 0, 0x100), 0x11);
+    CHECK_U32("RSP_DMEM_BYTE_3",
+        n64_rsp_dmem_load_u8(rsp_dmem_probe, 0, 0x103), 0x44);
+    CHECK_U32("RSP_DMEM_WORD",
+        n64_rsp_dmem_load_u32(rsp_dmem_probe, 0, 0x100),
+        UINT32_C(0x11223344));
+    CHECK_U32("RSP_DMEM_HALF_HI",
+        n64_rsp_dmem_load_u16(rsp_dmem_probe, 0, 0x100),
+        UINT32_C(0x1122));
+    CHECK_U32("RSP_DMEM_HALF_LO",
+        n64_rsp_dmem_load_u16(rsp_dmem_probe, 0, 0x102),
+        UINT32_C(0x3344));
+
+    n64_rsp_dmem_store_u8(rsp_dmem_probe, 0, 0x200, 0x80);
+    n64_rsp_dmem_store_u8(rsp_dmem_probe, 0, 0x201, 0x01);
+    CHECK_U32("RSP_DMEM_SIGNED_BYTE",
+        (uint32_t)(int32_t)n64_rsp_dmem_load_s8(rsp_dmem_probe, 0, 0x200),
+        UINT32_C(0xFFFFFF80));
+    CHECK_U32("RSP_DMEM_SIGNED_HALF",
+        (uint32_t)n64_rsp_dmem_load_s16(rsp_dmem_probe, 0, 0x200),
+        UINT32_C(0xFFFF8001));
+
+    n64_rsp_dmem_store_u16_low(rsp_dmem_probe, 0, 0x202,
+                               UINT32_C(0xA1B2C3D4));
+    CHECK_U32("RSP_DMEM_HALF_STORE_BYTE_0",
+        n64_rsp_dmem_load_u8(rsp_dmem_probe, 0, 0x202), 0xC3);
+    CHECK_U32("RSP_DMEM_HALF_STORE_BYTE_1",
+        n64_rsp_dmem_load_u8(rsp_dmem_probe, 0, 0x203), 0xD4);
+    CHECK_U32("RSP_DMEM_HALF_STORE_VALUE",
+        n64_rsp_dmem_load_u16(rsp_dmem_probe, 0, 0x202),
+        UINT32_C(0xC3D4));
+
+    n64_rsp_dmem_store_u32(rsp_dmem_probe, 0x10, 0x300,
+                           UINT32_C(0xDEADBEEF));
+    CHECK_U32("RSP_DMEM_WORD_STORE",
+        n64_rsp_dmem_load_u32(rsp_dmem_probe, 0x10, 0x300),
+        UINT32_C(0xDEADBEEF));
+
+    n64_rsp_dmem_store_u8(rsp_dmem_probe, 0, 0xFFE, 0x11);
+    n64_rsp_dmem_store_u8(rsp_dmem_probe, 0, 0xFFF, 0x22);
+    n64_rsp_dmem_store_u8(rsp_dmem_probe, 0, 0x1000, 0x33);
+    n64_rsp_dmem_store_u8(rsp_dmem_probe, 0, 0x1001, 0x44);
+    CHECK_U32("RSP_DMEM_WRAP_BYTE_0",
+        n64_rsp_dmem_load_u8(rsp_dmem_probe, 0, 0x000), 0x33);
+    CHECK_U32("RSP_DMEM_WRAP_BYTE_1",
+        n64_rsp_dmem_load_u8(rsp_dmem_probe, 0, 0x001), 0x44);
+    CHECK_U32("RSP_DMEM_WRAP_WORD",
+        n64_rsp_dmem_load_u32(rsp_dmem_probe, 0, 0xFFE),
+        UINT32_C(0x11223344));
+
+    return 1;
+}
+
 int main(void) {
     set_probe_stage('S', 'T', 'A', 'R');
     probe_start_marker();
 
-    if (!run_memory_probe() || !run_segmented_probe()) {
+    if (!run_memory_probe() || !run_segmented_probe() || !run_rsp_dmem_probe()) {
         set_probe_stage('F', 'A', 'I', 'L');
         probe_fail_marker();
         for (;;) {
