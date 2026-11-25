@@ -43,7 +43,7 @@ The patcher rewrites only the two byte and two halfword lane expressions in the 
 
 `tests/recomp-abi/test_ppc_mul64.c` checks edge cases and 10,000 deterministic operand pairs. On host builds where `__int128` is available, the result is compared with a compiler-provided 128-bit reference. The compatibility implementation itself does not use `__int128`.
 
-`tests/recomp-abi/patch_recomp_header_for_ppc.py` applies a deliberately narrow patch to the ephemeral copy of the pinned header: it replaces only the upstream conditional `DMULT/DMULTU` block with an include of the local compatibility header. All other declarations and code in `recomp.h` remain from the exact upstream commit. The patcher checks unique anchor strings and stops if the source layout differs.
+`tests/recomp-abi/patch_recomp_header_for_ppc.py` applies two deliberately narrow changes to the ephemeral copy of the pinned header: it replaces the upstream conditional `DMULT/DMULTU` block with the local compatibility header, and it routes the two byte and two halfword lane adjustments through the target-endian selector. It checks that each anchor and expression occurs exactly the expected number of times and stops if the source layout differs. All other declarations and code in `recomp.h` remain from the exact upstream commit.
 
 This is a feasibility shim for the experiment, not a claim that the upstream project has accepted this patch. Before any production integration, review the arithmetic independently and test it through the actual generated instructions/contexts.
 
@@ -62,25 +62,31 @@ The workflow compiles the same source twice: once with `-mogc` and once with `-m
 
 `tests/recomp-abi/n64_memory_be.h` is a separate clean-room reference model for N64 big-endian byte layout. Its host tests cover 8/16/32/64-bit reads and writes, unaligned reads, and signed scalar extension. It is not a production replacement for N64Recomp's memory macros.
 
-## Separate, unresolved endian issue
+## Target-endian memory adapter: compile-time evidence only
 
-The pinned upstream header applies XOR lane adjustments unconditionally:
+The pinned upstream header uses little-endian host lane adjustments for:
+- `MEM_B` and `MEM_BU`: `address ^ 3`;
+- `MEM_H` and `MEM_HU`: `address ^ 2`.
 
-- `MEM_B` and `MEM_BU` use `address ^ 3`;
-- `MEM_H` and `MEM_HU` use `address ^ 2`.
+The local adapter now selects:
+- **little-endian host:** retain those XOR adjustments unchanged;
+- **big-endian host:** use the N64 address directly for byte and halfword accesses.
 
-Those are the little-endian-host lane adjustments. A successful big-endian PowerPC compile does **not** prove that these accesses are semantically correct on Broadway. The compile probe only proves that the syntax, types, attributes and helper operations compile after the explicit multiply shim.
+`MEM_W` already dereferences the aligned address directly and is not changed. The `SD`/`LD` word order is also not changed; on a big-endian target its high word at offset 0 and low word at offset 4 should match N64 byte layout, but this still needs runtime verification.
 
-A separate target-specific memory-access adapter is still required, preserving the little-endian behavior for Android/Windows. It must test byte, halfword, word, doubleword and unaligned load/store behavior on a big-endian execution target.
+The PowerPC compile probe checks that the compiler selects the big-endian branch and that its byte/halfword lane transforms are identity operations. A host test checks the selector in both little- and forced-big-endian modes. These tests verify the selector and preprocessor wiring, **not actual PPC memory dereferences**.
+
+A native big-endian execution test remains necessary for byte, halfword, word, doubleword, and unaligned MIPS load/store behavior, including `LWL/LWR/SWL/SWR/LDL/LDR/SDL/SDR`. Do not claim these operations are fully correct until that test runs on an actual PowerPC target or a suitable big-endian emulator.
 
 ## Acceptance and limits
 
 A green workflow means:
 
 1. host tests pass for the big-endian byte-layout reference helpers;
-2. host tests pass for the portable 64x64-to-128 multiply fallback against a 128-bit reference;
-3. the pinned N64Recomp header, with only its `DMULT/DMULTU` block replaced in the ephemeral workspace, compiles for GameCube and Wii;
-4. the two resulting object files have the expected ELF32, big-endian PowerPC identity.
+2. host tests pass for both little-endian and forced-big-endian lane selection;
+3. host tests pass for the portable 64x64-to-128 multiply fallback against a 128-bit reference;
+4. the pinned N64Recomp header, with only the documented multiply and lane-selector changes applied in the ephemeral workspace, compiles for GameCube and Wii;
+5. the two resulting object files have the expected ELF32, big-endian PowerPC identity.
 
 It does **not** mean that:
 
@@ -89,7 +95,7 @@ It does **not** mean that:
 - a DOL or ELF was linked against libogc;
 - generated Racer game functions were compiled;
 - the full runtime, bounded RDRAM map, scheduler, graphics, audio or input works;
-- the byte/halfword semantics have been executed on actual big-endian PowerPC; the current CI checks compile-time selection and the host reference model only;
+- the actual `MEM_*` and unaligned MIPS load/store semantics have been executed on big-endian PowerPC; the current CI checks compile-time selection and host reference models only;
 - the multiplication fallback has been validated through all MIPS instruction paths;
 - a ROM or any ROM-derived content was used.
 
@@ -97,4 +103,4 @@ No ROM, generated functions, extracted assets, emulator binary or APK is part of
 
 ## Next gate
 
-After the CI passes, isolate the N64 target-endian memory adapter and prove it with actual PPC execution (preferably a tiny DOL/ELF and a controlled test on Dolphin, then real hardware). Only then attempt a small sample of locally generated C. Do not start the full Racer runtime or GX renderer based on compile-only evidence.
+After the CI passes, prove the patched memory macros with actual PPC execution (preferably a tiny DOL/ELF and a controlled test on Dolphin, then real hardware). Only then attempt a small sample of locally generated C. Do not start the full Racer runtime or GX renderer based on compile-only evidence.
