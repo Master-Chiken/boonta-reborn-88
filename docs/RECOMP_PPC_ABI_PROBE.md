@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. Host tests, GameCube/Wii cross-compilation and the standalone GameCube DOL link have passed. Dolphin execution is still unverified: the first instrumented run launched the emulator process but captured no DOL `START` marker and produced an empty OSReport log.
+Status: the original header's native `__int128` path is unsupported by this devkitPPC target; a local multiply fallback and target-endian byte-lane adapter are used for the probe. Host tests, GameCube/Wii cross-compilation and the standalone GameCube DOL link have passed. Dolphin NoGUI confirms that its GameCube core is initialized and the DOL boot is requested, but UART markers are not emitted. The current CI revision replaces UART-based success detection with a GDB-readable stage marker; its execution result is pending.
 
 ## Question
 
@@ -100,6 +100,38 @@ It does **not** mean that:
 - a ROM or any ROM-derived content was used.
 
 No ROM, generated functions, extracted assets, emulator binary or APK is part of this probe.
+
+## Dolphin NoGUI runs 21–22: boot requested, main still unproven
+
+- Run 21: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45670641463  
+  Commit: `81362a0d7a7a854a70950a30745b038bcdb9acb6`
+- Run 22: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45671113685  
+  Commit: `cfcef7c23cc1db952d3124ea6387222a333401f0`
+
+Both runs passed host tests, the GameCube/Wii cross-compiles and the DOL build/structural validation. Dolphin NoGUI 2512 produced these startup records:
+
+- GameCube core startup was logged.
+- EXI channel 0, device 1 was assigned the IPL MaskROM device.
+- `Booting from executable: .../recomp_memory_probe.dol` was logged.
+- Neither libogc `SYS_Report` nor a direct libogc EXI transfer produced the expected `START` marker before the 25-second timeout.
+
+These runs confirm that Dolphin initializes a GameCube core and requests the DOL boot. They do **not** prove that the DOL reached `main()`, nor that any PowerPC memory helper executed.
+
+## GDB-visible DOL execution marker
+
+The current probe exports three symbols from its ELF:
+- `g_probe_stage`: four ASCII bytes, initially `INIT`, set to `STAR` at the first instruction of `main()`, then `FAIL` or `PASS`;
+- `g_probe_failure_code`: identifies whether a 32-bit or 64-bit assertion failed;
+- `g_probe_failure_label`: the label of the first failed assertion.
+
+The cross-compile job extracts their guest addresses with `powerpc-eabi-nm` and uploads those addresses alongside the DOL. The Dolphin job checks out the Python RSP client, enables Dolphin's built-in GDB server on localhost port 55000, lets the guest run, interrupts it, and reads the marker bytes through the GDB remote memory-read command. This avoids relying on the EXI debug UART and gives a direct memory observation of the guest program state.
+
+Acceptance remains strict:
+- `PASS` proves the DOL reached the end of the enumerated memory tests under Dolphin's GameCube emulation.
+- `FAIL` identifies a failed scalar-width family and label; investigate before claiming compatibility.
+- `STAR`, `INIT`, a GDB timeout, or any other state is **not** a successful memory test.
+
+This is emulator evidence only, not a physical GameCube or Wii hardware test, and it does not validate the full N64 runtime, renderer, scheduler, audio or input integration.
 
 ## Dolphin run 16: no execution evidence yet
 
