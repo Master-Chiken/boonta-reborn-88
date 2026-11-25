@@ -172,8 +172,28 @@ jobs:
           export HOME=/tmp/recomp-dolphin-home
           mkdir -p "$HOME" /tmp/recomp-dolphin-user/Logs /tmp/recomp-dolphin-user/Config
           chmod 700 "$HOME"
+          cat > /tmp/recomp-dolphin-user/Config/Logger.ini <<'EOF'
+          [Options]
+          WriteToFile = True
+          WriteToConsole = True
+          WriteToWindow = False
+          Verbosity = 4
+          [Logs]
+          OSREPORT = True
+          OSREPORT_HLE = True
+          MASTER = True
+          BOOT = True
+          EXI = True
+          CORE = True
+          EOF
+          echo "Dolphin version:"
+          dolphin-emu --version
+          echo "Dolphin command-line options:"
+          dolphin-emu --help
+          echo "Configured Logger.ini:"
+          cat /tmp/recomp-dolphin-user/Config/Logger.ini
           set +e
-          timeout --signal=TERM --kill-after=5s 12s xvfb-run -a dolphin-emu \
+          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dolphin-emu \
             --batch --video_backend=Null \
             --exec="$dol" \
             --user=/tmp/recomp-dolphin-user \
