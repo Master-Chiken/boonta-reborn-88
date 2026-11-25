@@ -26,6 +26,8 @@ volatile uint8_t g_probe_stage[4] __attribute__((used, aligned(4))) = {
 };
 volatile uint32_t g_probe_failure_code __attribute__((used, aligned(4))) = 0;
 volatile uint8_t g_probe_failure_label[24] __attribute__((used, aligned(4))) = {0};
+volatile uint64_t g_probe_failure_actual __attribute__((used, aligned(8))) = 0;
+volatile uint64_t g_probe_failure_expected __attribute__((used, aligned(8))) = 0;
 
 static void set_probe_stage(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     g_probe_stage[0] = a;
@@ -55,17 +57,17 @@ void *rdram_bad_access(uint64_t n64_addr) {
 }
 
 static int fail_u32(const char *label, uint32_t actual, uint32_t expected) {
-    (void)actual;
-    (void)expected;
     g_probe_failure_code = UINT32_C(1);
+    g_probe_failure_actual = (uint64_t)actual;
+    g_probe_failure_expected = (uint64_t)expected;
     set_failure_label(label);
     return 0;
 }
 
 static int fail_u64(const char *label, uint64_t actual, uint64_t expected) {
-    (void)actual;
-    (void)expected;
     g_probe_failure_code = UINT32_C(2);
+    g_probe_failure_actual = actual;
+    g_probe_failure_expected = expected;
     set_failure_label(label);
     return 0;
 }
@@ -147,17 +149,17 @@ static int run_memory_probe(void) {
     CHECK_U32("MEM_HU_2", MEM_HU(0, n64_base + 2), UINT32_C(0x4567));
     CHECK_U32("MEM_W", (uint32_t)MEM_W(0, n64_base), UINT32_C(0x01234567));
 
-    /* Signed loads must extend the N64 byte/halfword sign to 32 bits. */
+    /* Signed N64 scalar loads must extend through the full 64-bit gpr. */
     test_rdram[24] = 0x80;
     test_rdram[25] = 0x7F;
     test_rdram[26] = 0xFF;
     test_rdram[27] = 0x01;
-    CHECK_U32("MEM_B_NEGATIVE", MEM_B(0, n64_base + 24), UINT32_C(0xFFFFFF80));
-    CHECK_U32("MEM_B_POSITIVE", MEM_B(0, n64_base + 25), UINT32_C(0x0000007F));
-    CHECK_U32("MEM_B_MINUS_ONE", MEM_B(0, n64_base + 26), UINT32_C(0xFFFFFFFF));
-    CHECK_U32("MEM_B_ONE", MEM_B(0, n64_base + 27), UINT32_C(0x00000001));
-    CHECK_U32("MEM_H_NEGATIVE", MEM_H(0, n64_base + 24), UINT32_C(0xFFFF807F));
-    CHECK_U32("MEM_H_NEGATIVE_TWO", MEM_H(0, n64_base + 26), UINT32_C(0xFFFFFF01));
+    CHECK_U64("MEM_B_NEGATIVE", MEM_B(0, n64_base + 24), UINT64_C(0xFFFFFFFFFFFFFF80));
+    CHECK_U64("MEM_B_POSITIVE", MEM_B(0, n64_base + 25), UINT64_C(0x000000000000007F));
+    CHECK_U64("MEM_B_MINUS_ONE", MEM_B(0, n64_base + 26), UINT64_C(0xFFFFFFFFFFFFFFFF));
+    CHECK_U64("MEM_B_ONE", MEM_B(0, n64_base + 27), UINT64_C(0x0000000000000001));
+    CHECK_U64("MEM_H_NEGATIVE", MEM_H(0, n64_base + 24), UINT64_C(0xFFFFFFFFFFFF807F));
+    CHECK_U64("MEM_H_NEGATIVE_TWO", MEM_H(0, n64_base + 26), UINT64_C(0xFFFFFFFFFFFFFF01));
     CHECK_U32("MEM_HU_HIGH_BIT", MEM_HU(0, n64_base + 24), UINT32_C(0x807F));
     CHECK_U32("MEM_HU_FF01", MEM_HU(0, n64_base + 26), UINT32_C(0xFF01));
 
@@ -171,13 +173,15 @@ static int run_memory_probe(void) {
     CHECK_U32("MEM_H_STORE_LO", test_rdram[11], UINT32_C(0xC7));
     CHECK_U32("MEM_W_STORE", (uint32_t)MEM_W(0, n64_base + 12),
              UINT32_C(0xD8E9FA0B));
+    CHECK_U64("MEM_W_SIGNED_READ", MEM_W(0, n64_base + 12),
+              UINT64_C(0xFFFFFFFFD8E9FA0B));
     CHECK_U32("MEM_B_STORE_EXTRA", test_rdram[28], UINT32_C(0xD2));
     CHECK_U32("MEM_H_STORE_EXTRA_HI", test_rdram[30], UINT32_C(0xE3));
     CHECK_U32("MEM_H_STORE_EXTRA_LO", test_rdram[31], UINT32_C(0xF4));
-    CHECK_U32("MEM_B_STORE_SIGNED_READ", MEM_B(0, n64_base + 28),
-             UINT32_C(0xFFFFFFD2));
-    CHECK_U32("MEM_H_STORE_SIGNED_READ", MEM_H(0, n64_base + 30),
-             UINT32_C(0xFFFFE3F4));
+    CHECK_U64("MEM_B_STORE_SIGNED_READ", MEM_B(0, n64_base + 28),
+             UINT64_C(0xFFFFFFFFFFFFFFD2));
+    CHECK_U64("MEM_H_STORE_SIGNED_READ", MEM_H(0, n64_base + 30),
+             UINT64_C(0xFFFFFFFFFFFFE3F4));
     CHECK_U32("MEM_H_STORE_UNSIGNED_READ", MEM_HU(0, n64_base + 30),
              UINT32_C(0xE3F4));
 
@@ -191,10 +195,10 @@ static int run_memory_probe(void) {
     /* Actual MIPS LWL/LWR/SWL/SWR helper behavior for every byte lane. */
     for (unsigned lane = 0; lane < 4; ++lane) {
         memcpy(test_rdram + 32, initial_word, sizeof(initial_word));
-        CHECK_U32("LWL", do_lwl(rdram, (gpr)UINT32_C(0xAABBCCDD), 0,
+        CHECK_U64("LWL", do_lwl(rdram, (gpr)UINT32_C(0xAABBCCDD), 0,
                                 n64_base + 32 + lane), lwl_expected[lane]);
         memcpy(test_rdram + 32, initial_word, sizeof(initial_word));
-        CHECK_U32("LWR", do_lwr(rdram, (gpr)UINT32_C(0xAABBCCDD), 0,
+        CHECK_U64("LWR", do_lwr(rdram, (gpr)UINT32_C(0xAABBCCDD), 0,
                                 n64_base + 32 + lane), lwr_expected[lane]);
 
         n64_be_write_u32(test_rdram, 32, UINT32_C(0xAABBCCDD));
@@ -205,6 +209,16 @@ static int run_memory_probe(void) {
         do_swr(rdram, 0, n64_base + 32 + lane, (gpr)UINT32_C(0x11223344));
         CHECK_U32("SWR", n64_be_read_u32(test_rdram, 32), swr_expected[lane]);
     }
+
+    /* LWL/LWR must sign-extend a negative 32-bit result to the full gpr. */
+    test_rdram[64] = 0x89;
+    test_rdram[65] = 0xAB;
+    test_rdram[66] = 0xCD;
+    test_rdram[67] = 0xEF;
+    CHECK_U64("LWL_SIGNED_EXT", do_lwl(rdram, 0, 0, n64_base + 64),
+              UINT64_C(0xFFFFFFFF89ABCDEF));
+    CHECK_U64("LWR_SIGNED_EXT", do_lwr(rdram, 0, 0, n64_base + 67),
+              UINT64_C(0xFFFFFFFF89ABCDEF));
 
     /* Actual MIPS LDL/LDR/SDL/SDR helper behavior for every byte lane. */
     for (unsigned lane = 0; lane < 8; ++lane) {
