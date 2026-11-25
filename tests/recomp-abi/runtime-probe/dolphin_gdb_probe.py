@@ -16,6 +16,7 @@ class RSPClient:
     def __init__(self, sock: socket.socket) -> None:
         self.sock = sock
         self.sock.settimeout(10.0)
+        self.pending_packet: str | None = None
 
     @staticmethod
     def packet(payload: bytes) -> bytes:
@@ -34,30 +35,7 @@ class RSPClient:
             data.extend(chunk)
         return bytes(data)
 
-    def read_ack(self) -> None:
-        while True:
-            value = self.sock.recv(1)
-            if not value:
-                raise ConnectionError("Dolphin GDB socket closed before ACK")
-            if value == b"+":
-                return
-            if value == b"-":
-                raise RuntimeError("Dolphin GDB stub rejected the command (NACK)")
-            if value == b"$":
-                raise RuntimeError("Received a GDB packet where an ACK was expected")
-
-    def read_packet(self) -> str:
-        while True:
-            value = self.sock.recv(1)
-            if not value:
-                raise ConnectionError("Dolphin GDB socket closed before packet")
-            if value in (b"+", b"\n", b"\r"):
-                continue
-            if value == b"-":
-                raise RuntimeError("Dolphin GDB stub sent NACK")
-            if value == b"$":
-                break
-
+    def read_packet_body(self) -> str:
         payload = bytearray()
         while True:
             value = self.sock.recv(1)
@@ -79,6 +57,38 @@ class RSPClient:
             )
         self.sock.sendall(b"+")
         return payload.decode("ascii", errors="replace")
+
+    def read_ack(self) -> None:
+        while True:
+            value = self.sock.recv(1)
+            if not value:
+                raise ConnectionError("Dolphin GDB socket closed before ACK")
+            if value == b"+":
+                return
+            if value == b"-":
+                raise RuntimeError("Dolphin GDB stub rejected the command (NACK)")
+            if value == b"$":
+                # Accept a reply packet sent without a separate '+' ACK, and
+                # preserve it for the caller waiting for the command response.
+                self.pending_packet = self.read_packet_body()
+                return
+
+    def read_packet(self) -> str:
+        if self.pending_packet is not None:
+            packet = self.pending_packet
+            self.pending_packet = None
+            return packet
+
+        while True:
+            value = self.sock.recv(1)
+            if not value:
+                raise ConnectionError("Dolphin GDB socket closed before packet")
+            if value in (b"+", b"\\n", b"\\r"):
+                continue
+            if value == b"-":
+                raise RuntimeError("Dolphin GDB stub sent NACK")
+            if value == b"$":
+                return self.read_packet_body()
 
     def command(self, payload: str) -> str:
         self.send_packet(payload)
