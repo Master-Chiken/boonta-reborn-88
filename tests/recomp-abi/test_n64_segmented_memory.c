@@ -285,7 +285,7 @@ static void test_host_pointer_for_guest(const n64_segmented_memory *memory)
     assert(host == NULL);
 
     assert(n64_segmented_host_pointer_for_guest(
-               memory, N64_ADDR(0x80000FFF), 2,
+               memory, N64_ADDR(0x807FFFFF), 2,
                N64_SEGMENTED_ACCESS_READ, &host) ==
            N64_SEGMENTED_RANGE_CROSSES_REGION);
     assert(host == NULL);
