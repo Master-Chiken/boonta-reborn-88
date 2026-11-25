@@ -127,6 +127,7 @@ def load_symbols(path: Path) -> dict[str, int]:
 
 def read_memory(rsp: RSPClient, address: int, size: int) -> bytes:
     reply = rsp.command(f"m{address:08x},{size:x}")
+    print(f"GDB memory reply at 0x{address:08x}: {reply!r}", flush=True)
     if reply.startswith("E"):
         raise RuntimeError(f"Dolphin GDB memory read failed at 0x{address:08x}: {reply}")
     try:
@@ -253,6 +254,21 @@ def main() -> int:
             pc = int(pc_match.group(1), 16) if pc_match else None
             if pc is not None:
                 print(f"PowerPC PC at interrupt: 0x{pc:08x}", flush=True)
+
+            phase = "GDB read of PowerPC MSR"
+            print("GDB: reading PowerPC MSR (register 0x41)", flush=True)
+            msr_reply = rsp.command("p41")
+            print(f"GDB MSR reply: {msr_reply!r}", flush=True)
+            if len(msr_reply) == 8:
+                msr = int(msr_reply, 16)
+                print(
+                    f"MSR=0x{msr:08x} IR={(msr >> 5) & 1} DR={(msr >> 4) & 1}",
+                    flush=True,
+                )
+
+            phase = "GDB read of DOL code at interrupted PC"
+            if pc is not None:
+                read_memory(rsp, pc, 4)
 
             phase = "GDB read of g_probe_stage"
             print("GDB: reading g_probe_stage", flush=True)
