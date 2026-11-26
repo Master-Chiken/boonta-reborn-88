@@ -17,6 +17,7 @@ TARGET   := recomp_memory_probe
 BUILD    := build
 SOURCES  := .
 INCLUDES := . ..
+N64MODERN_RUNTIME_INCLUDE ?=
 
 CFLAGS   = -g -O2 -Wall -Wextra -Werror -std=gnu11 $(MACHDEP) $(INCLUDE)
 CXXFLAGS = -g -O2 -Wall -Wextra -Werror -std=gnu++20 $(MACHDEP) $(INCLUDE)
@@ -42,7 +43,7 @@ endif
 
 export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
 export OFILES := $(OFILES_SOURCES)
-export INCLUDE := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) -I$(N64RECOMP_INCLUDE) -I$(LIBOGC_INC)
+export INCLUDE := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) -I$(N64RECOMP_INCLUDE) $(if $(N64MODERN_RUNTIME_INCLUDE),-I$(N64MODERN_RUNTIME_INCLUDE)) -I$(LIBOGC_INC)
 export LIBPATHS := -L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 .PHONY: all $(BUILD) clean
