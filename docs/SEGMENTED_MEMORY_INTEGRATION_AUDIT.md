@@ -166,6 +166,24 @@ This is still a bounded synthetic probe. It does not call `recomp::rsp::run_task
 
 The RSP adapter must read RDRAM via checked spans or a bounded copy API before the ucode is executed. The microcode dump must use the same path. It must not index the opaque token or assume all source bytes live in the first host buffer. DMEM/IMEM remain separate fixed-size RSP memory windows.
 
+### Exact pinned RSP task call chain and opaque-memory blockers
+
+Source inspection at `N64ModernRuntime@63b808662fc8b604e09552f7c2c8cc7015e8313c` confirms the call chain:
+
+1. `librecomp/src/sp.cpp::osSpTaskStartGo_recomp(rdram, ctx)` obtains the `OSTask*` with `TO_PTR(OSTask, ctx->r4)`. Its optional `dump_frame` path reads an entire 8 MiB image using raw `rdram[i ^ 3]` byte indexing. It then calls `ultramodern::submit_rsp_task(rdram, ctx->r4)`.
+2. `ultramodern/include/ultramodern/rsp.hpp` defines the callback as `bool(RDRAM_ARG const OSTask* task)`; `ultramodern/src/rsp.cpp::run_task` forwards the RDRAM argument and task pointer unchanged to the registered callback.
+3. `librecomp/src/rsp.cpp::recomp::rsp::run_task(uint8_t* rdram, const OSTask* task)` copies the task into `dmem[0xFC0]`, calls `dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80 - 1)`, then invokes `ucode_func(rdram, task->t.ucode)`.
+4. The pinned `rsp.hpp` DMA functions use `MEM_B` lvalue reads/writes for the RDRAM side and `RSP_MEM_B` for DMEM. The scalar helper and DMA loops now have isolated BE/Dolphin tests (run #45888134135), but that test supplies a real bounded byte array and does not pass the opaque segmented-memory token.
+
+This means a complete migration must cover the whole chain, not just change `RSP_MEM_B`:
+- Resolve the guest `OSTask` address with a checked object-range lookup before dereferencing it.
+- Replace the debug dump's raw 8 MiB indexing with a checked guest-memory copy; otherwise the opaque token would be read as an array.
+- Preserve the opaque memory handle through `submit_rsp_task`, the `RDRAM_ARG` callback and `RspUcodeFunc` boundary.
+- Replace the DMA helpers' `MEM_B` pointer-lvalue operations with a checked RDRAM-to-DMEM / DMEM-to-RDRAM range-copy interface that reports unmapped/MMIO access and handles region boundaries.
+- Only after the source memory and task path is safe should the game RSP ucode be enabled; vector instruction and microcode semantics remain a separate validation gate.
+
+The existing DOL proves only that the extracted scalar lanes and copy loops behave correctly on a bounded contiguous test buffer. It does not prove these APIs are integrated into the runtime, nor that `run_task` can safely consume an opaque handle.
+
 **Remaining RSP gate:** the scalar `RSP_MEM_*` accessors and the two pinned RDRAM↔DMEM DMA helper functions now have isolated big-endian PPC/Dolphin test coverage. The extracted test copy applies natural BE lanes; the actual upstream runtime is not patched or integrated. Before enabling Racer RSP microcode, migrate task loading/DMA to checked memory-context spans, execute the full `run_task` setup and microcode path, and test vector instruction semantics plus VU state fields marked little-endian.
 
 ### libultra / controller / flash helpers
