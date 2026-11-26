@@ -179,7 +179,7 @@ The current inspection is a targeted static audit of the named files, not a comp
 - [ ] Migrate generated scalar/unaligned stores to callback-capable typed writes.
 - [ ] Port the heap and Racer-specific direct-access call sites.
 - [x] Add a clean-room RSP DMEM scalar lane adapter with little-/big-endian host selection and host/PPC tests for 8/16/32-bit access, low-half stores and 4 KiB wrap (run [#86](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45689096458)).
-- [ ] Verify the RSP `r128.byte/element/u8/u16` register-lane mapping on big-endian PowerPC; no vector-register execution is covered yet.
+- [x] Verify the pinned `RSP::r128.byte/element/u8/element/s16/u16` scalar accessor lane mapping on big-endian PowerPC using the exact extracted union methods in the Dolphin DOL (run [#45884333337](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45884333337)). This does not validate vector instruction semantics, VU state fields marked little-endian, DMA, or microcode execution.
 - [ ] Migrate RSP microcode DMA and debug-dump reads to checked memory-context copies; the current opaque token must never be indexed as raw RDRAM.
 - [ ] Add real PI/MMIO device models and integration tests.
 
