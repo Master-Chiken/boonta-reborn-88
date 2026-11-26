@@ -2,6 +2,7 @@
  * Executes scalar RSP DMEM helpers extracted from the exact pinned
  * N64ModernRuntime rsp.hpp, with the BE lane adapter applied by the extractor.
  */
+#include <recomp.h>
 #include "pinned_rsp_dmem_accessors.hpp"
 
 #include <stdint.h>
@@ -49,6 +50,28 @@ extern "C" int run_pinned_rsp_dmem_accessor_probe(void) {
     RSP_MEM_BU(0, 0xFFF) = UINT8_C(0x5A);
     if (RSP_MEM_BU(1, 0xFFF) != UINT8_C(0x5A)) {
         return 6;
+    }
+
+    /* Exercise the exact pinned RDRAM<->DMEM DMA helpers through patched MEM_B. */
+    uint8_t rdram[0x1000] = {};
+    rdram[0x100] = 0x10;
+    rdram[0x101] = 0x21;
+    rdram[0x102] = 0x32;
+    rdram[0x103] = 0x43;
+    dma_rdram_to_dmem(rdram, 0x200, 0x103, 3); /* inclusive length; address aligns to 8 */
+    if (dmem[0x200] != 0x10 || dmem[0x201] != 0x21 ||
+        dmem[0x202] != 0x32 || dmem[0x203] != 0x43) {
+        return 7;
+    }
+
+    dmem[0x210] = 0xA0;
+    dmem[0x211] = 0xB1;
+    dmem[0x212] = 0xC2;
+    dmem[0x213] = 0xD3;
+    dma_dmem_to_rdram(rdram, 0x210, 0x107, 3);
+    if (rdram[0x100] != 0xA0 || rdram[0x101] != 0xB1 ||
+        rdram[0x102] != 0xC2 || rdram[0x103] != 0xD3) {
+        return 8;
     }
 
     return 0;
