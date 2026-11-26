@@ -48,7 +48,8 @@ extern "C" int run_pinned_rsp_dmem_accessor_probe(void) {
     }
 
     RSP_MEM_BU(0, 0xFFF) = UINT8_C(0x5A);
-    if (RSP_MEM_BU(1, 0xFFF) != UINT8_C(0x5A)) {
+    RSP_MEM_BU(0, 0x000) = UINT8_C(0xA5);
+    if (RSP_MEM_BU(1, 0xFFF) != UINT8_C(0xA5)) {
         return 6;
     }
 
