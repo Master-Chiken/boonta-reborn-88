@@ -15,11 +15,13 @@ These are permanent development references. Do not rename, delete, or force-push
 
 The following archive refs are retained recovery points, not development bases:
 
-- `archive/branch-heads-20261019`: protected recovery archive.
-- `archive/rival-ai-history-20261107`: pinned recovery history for the rival-AI work.
-- `archive/branch-heads-20261126`: recovery checkpoint whose tree matches `main` and whose commit preserves the distinct branch tips present when it was created.
+- `archive/branch-heads-20261019`: protected recovery archive (the currently active recovery-archive ruleset covers this ref).
+- `archive/rival-ai-history-20261107`: pinned recovery history for the rival-AI work; **currently not protected** by an active branch ruleset.
+- `archive/branch-heads-20261126`: recovery checkpoint whose tree matches `main` and whose commit preserves the distinct branch tips present when it was created; **currently not protected** by an active branch ruleset.
 
 Do not rename, delete, force-push, or merge these archives wholesale into `main` or `dev`. New archives are not automatically permanent: each must be explicitly recorded in the live inventory and protected by the retirement workflow before another branch cleanup can rely on it.
+
+**Retirement safety gate:** the branch-retirement workflow requires all three recovery archive refs above to be present at their pinned SHAs and protected. The current ruleset inventory protects only `archive/branch-heads-20261019`; the owner must enable active branch-protection rules for the other two archive refs before any candidate branch can be retired. The workflow checks this in both the initial verification and the immediate pre-delete recheck, and fails closed while either archive remains unprotected.
 
 The five references above (`main`, `dev`, and the three named archives) are the retained baseline for the 2026-11-26 branch cleanup. Any future change to that baseline requires a documented owner decision and an updated inventory in issue #248.
 
