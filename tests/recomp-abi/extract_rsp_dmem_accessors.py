@@ -10,7 +10,7 @@ from pathlib import Path
 START = "#define RSP_MEM_B(offset, addr) \\\n"
 END = "#define RSP_ADD32(a, b) \\\n"
 DMA_START = "static inline void dma_rdram_to_dmem("
-DMA_END = "\\nnamespace recomp {"
+DMA_END = "\nnamespace recomp {"
 
 REPLACEMENTS = (
     ("(((offset) + (addr)) ^ 3)", "(((offset) + (addr)) ^ RSP_BYTE_XOR)", 2),
@@ -38,7 +38,7 @@ def extract_and_adapt(source: str) -> str:
     dma_end = source.find(DMA_END, dma_start)
     if dma_start < 0 or dma_end < 0:
         raise SystemExit("Pinned rsp.hpp RSP DMA helper block not found")
-    dma_block = source[dma_start:dma_end].rstrip() + "\\n"
+    dma_block = source[dma_start:dma_end].rstrip() + "\n"
     if dma_block.count("dma_rdram_to_dmem(") != 1 or dma_block.count("dma_dmem_to_rdram(") != 1:
         raise SystemExit("Pinned RSP DMA helper definitions changed unexpectedly")
 
