@@ -194,6 +194,61 @@ The existing DOL proves only that the extracted scalar lanes and copy loops beha
 
 **Remaining RSP gate:** the scalar `RSP_MEM_*` accessors and the two pinned RDRAM↔DMEM DMA helper functions now have isolated big-endian PPC/Dolphin test coverage. The extracted test copy applies natural BE lanes; the actual upstream runtime is not patched or integrated. Before enabling Racer RSP microcode, migrate task loading/DMA to checked memory-context spans, execute the full `run_task` setup and microcode path, and test vector instruction semantics plus VU state fields marked little-endian.
 
+## RDRAM consumer lifetime inventory — pinned runtime
+
+All source links below refer to the same immutable `N64ModernRuntime@63b808662fc8b604e09552f7c2c8cc7015e8313c` revision. This inventory separates short synchronous byte access from host pointers that escape the current call stack.
+
+### 1. Raw-base ABI and guest-pointer conversion
+
+[`ultra64.h`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/include/ultramodern/ultra64.h#L23-L43) defines the recomp ABI as `uint8_t* rdram` (`RDRAM_ARG`) and expands `TO_PTR(type, var)` into direct pointer arithmetic from that base. That is not a context handle: every function receiving the value can index it or turn a guest address into a host pointer without a checked region lookup.
+
+[`helpers.hpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/librecomp/include/librecomp/helpers.hpp#L8-L72) centralizes some conversions through `_arg<T*>`, but it still returns a raw `TO_PTR` pointer. `_arg_string` then scans with `MEM_B` until NUL without an explicit maximum length or a validated range. This should become a bounded guest-string copy (maximum bytes plus region/fault handling), not a returned pointer into guest RAM.
+
+### 2. Host pointers that outlive a single operation
+
+| Consumer | Pinned source behavior | Required migration |
+|---|---|---|
+| Thread scheduler | [`threads.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/src/threads.cpp#L149-L211) resolves guest `OSThread` addresses with `TO_PTR`; `thread_self` stores a guest pointer value and code uses resolved `OSThread*` around semaphore waits/resume. | Keep guest addresses/IDs in host scheduler state and resolve fields on each access, or hold an explicit pinned-span lease across the wait. Do not keep an unpinned pointer into movable/discontiguous backing. |
+| RSP task queue | [`events.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/src/events.cpp#L45-L60) copies graphics `OSTask` values into `SpTaskAction`, but [the non-graphics queue stores `OSTask*`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/src/events.cpp#L182-L183). The task worker dequeues that pointer later and calls `rsp::run_task` ([lines 339–362](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/src/events.cpp#L339-L362)). | Queue an `OSTask` snapshot by value (as the graphics path already does); keep guest addresses for its buffers, and resolve/copy those ranges only when the task worker consumes them. The memory context must outlive the worker. |
+| Renderer | The event system retains `events_context.rdram` and passes the raw base to `create_render_context` ([`events.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/src/events.cpp#L401-L406)); the callback interface accepts `uint8_t* rdram` ([`renderer_context.hpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/include/ultramodern/renderer_context.hpp#L98-L117)). | Replace the raw base with a long-lived memory-interface object. Renderer tasks should resolve framebuffer/display-list ranges through bounded read-only views or copy them into renderer-owned buffers; specify cache-coherency and lifetime explicitly. |
+| Audio | [`audio.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/ultramodern/src/audio.cpp#L25-L35) calls `TO_PTR(int16_t, audio_data_)` then passes the pointer to `queue_samples`. The callback type is `void(int16_t*, size_t)` and has no stated copy/lifetime contract ([`ultramodern.hpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/ultramodern/include/ultramodern/ultramodern.hpp#L145-L158)). | Make the boundary copy audio samples into an owned queue packet, or define a strictly synchronous callback contract and enforce it in every platform backend. An asynchronous audio queue must not retain an unpinned guest-RAM pointer. |
+
+### 3. Contiguous allocator and reverse mapping assumptions
+
+[`heap.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/heap.cpp#L7-L50) places `O1HeapInstance` at `&rdram[heap_offset]`, initializes O1Heap over the remaining contiguous RDRAM tail, returns a native pointer from `alloc`, and derives guest addresses by subtracting the RDRAM base. [`mod_config_api.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/mod_config_api.cpp#L38-L75) repeats the pointer-subtraction pattern for returned strings and reconstructs a host pointer for free.
+
+A segmented implementation must choose one of two explicit designs:
+- Keep the guest heap inside a stable contiguous RDRAM arena, with a guest-address allocator and bounds checks; or
+- Make allocations return guest virtual addresses/handles and maintain a checked reverse map from guest allocation to backing storage. Free must validate the allocation identity; it must not subtract an opaque token or trust an arbitrary guest pointer.
+
+The current O1Heap metadata and allocation headers must remain address-stable for the full lifetime of each allocation.
+
+### 4. Synchronous consumers that can use checked copies
+
+These paths copy or consume data before returning, so they should migrate to `copy_from_guest`, `copy_to_guest`, or typed scalar accessors rather than taking persistent host pointers:
+
+- ROM/PI PIO loops in [`pi.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/librecomp/src/pi.cpp#L67-L88).
+- Save transfer loops: [`save_write`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/pi.cpp#L232-L247) copies guest data into the native save buffer before it signals the asynchronous disk writer; [`save_read`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/pi.cpp#L249-L260) copies in the other direction synchronously.
+- Flash page writes copy guest bytes into the fixed `write_buffer` before queueing completion; Flash reads write from save storage synchronously ([`flash.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/flash.cpp#L140-L199)).
+- Debug printing copies bytes into `to_print` before `fwrite` ([`print.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/print.cpp#L32-L45)).
+- Mod sections/relocations and overlay patch data are written synchronously through `MEM_B/MEM_W` in [`mods.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/mods.cpp#L2241-L2291) and [`overlays.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/overlays.cpp#L185-L188).
+
+These are good early migration targets once the typed API exists. They still need explicit range checks, correct endian widths, MMIO rejection/dispatch, and fault propagation.
+
+### 5. Memory-window reservation
+
+[`recomp.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b60452f7c2c8cc7015e8313c/librecomp/src/recomp.cpp#L831-L856) reserves a large virtual address window, commits/protects `mem_size`, and relies on direct base-plus-offset addressing and protected pages to catch invalid accesses. A Wii implementation cannot assume desktop `mmap`/`VirtualAlloc` semantics. The target needs bounded MEM1/MEM2 backing, explicit guest-region translation, and distinct MMIO/ROM/invalid outcomes. The logical 512 MiB N64 KSEG0 range is not a request to allocate 512 MiB of physical memory.
+
+### Migration order derived from this inventory
+
+1. Establish the long-lived memory context and checked RAM/MMIO/ROM region classification, with read/write/copy operations and fault reporting.
+2. Change generated `MEM_*` and unaligned load/store helpers from pointer-lvalue expressions to typed calls; this is necessary for region crossing and MMIO side effects.
+3. Convert short synchronous readers/writers first: debug print, save/flash transfers, PI PIO/DMA, mod/overlay writes, and bounded strings.
+4. Introduce a safe guest-object API: either a short-lived pinned lease with explicit ownership or copy-in/copy-out structures. Ban raw `TO_PTR` from escaping into queues or across waits.
+5. Migrate heap allocation and free to stable guest addresses with validated reverse mapping.
+6. Replace asynchronous interfaces (RSP task queue, renderer, audio, thread scheduler) with owned snapshots, guest addresses resolved at consumption time, or explicit reference-counted leases.
+7. Only then port PI/MMIO device models, RSP task/IMEM/DMEM loading, microcode, GX and game-level execution.
+
 ### libultra / controller / flash helpers
 
 - `librecomp/src/cont.cpp` resolves message queues, controller status and pad structures through `_arg<T*>`/ `TO_PTR`, and writes controller results through `MEM_H/MEM_B`. This should work with the RAM-only object resolver plus typed writes after the libultra structure helpers are migrated.
