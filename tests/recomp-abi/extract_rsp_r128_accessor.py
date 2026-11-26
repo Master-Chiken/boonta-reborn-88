@@ -34,9 +34,9 @@ def extract_union(source: str) -> str:
     # The pinned desktop runtime reverses byte/halfword indices for LE hosts.
     # Wii/GameCube PPC are BE, so adapt this ephemeral copy to native lane order.
     lane_adapters = (
-        ("((uint8_t*)&u128)[15 - index]", "((uint8_t*)&u128)[index]", 4),
-        ("((uint16_t*)&u128)[7 - index]", "((uint16_t*)&u128)[index]", 4),
-        ("((int16_t*)&u128)[7 - index]", "((int16_t*)&u128)[index]", 2),
+        ("((uint8_t*)&u128)[15 - index]", "((rsp_u8_alias*)&u128)[index]", 4),
+        ("((uint16_t*)&u128)[7 - index]", "((rsp_u16_alias*)&u128)[index]", 4),
+        ("((int16_t*)&u128)[7 - index]", "((rsp_s16_alias*)&u128)[index]", 2),
     )
     for old, new, expected in lane_adapters:
         count = block.count(old)
@@ -78,6 +78,15 @@ def main() -> int:
         "#define BOONTA_PINNED_RSP_R128_ACCESSOR_HPP\n\n"
         "#include <stdint.h>\n"
         "using u32 = uint32_t;\n"
+        "#if defined(__GNUC__)\n"
+        "typedef uint8_t rsp_u8_alias __attribute__((may_alias));\n"
+        "typedef uint16_t rsp_u16_alias __attribute__((may_alias));\n"
+        "typedef int16_t rsp_s16_alias __attribute__((may_alias));\n"
+        "#else\n"
+        "typedef uint8_t rsp_u8_alias;\n"
+        "typedef uint16_t rsp_u16_alias;\n"
+        "typedef int16_t rsp_s16_alias;\n"
+        "#endif\n"
         "struct RSP {\n"
         f"{union}\n"
         "};\n\n"
