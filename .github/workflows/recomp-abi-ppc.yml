@@ -182,7 +182,8 @@ jobs:
           export PATH="$DEVKITPPC/bin:$PATH"
           cd "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe"
           make clean
-          make N64RECOMP_INCLUDE="$RUNNER_TEMP/N64Recomp/include"
+          make N64RECOMP_INCLUDE="$RUNNER_TEMP/N64Recomp/include" \
+            N64MODERN_RUNTIME_INCLUDE="$RUNNER_TEMP/N64ModernRuntime/ultramodern/include"
           python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/pad_dol.py" recomp_memory_probe.dol
           test -s recomp_memory_probe.dol
           test -s recomp_memory_probe.elf
