@@ -60,7 +60,7 @@ def extract_and_adapt(source: str) -> str:
         if block.count(helper) < 1:
             raise SystemExit(f"Missing pinned RSP helper {helper}")
 
-    return block
+    return block + "\n" + dma_block
 
 
 def main() -> int:
@@ -79,8 +79,6 @@ def main() -> int:
         "#define RSP_BYTE_XOR 0\n"
         "extern uint8_t dmem[];\n\n"
         + block
-        + "\n"
-        + dma_block
         + "\n#endif\n"
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
