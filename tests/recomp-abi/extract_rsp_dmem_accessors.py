@@ -9,6 +9,8 @@ from pathlib import Path
 
 START = "#define RSP_MEM_B(offset, addr) \\\n"
 END = "#define RSP_ADD32(a, b) \\\n"
+DMA_START = "static inline void dma_rdram_to_dmem("
+DMA_END = "\\nnamespace recomp {"
 
 REPLACEMENTS = (
     ("(((offset) + (addr)) ^ 3)", "(((offset) + (addr)) ^ RSP_BYTE_XOR)", 2),
@@ -32,6 +34,14 @@ def extract_and_adapt(source: str) -> str:
         raise SystemExit("Invalid pinned rsp.hpp helper block boundaries")
 
     block = source[start:end]
+    dma_start = source.find(DMA_START)
+    dma_end = source.find(DMA_END, dma_start)
+    if dma_start < 0 or dma_end < 0:
+        raise SystemExit("Pinned rsp.hpp RSP DMA helper block not found")
+    dma_block = source[dma_start:dma_end].rstrip() + "\\n"
+    if dma_block.count("dma_rdram_to_dmem(") != 1 or dma_block.count("dma_dmem_to_rdram(") != 1:
+        raise SystemExit("Pinned RSP DMA helper definitions changed unexpectedly")
+
     for old, new, expected in REPLACEMENTS:
         count = block.count(old)
         if count != expected:
@@ -65,9 +75,12 @@ def main() -> int:
         "#ifndef BOONTA_PINNED_RSP_DMEM_ACCESSORS_HPP\n"
         "#define BOONTA_PINNED_RSP_DMEM_ACCESSORS_HPP\n\n"
         "#include <stdint.h>\n"
+        "#include <cassert>\n"
         "#define RSP_BYTE_XOR 0\n"
         "extern uint8_t dmem[];\n\n"
         + block
+        + "\n"
+        + dma_block
         + "\n#endif\n"
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
