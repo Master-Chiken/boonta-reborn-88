@@ -20,6 +20,7 @@
 
 /* Compiled from the exact pinned N64ModernRuntime RSP::r128 accessor union. */
 extern int run_pinned_rsp_r128_accessor_probe(void);
+extern int run_pinned_rsp_dmem_accessor_probe(void);
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
@@ -721,8 +722,8 @@ int main(void) {
     probe_start_marker();
 
     if (!run_memory_probe() || !run_segmented_probe() || !run_fpr_layout_probe() ||
-        !run_rsp_dmem_probe() || !run_rsp_vector_layout_probe() ||
-        !run_pinned_rsp_r128_accessor_probe()) {
+        !run_rsp_dmem_probe() || !run_pinned_rsp_dmem_accessor_probe() ||
+        !run_rsp_vector_layout_probe() || !run_pinned_rsp_r128_accessor_probe()) {
         set_probe_stage('F', 'A', 'I', 'L');
         probe_fail_marker();
         for (;;) {
