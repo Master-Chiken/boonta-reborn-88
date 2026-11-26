@@ -7,14 +7,14 @@
 static void test_lane_selector(void)
 {
 #if N64_RSP_VECTOR_HOST_BIG_ENDIAN
-    assert(n64_rsp_vector_byte_storage_index(0) == 8);
-    assert(n64_rsp_vector_byte_storage_index(7) == 15);
-    assert(n64_rsp_vector_byte_storage_index(8) == 0);
-    assert(n64_rsp_vector_byte_storage_index(15) == 7);
-    assert(n64_rsp_vector_half_storage_index(0) == 4);
-    assert(n64_rsp_vector_half_storage_index(3) == 7);
-    assert(n64_rsp_vector_half_storage_index(4) == 0);
-    assert(n64_rsp_vector_half_storage_index(7) == 3);
+    assert(n64_rsp_vector_byte_storage_index(0) == 0);
+    assert(n64_rsp_vector_byte_storage_index(7) == 7);
+    assert(n64_rsp_vector_byte_storage_index(8) == 8);
+    assert(n64_rsp_vector_byte_storage_index(15) == 15);
+    assert(n64_rsp_vector_half_storage_index(0) == 0);
+    assert(n64_rsp_vector_half_storage_index(3) == 3);
+    assert(n64_rsp_vector_half_storage_index(4) == 4);
+    assert(n64_rsp_vector_half_storage_index(7) == 7);
 #else
     assert(n64_rsp_vector_byte_storage_index(0) == 15);
     assert(n64_rsp_vector_byte_storage_index(7) == 8);
@@ -39,9 +39,15 @@ static void test_architectural_byte_and_halfword_order(void)
         0x8899, 0xAABB, 0xCCDD, 0xEEFF
     };
 
-    /* u128[0] is the low 64-bit word; u128[1] is the high 64-bit word. */
+#if N64_RSP_VECTOR_HOST_BIG_ENDIAN
+    /* Native BE object order: first memory word contains logical lanes 0..7. */
+    words[0] = UINT64_C(0x0011223344556677);
+    words[1] = UINT64_C(0x8899AABBCCDDEEFF);
+#else
+    /* Preserve the upstream little-endian two-word representation. */
     words[0] = UINT64_C(0x8899AABBCCDDEEFF);
     words[1] = UINT64_C(0x0011223344556677);
+#endif
 
     for (uint32_t i = 0; i < 16; ++i) {
         assert(n64_rsp_vector_load_u8(words, i) == expected_bytes[i]);
@@ -56,18 +62,30 @@ static void test_architectural_byte_and_halfword_order(void)
 
 static void test_lane_stores(void)
 {
-    uint64_t words[2] = {
-        UINT64_C(0x8899AABBCCDDEEFF),
-        UINT64_C(0x0011223344556677)
-    };
+    uint64_t words[2];
+#if N64_RSP_VECTOR_HOST_BIG_ENDIAN
+    words[0] = UINT64_C(0x0011223344556677);
+    words[1] = UINT64_C(0x8899AABBCCDDEEFF);
+#else
+    words[0] = UINT64_C(0x8899AABBCCDDEEFF);
+    words[1] = UINT64_C(0x0011223344556677);
+#endif
 
     n64_rsp_vector_store_u8(words, 0, 0xA0);
     assert(n64_rsp_vector_load_u8(words, 0) == 0xA0);
+#if N64_RSP_VECTOR_HOST_BIG_ENDIAN
+    assert(words[0] == UINT64_C(0xA011223344556677));
+#else
     assert(words[1] == UINT64_C(0xA011223344556677));
+#endif
 
     n64_rsp_vector_store_u8(words, 15, 0x0F);
     assert(n64_rsp_vector_load_u8(words, 15) == 0x0F);
+#if N64_RSP_VECTOR_HOST_BIG_ENDIAN
+    assert(words[1] == UINT64_C(0x8899AABBCCDDEE0F));
+#else
     assert(words[0] == UINT64_C(0x8899AABBCCDDEE0F));
+#endif
 
     n64_rsp_vector_store_u16(words, 0, UINT16_C(0x1357));
     assert(n64_rsp_vector_load_u16(words, 0) == UINT16_C(0x1357));
