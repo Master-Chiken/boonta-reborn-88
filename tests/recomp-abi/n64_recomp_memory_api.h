@@ -72,6 +72,24 @@ static inline void n64_recomp_memory_record_fault(
     }
 }
 
+/*
+ * Report a fault without touching the legacy shared last_error slot.
+ * Status-returning production callers receive the error directly from the
+ * operation; this avoids introducing a data race on last_error when separate
+ * guest threads access the same memory context concurrently.
+ */
+static inline void n64_recomp_memory_notify_fault(
+    n64_recomp_memory_handle *handle,
+    n64_segmented_result result,
+    uint64_t guest_address,
+    size_t width,
+    n64_segmented_access access)
+{
+    if (handle != NULL && handle->fault != NULL) {
+        handle->fault(handle->fault_context, result, guest_address, width, access);
+    }
+}
+
 static inline n64_segmented_result n64_recomp_memory_last_error(
     const uint8_t *token)
 {
@@ -111,13 +129,13 @@ static inline n64_segmented_result n64_recomp_try_load(
     }
 
     if (result != N64_SEGMENTED_OK) {
-        n64_recomp_memory_record_fault(
+        n64_recomp_memory_notify_fault(
             handle, result, guest_address, width, N64_SEGMENTED_ACCESS_READ);
         return result;
     }
 
     *output = value;
-    handle->last_error = N64_SEGMENTED_OK;
+    /* No shared sticky error write: the return value is the per-call status. */
     return N64_SEGMENTED_OK;
 }
 
