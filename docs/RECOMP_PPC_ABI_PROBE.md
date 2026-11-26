@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback, target-endian scalar memory lanes and a big-endian FPR layout adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map execution, opaque-context/typed-access execution, RSP DMEM reference tests, actual pinned `RSP::r128` accessor tests, and FPR offset/FR-mode tests all pass** in workflow run [#45884333337](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45884333337) on validated implementation commit `66f34f0cb104b5e9764d95316c1d93403eec4f69`. The GameCube DOL reached its GDB `PASS` marker under Dolphin. This is synthetic ABI/accessor evidence only: the full upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full RSP instruction/microcode path, GX renderer, audio or controller integration has been validated.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback, target-endian scalar memory lanes and a big-endian FPR layout adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map and opaque-context execution, RSP DMEM scalar helper tests, RSP RDRAM↔DMEM DMA helper tests, pinned `RSP::r128` accessor tests, and FPR offset/FR-mode tests all pass** in workflow run [#45888134135](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45888134135) on implementation commit `c3d2389d7d1977c001753ff51e91f8db1942e2a2`. The synthetic GameCube DOL reached GDB `probe_pass_marker` under Dolphin. This is ABI/accessor/helper evidence only: the full upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full RSP task/microcode path, GX renderer, audio or controller integration has been validated.
 
 ## Question
 
@@ -265,11 +265,11 @@ The audit now includes `tests/recomp-abi/rsp_dmem_endian.h`, a clean-room refere
 
 Host tests and the same scalar DMEM vectors in the GameCube DOL both passed in workflow run [#86](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45689096458). Dolphin GDB stopped at `probe_start_marker` (PC `0x80003494`) and then `probe_pass_marker` (PC `0x800034a8`); `probe_fail_marker` was not reached.
 
-### Pinned RSP::r128 accessors and FPR register layout — run 45884333337
+### Pinned RSP::r128 accessors and FPR register layout — run 45888134135
 
 The PPC DOL now compiles the exact `union RSP::r128` declaration and its `byte`, `element`, `u8`, `s16` and `u16` accessors extracted from pinned `N64ModernRuntime@63b808662fc8b604e09552f7c2c8cc7015e8313c`. The workflow fetches and verifies that exact commit, extracts the union into an ephemeral header, builds the probe at the target optimization level, and executes it on Dolphin's big-endian GameCube CPU. Reads and writes cover all byte and halfword lanes, including boundary indices, const and mutable accessors, and raw backing bytes. Run [#45884333337](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45884333337) reached `probe_start_marker` then `probe_pass_marker`; `probe_fail_marker` was not reached.
 
-The standalone reference model's 16-bit accessors now use `memcpy` instead of type-punning `uint64_t[]` as `uint16_t[]`, so the `-O2` host/DOL checks do not rely on undefined strict-aliasing behavior. The BE mapping uses natural logical indices; the LE model retains the upstream desktop reversed indexing. The DOL separately tests the extracted upstream accessor methods, so a pass is not solely a pass of the model.
+The standalone reference model's 16-bit accessors now use `memcpy` instead of type-punning `uint64_t[]` as `uint16_t[]`, so the `-O2` host/DOL checks do not rely on undefined strict-aliasing behavior. The extracted `RSP::r128` view types use GCC `may_alias` for 8/16-bit union access, matching the alias-safety requirement found in the public Wii runtime patch. The BE mapping uses natural logical indices; the LE model retains the upstream desktop reversed indexing. The DOL separately tests the extracted upstream accessor methods, so a pass is not solely a pass of the model.
 
 The same target patcher now reverses the `fpr` union's float/word fields only on big-endian targets. PowerPC compile-time assertions verify `fh/u32h` at offset 0, `fl/u32l` at offset 4, and `d/u64` at offset 0. The DOL then reproduces the pinned runtime's two `f_odd` pointer configurations and exercises the generator-shaped `ctx->f_odd[(n - 1) * 2]` access:
 - FR=0: odd F1 singles map to `f0.u32h`, leaving `f0.u32l` intact.
@@ -278,16 +278,24 @@ The same target patcher now reverses the `fpr` union's float/word fields only on
 
 These tests prove the selected ABI layout and scalar access paths only. They do not execute RSP vector instructions, establish vector-microcode semantics, or call the full runtime's `cop0_status_write`; the probe reproduces its exact documented `f_odd` pointer setup.
 
+### Pinned RSP DMEM helpers and RDRAM DMA — run 45888134135
+
+The workflow also extracts the exact scalar helper block and the two DMA helper definitions from pinned `N64ModernRuntime/librecomp/include/librecomp/rsp.hpp` at `63b808662fc8b604e09552f7c2c8cc7015e8313c`. The ephemeral test header applies the BE byte-lane adapter to `RSP_MEM_B/BU`, `RSP_MEM_W_LOAD/STORE`, `RSP_MEM_HU/H_LOAD` and `RSP_MEM_H_STORE`; it also includes the original `dma_rdram_to_dmem` and `dma_dmem_to_rdram` functions, which use the patched `recomp.h` `MEM_B` path for RDRAM.
+
+The GameCube DOL checks direct signed/unsigned byte access, word and halfword loads/stores, sign extension, the 4 KiB DMEM wrap, then transfers four bytes in both directions using the original inclusive-length and 8-byte DRAM-address alignment behavior. Host tests, cross-compilation, DOL linking and Dolphin execution all passed. GDB reached `probe_start_marker` then `probe_pass_marker` in run [#45888134135](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45888134135).
+
+This proves the extracted scalar helpers and DMA copy loops with bounded synthetic RDRAM/DMEM only. It does not validate `recomp::rsp::run_task`, the full RSP task lifecycle, IMEM/DMEM task loading, the opaque segmented-memory context in runtime DMA, RSP vector instruction semantics, or actual microcode execution.
+
 ### Still not integrated or proven
 
 - The pinned upstream `recomp.h` still has its original direct pointer arithmetic. Generated Racer code does not yet call this segmented resolver.
 - The direct-pointer audit is maintained in [`SEGMENTED_MEMORY_INTEGRATION_AUDIT.md`](SEGMENTED_MEMORY_INTEGRATION_AUDIT.md). It records the remaining `TO_PTR`, heap, mod-config, Racer SI/PI/VI, RSP DMA, SP dump, audio-buffer and thread/libultra consumers.
 - `recomp_alloc/free` and mod-config string allocations must use the heap backing plus reverse map instead of subtracting a single contiguous host RDRAM base.
-- The runtime's actual RSP DMEM `RSP_MEM_B/BU` helpers and their surrounding RSP memory path are not yet wired to the tested scalar reference adapter; audit and execute those pinned runtime helpers on PPC before enabling RSP microcode.
+- The pinned `rsp.hpp` scalar `RSP_MEM_*` helpers and RDRAM↔DMEM DMA copy functions now have isolated PPC/Dolphin execution evidence, but they are not integrated with the segmented opaque-memory context or full `recomp::rsp::run_task`; migration of task loading, IMEM/DMEM source spans, debug dumps and microcode lifecycle remains open.
 - The code generator must emit typed stores for `SW/SH/SB/SWC1/SD` and rewrite the unaligned store helpers. Pointer-lvalue `MEM_*` assignments cannot invoke MMIO callbacks.
 - The MMIO callback is currently a test double, not a set of working SP/DP/MI/VI/AI/PI/SI device models.
 - The ROM callback is currently a test fixture, not the Racer cartridge/PI DMA implementation.
-- The `RSP::r128` scalar byte/halfword accessors are now exercised directly from the pinned union declaration. RSP VU state fields marked little-endian, vector instruction semantics, DMA/IMEM/DMEM integration and microcode execution remain untested.
+- The `RSP::r128` scalar byte/halfword accessors are exercised from the pinned union declaration with BE lane and `may_alias` adapters. RSP VU state fields marked little-endian, vector instruction semantics, SIMD paths, and full RSP task/microcode execution remain untested.
 - The 512 MiB logical KSEG0 window is not an allocation request. A Wii implementation must use bounded physical buffers in its real MEM1/MEM2 budget; it cannot assume a contiguous 512 MiB host region.
 - No original Racer generated functions, scheduler, GX renderer, RSP microcode, audio, controller input, or physical Wii/GameCube hardware has been tested.
 
