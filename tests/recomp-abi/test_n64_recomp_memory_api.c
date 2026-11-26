@@ -63,6 +63,9 @@ int main(void)
     mmio_test_state callbacks;
     uint8_t *token;
     uint64_t value;
+    uint64_t try_value;
+    uint32_t try_word;
+    int8_t try_signed_byte;
     guest_object *object;
 
     memset(&memory, 0, sizeof(memory));
@@ -96,11 +99,48 @@ int main(void)
     assert(token == (uint8_t *)(void *)&handle);
     assert(n64_recomp_memory_from_token(token) == &handle);
 
+    /*
+     * Status-returning reads distinguish a valid zero from a memory fault.
+     * The output variable must remain unchanged on every failed access.
+     */
+    try_word = UINT32_C(0xDEADBEEF);
+    assert(n64_recomp_try_load_u32(
+               token, N64_ADDR(0x80000100), &try_word) == N64_SEGMENTED_OK);
+    assert(try_word == UINT32_C(0x00000000)); /* Initial RDRAM word is zero. */
+    /* Verify a nonzero value separately after the normal store below. */
+
+    try_word = UINT32_C(0xCAFEBABE);
+    assert(n64_recomp_try_load_u32(
+               token, N64_ADDR(0x80004000), &try_word) ==
+           N64_SEGMENTED_UNMAPPED_ADDRESS);
+    assert(try_word == UINT32_C(0xCAFEBABE));
+    assert(n64_recomp_memory_last_error(token) ==
+           N64_SEGMENTED_UNMAPPED_ADDRESS);
+
+    try_value = UINT64_C(0x0123456789ABCDEF);
+    assert(n64_recomp_try_load(
+               token, N64_ADDR(0x80003FFF), 2, &try_value) ==
+           N64_SEGMENTED_RANGE_CROSSES_REGION);
+    assert(try_value == UINT64_C(0x0123456789ABCDEF));
+
+    try_value = UINT64_C(0x0123456789ABCDEF);
+    assert(n64_recomp_try_load(
+               token, N64_ADDR(0x80000100), 3, &try_value) ==
+           N64_SEGMENTED_UNSUPPORTED_WIDTH);
+    assert(try_value == UINT64_C(0x0123456789ABCDEF));
+
+    assert(n64_recomp_try_load_u32(
+               token, N64_ADDR(0x80000100), NULL) ==
+           N64_SEGMENTED_INVALID_ARGUMENT);
+
     /* Generated load/store functions operate on guest addresses, not offsets. */
     assert(n64_recomp_store_u32(token, N64_ADDR(0x80000100),
                                 UINT32_C(0x12345678)) == N64_SEGMENTED_OK);
     assert(n64_recomp_load_u32(token, N64_ADDR(0x80000100)) ==
            UINT32_C(0x12345678));
+    assert(n64_recomp_try_load_u32(
+               token, N64_ADDR(0x80000100), &try_word) == N64_SEGMENTED_OK);
+    assert(try_word == UINT32_C(0x12345678));
     assert(n64_recomp_load_s32(token, N64_ADDR(0x80000100)) ==
            (uint64_t)(int64_t)INT32_C(0x12345678));
 
@@ -109,6 +149,10 @@ int main(void)
     assert(n64_recomp_load_s8(token, N64_ADDR(0x80000104)) ==
            UINT64_C(0xFFFFFFFFFFFFFF80));
     assert(n64_recomp_load_u8(token, N64_ADDR(0x80000104)) == 0x80);
+    assert(n64_recomp_try_load_s8(
+               token, N64_ADDR(0x80000104), &try_signed_byte) ==
+           N64_SEGMENTED_OK);
+    assert(try_signed_byte == INT8_MIN);
 
     assert(n64_recomp_store_u16(token, N64_ADDR(0x80800010), 0xBEEF) ==
            N64_SEGMENTED_OK);
