@@ -300,6 +300,18 @@ A separate Wii recompiler port, [`DKR-R-WII@0d8dc9c65563f3c7548f25a2fc73366043bf
 
 For Star Wars Racer, the transferable lesson is the **GX pipeline shape** (display-list decode → N64 RDP state/texture emulation → GX TEV and geometry), not DKR's opcode handlers, texture assumptions, audio mixer, or task schedule. Racer's own GBI/microcode, display-list command set, texture formats, memory footprint and SP/DP completion contract must be audited before choosing either live-RDRAM synchronization or per-task snapshots.
 
+## Star Wars Racer graphics/audio split versus DKR's GX renderer
+
+The pinned public Racer runtime source at `star-wars-racer-recomp@68d3d2709cf71c07b5abed3627e01b03696cefd2` shows a different graphics/audio split from DKR:
+
+- [`src/main.cpp`](https://github.com/dguillot-gh/star-wars-racer-recomp/blob/68d3d2709cf71c07b5abed3627e01b03696cefd2/src/main.cpp#L254-L281) says the RSP microcode callback is only reached for non-graphics tasks. It registers the audio `aspMain` ucode at `0x80099450`, recompiled by RSPRecomp from `aspMain.toml` into `rsp/aspMain.cpp`; unknown non-graphics ucode falls back to a no-op. Graphics tasks are routed to the renderer instead of running through this RSP callback.
+- [`src/rt64_render_context.cpp`](https://github.com/dguillot-gh/star-wars-racer-recomp/blob/68d3d2709cf71c07b5abed3627e01b03696cefd2/src/rt64_render_context.cpp#L208-L234) passes the task's `ucode`, `ucode_data` and `data_ptr` to RT64: it loads the GBI with `loadUCodeGBI(ucode, ucode_data, true)`, resets RT64's HLE RSP state, then processes the display list from RDRAM. Its debug dump uses common F3DEX2 opcode names, but the runtime dynamically provides the ucode addresses to RT64; do not assume every Racer task uses the same static command table without checking the selected GBI.
+- The same file documents RT64 as a Vulkan/D3D12 HLE renderer. This is the desktop graphics path that must be replaced by a Wii GX path; changing only the callback signature or endian lane helpers does not port it.
+
+This changes the renderer-port estimate: DKR's `wii_renderer_dlparse.inc` is specifically a F3DDKR display-list implementation. It is useful as a GX technique reference (RDP state, N64 texture memory, TEV, geometry subdivision), but not as the command parser for Racer. A Racer GX renderer must implement the actual GBI that its RT64 setup selects from the Racer ucode task fields, preserve RT64-equivalent state/combiner behavior, and read all vertex/texture/display-list ranges through the runtime's memory-lifetime contract.
+
+The audio path is a separate decision. Racer's current desktop setup reuses recompiled `aspMain`; DKR instead advertises a native PowerPC audio mixer replacing its sound microcode. For Racer, keep the RSPRecomp audio path only after full audio RSP instruction/DMEM/DMA semantics and output parity are verified, or qualify a native mixer as a separate project. The current scalar `RSP::r128`/DMEM tests do not validate `aspMain` execution.
+
 ### libultra / controller / flash helpers
 
 - `librecomp/src/cont.cpp` resolves message queues, controller status and pad structures through `_arg<T*>`/ `TO_PTR`, and writes controller results through `MEM_H/MEM_B`. This should work with the RAM-only object resolver plus typed writes after the libultra structure helpers are migrated.
