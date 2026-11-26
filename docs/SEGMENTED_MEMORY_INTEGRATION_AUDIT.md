@@ -183,6 +183,16 @@ Source inspection at `N64ModernRuntime@63b808662fc8b604e09552f7c2c8cc7015e8313c`
 3. `librecomp/src/rsp.cpp::recomp::rsp::run_task(uint8_t* rdram, const OSTask* task)` copies the task into `dmem[0xFC0]`, calls `dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80 - 1)`, then invokes `ucode_func(rdram, task->t.ucode)`.
 4. The pinned `rsp.hpp` DMA functions use `MEM_B` lvalue reads/writes for the RDRAM side and `RSP_MEM_B` for DMEM. Their original loops have an isolated BE/Dolphin test on a bounded contiguous byte array (run #45888134135). A separate reference adapter now exercises both transfer directions through the opaque segmented-memory token and returns a checked error at the backing boundary (run #45891822170), but the upstream callback path has not yet been switched to it.
 
+### Asynchronous OSTask ownership in the pinned event queue
+
+The exact `ultramodern/src/events.cpp::submit_rsp_task` implementation resolves the guest address again with `TO_PTR(OSTask, task_)`. It then has two different ownership policies:
+- `M_GFXTASK` is copied by value into `SpTaskAction{ *task }` and placed on the graphics action queue.
+- Every other task is enqueued as the raw host pointer with `sp_task_queue.enqueue(task)`; the SP task thread dequeues that `OSTask*` later and calls `ultramodern::rsp::run_task`.
+
+That non-graphics pointer can outlive the synchronous `osSpTaskStartGo_recomp` call and refers directly into the guest-RDRAM backing. A checked resolution at enqueue time does not by itself prove pointer lifetime or prevent the guest task record from being overwritten before dequeue. The queue migration should snapshot the `OSTask` by value (matching the existing graphics path) or store a guest address plus an explicit backing lease. The snapshot should preserve guest addresses for ucode/data buffers; those ranges are resolved/copied through the opaque memory API only when the worker consumes the task.
+
+The new Dolphin `OSTask` test proves only synchronous object resolution and full-object bounds. It does not exercise the asynchronous queue lifetime. This remains a separate integration gate.
+
 This means a complete migration must cover the whole chain, not just change `RSP_MEM_B`:
 - Resolve the guest `OSTask` address with a checked object-range lookup before dereferencing it.
 - Replace the debug dump's raw 8 MiB indexing with a checked guest-memory copy; otherwise the opaque token would be read as an array.
