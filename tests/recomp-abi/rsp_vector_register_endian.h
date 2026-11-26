@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #if defined(N64_RSP_VECTOR_FORCE_BIG_ENDIAN_FOR_TEST)
 #define N64_RSP_VECTOR_HOST_BIG_ENDIAN 1
@@ -68,8 +69,12 @@ static inline void n64_rsp_vector_store_u8(
 static inline uint16_t n64_rsp_vector_load_u16(
     const uint64_t words[2], uint32_t logical_index)
 {
-    const uint16_t *raw = (const uint16_t *)words;
-    return raw[n64_rsp_vector_half_storage_index(logical_index)];
+    const uint8_t *raw = (const uint8_t *)words;
+    const size_t byte_offset =
+        (size_t)n64_rsp_vector_half_storage_index(logical_index) * sizeof(uint16_t);
+    uint16_t value;
+    memcpy(&value, raw + byte_offset, sizeof(value));
+    return value;
 }
 
 static inline int16_t n64_rsp_vector_load_s16(
@@ -81,8 +86,10 @@ static inline int16_t n64_rsp_vector_load_s16(
 static inline void n64_rsp_vector_store_u16(
     uint64_t words[2], uint32_t logical_index, uint16_t value)
 {
-    uint16_t *raw = (uint16_t *)words;
-    raw[n64_rsp_vector_half_storage_index(logical_index)] = value;
+    uint8_t *raw = (uint8_t *)words;
+    const size_t byte_offset =
+        (size_t)n64_rsp_vector_half_storage_index(logical_index) * sizeof(uint16_t);
+    memcpy(raw + byte_offset, &value, sizeof(value));
 }
 
 #endif
