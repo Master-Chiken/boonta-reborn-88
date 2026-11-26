@@ -13,11 +13,11 @@ This is a reference/emulation route for a locally owned N64 game image. It is no
 5. If loading succeeds and `SkipMenu=1`, Not64 starts the game without waiting at its regular menu.
 
 Sources:
-- Not64 options and argument parsing: https://github.com/extremscorner/not64/blob/master/main/main_gc-menu2.cpp
-- Not64 auto-path handling: https://github.com/extremscorner/not64/blob/master/menu/LoadRomFrame.cpp
-- Not64 auto-selection and SkipMenu: https://github.com/extremscorner/not64/blob/master/menu/FileBrowserFrame.cpp
-- Not64 menu initialization: https://github.com/extremscorner/not64/blob/master/menu/MenuContext.cpp
-- WiiFlow Lite argument building and plugin launch: https://github.com/Fledge68/WiiFlow_Lite/blob/master/source/plugin/plugin.cpp and https://github.com/Fledge68/WiiFlow_Lite/blob/master/source/menu/menu_game_boot.cpp
+- Not64 options and argument parsing: https://github.com/extremscorner/not64/blob/d35a7a1c454eca973995939dbca3f06725cf4a6e/main/main_gc-menu2.cpp
+- Not64 auto-path handling: https://github.com/extremscorner/not64/blob/d35a7a1c454eca973995939dbca3f06725cf4a6e/menu/LoadRomFrame.cpp
+- Not64 auto-selection and SkipMenu: https://github.com/extremscorner/not64/blob/d35a7a1c454eca973995939dbca3f06725cf4a6e/menu/FileBrowserFrame.cpp
+- Not64 menu initialization: https://github.com/extremscorner/not64/blob/d35a7a1c454eca973995939dbca3f06725cf4a6e/menu/MenuContext.cpp
+- WiiFlow Lite argument building and plugin launch: https://github.com/Fledge68/WiiFlow_Lite/blob/69c0d4d61984f4ed6fca51b4520320cadfac960d/source/plugin/plugin.cpp and https://github.com/Fledge68/WiiFlow_Lite/blob/69c0d4d61984f4ed6fca51b4520320cadfac960d/source/menu/menu_game_boot.cpp
 
 ## WiiFlow Lite plugin INI
 
@@ -81,7 +81,7 @@ Record each item as **pass**, **fail**, or **not tested**:
 
 This checklist is not a report of completed testing. No physical Wii/vWii launch has been performed as part of this source review.
 
-The Not64 release page lists an update dated 2026-04-10. Historical compatibility records list Star Wars Episode I: Racer as playable on an older Not64 version but report some graphical defects. This is promising prior evidence, not proof that the latest release works perfectly on every Wii configuration.
+The latest published Not64 release at the time of this review is [20260410](https://github.com/extremscorner/not64/releases/tag/20260410), published 2026-04-10. The source review is pinned to Not64 commit `d35a7a1c454eca973995939dbca3f06725cf4a6e` (2026-04-10) and WiiFlow Lite commit `69c0d4d61984f4ed6fca51b4520320cadfac960d` (2026-08-19), so later changes to either `master` branch do not silently alter the references above. Historical compatibility records list Star Wars Episode I: Racer as playable on an older Not64 version but report some graphical defects. This is promising prior evidence, not proof that the 20260410 release works perfectly on every Wii configuration.
 
 ## Separation from the native Boonta project
 
