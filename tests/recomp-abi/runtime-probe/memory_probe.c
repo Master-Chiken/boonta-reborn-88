@@ -22,6 +22,7 @@
 extern int run_pinned_rsp_r128_accessor_probe(void);
 extern int run_pinned_rsp_dmem_accessor_probe(void);
 extern int run_opaque_rsp_dma_probe(uint8_t *rdram_token);
+extern int run_opaque_ostask_resolve_probe(uint8_t *rdram_token);
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
@@ -418,6 +419,11 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     const int opaque_rsp_dma_result = run_opaque_rsp_dma_probe(rdram_token);
     if (opaque_rsp_dma_result != 0) {
         return fail_u32("CTX_RSP_DMA", (uint32_t)opaque_rsp_dma_result, 0);
+    }
+    const int opaque_ostask_result = run_opaque_ostask_resolve_probe(rdram_token);
+    if (opaque_ostask_result != 0) {
+        return fail_u32("CTX_OSTASK_RESOLVE",
+                        (uint32_t)opaque_ostask_result, 0);
     }
     CHECK_U32("CTX_RSP_DMA_WRITTEN",
         segmented_rdram[0x180], UINT8_C(0xA0));
