@@ -241,6 +241,15 @@ All source links below refer to the same immutable `N64ModernRuntime@63b808662fc
 
 **VI-specific validation gate:** test `osViSetMode` with a valid `OSViMode` in each supported RAM backing, reject an object that crosses a backing boundary, and verify the VI worker reads the same guest mode address after the double-buffered state transition. If the implementation chooses a value snapshot instead, add a compatibility test for mode-structure mutation after the call before accepting that semantic change.
 
+### Additional raw-pointer lifetime across blocking waits
+
+The previous table identifies the thread scheduler at a high level. Two more pinned runtime helpers have concrete local host pointers that survive a blocking wait and are then dereferenced:
+
+- **Timer worker — `ultramodern/src/timer.cpp`:** `timer_thread()` stores the guest timer address and a timestamp snapshot in `ActiveTimer`, which is a good start. But it resolves `cur_timer_` to `OSTimer* cur_timer` before calling `timer_context.action_queue.wait_dequeue_timed(...)` (around lines 141–150). When the wait finishes, it reads `cur_timer->mq`, `cur_timer->msg` and `cur_timer->interval`, and may write `cur_timer->timestamp` (around lines 159–164). Keep the guest timer address across the wait and re-resolve the complete `OSTimer` range after waking, before reading or updating it. The timer object's guest-side lifetime must also be validated until expiry/cancellation.
+- **Blocking message queues — `ultramodern/src/mesgqueue.cpp`:** `do_send()` and `do_recv()` resolve `OSMesgQueue* mq` before their blocking loops (around lines 94–108 and 134–145). A full/empty queue calls `run_next_thread_and_wait()`; after the scheduler resumes this guest thread, the functions continue to use the pre-wait `mq` pointer for queue fields and message-buffer access. Retain `mq_` as the guest address and re-resolve/revalidate the queue structure after every yield. Resolve the message buffer from its guest address for each checked operation; do not retain `OSMesgQueue*` or a message-buffer pointer across the wait.
+
+**Required tests:** exercise a blocked send and a blocked receive with a scheduler yield between initial inspection and resumed access; test queue/message-buffer structures wholly inside a supported backing, crossing a backing boundary, and unmapped. For timers, wake the worker through an add/remove action while its timed wait is pending, then verify expiry and periodic reload use a fresh checked resolution. These tests validate pointer lifetime and bounds only; they do not establish exact N64 timing or device-interrupt parity.
+
 ### Downstream Racer backend behavior at the pinned project revision
 
 The public runtime interfaces do not state callback pointer lifetimes. The pinned downstream project source at `star-wars-racer-recomp@68d3d2709cf71c07b5abed3627e01b03696cefd2` shows two different concrete behaviors:
