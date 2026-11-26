@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback, target-endian scalar memory lanes and a big-endian FPR layout adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map and opaque-context execution, pinned RSP DMEM/RDRAM DMA helper checks, pinned `RSP::r128` accessors, FPR FR-mode checks and the separate opaque-context RSP DMA adapter all pass** in Dolphin workflow run [#45892145434](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45892145434). The validated probe code includes the opaque DMA adapter introduced on implementation commit `c9a2455708ef2089e9aa46c2f3516966b737caf9`; subsequent commits through `110fece47b8e4437f3d5d1c6a266a7ba28d4c743` update the audit/PR documentation only. GDB reached `probe_pass_marker`. This is bounded reference-adapter evidence only: the full upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full RSP task/microcode path, GX renderer, audio or controller integration has been validated.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback, target-endian scalar memory lanes and a big-endian FPR layout adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map execution, opaque-context scalar/DMA access, checked guest byte-span copies, and pinned `OSTask` object resolution all pass** in workflow run [#45892729669](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45892729669) on implementation commit `b8d59afd1b4b490c5394e3dafb9afe1bb435855a`. The synthetic GameCube DOL reached GDB `probe_pass_marker` under Dolphin. This remains reference-adapter evidence only: the full upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full RSP task/microcode path, GX renderer, audio or controller integration has been validated.
 
 ## Question
 
@@ -293,6 +293,13 @@ A separate clean-room prototype, `tests/recomp-abi/n64_recomp_rsp_dma.h`, now co
 The Dolphin probe runs this adapter against the physically separate `segmented_rdram` backing used by `run_segmented_probe`. It verifies both transfer directions and the resulting bytes, then attempts a transfer beyond the backing buffer and checks that `N64_SEGMENTED_UNMAPPED_ADDRESS` is returned and retained as the handle's last error. Run [#45892145434](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45892145434) passed host tests, GameCube/Wii cross-compilation, DOL linking and Dolphin execution.
 
 This is an integration prototype, not a patch to upstream `rsp.hpp` or `recomp::rsp::run_task`. It proves the copy algorithm can use the opaque handle safely; the real runtime task callback chain still needs to call it instead of its raw `MEM_B` pointer-lvalue DMA helpers.
+### Checked guest byte copies and pinned OSTask resolution — run 45892729669
+
+The opaque memory API now exposes `n64_recomp_copy_from_guest` and `n64_recomp_copy_to_guest` for raw byte spans. They resolve one complete RAM-backed guest range, copy with overlap-safe semantics, preserve the byte sequence, and reject MMIO, ROM, unmapped addresses or ranges crossing a backing region. Successful operations clear the handle error; failures are recorded with the guest address, length and read/write direction.
+
+The Dolphin probe verifies source and destination byte patterns, MMIO read rejection, ROM write rejection, backing-boundary rejection and the recorded error state. It also includes the exact `OSTask` layout from the pinned `N64ModernRuntime/ultramodern/include/ultramodern/ultra64.h`: the probe writes a synthetic task into guest RDRAM, resolves the full object through `N64_RECOMP_TO_PTR(OSTask, token, address)`, verifies its fields, then confirms that an `OSTask` beginning at the final backed byte is rejected rather than returning a truncated pointer.
+
+Run [#45892729669](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45892729669) passed host tests, GameCube/Wii cross-compilation, DOL linking and Dolphin execution. This is still a test adapter: it does not patch `osSpTaskStartGo_recomp` or prove that all runtime `TO_PTR` call sites have been migrated.
 ### Still not integrated or proven
 
 - The pinned upstream `recomp.h` still has its original direct pointer arithmetic. Generated Racer code does not yet call this segmented resolver.
