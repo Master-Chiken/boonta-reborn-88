@@ -234,6 +234,58 @@ static inline n64_segmented_result n64_recomp_try_load_s64(
 }
 
 /*
+ * Status-returning stores mirror n64_recomp_try_load(): they do not touch the
+ * legacy shared last_error slot. Generated code must consume the result before
+ * proceeding to the next guest instruction.
+ */
+static inline n64_segmented_result n64_recomp_try_store(
+    uint8_t *token,
+    uint64_t guest_address,
+    size_t width,
+    uint64_t value)
+{
+    n64_recomp_memory_handle *handle = n64_recomp_memory_from_token(token);
+    n64_segmented_result result;
+
+    if (handle == NULL || handle->memory == NULL) {
+        result = N64_SEGMENTED_INVALID_ARGUMENT;
+    } else {
+        result = n64_segmented_write(
+            handle->memory, guest_address, width, value);
+    }
+
+    if (result != N64_SEGMENTED_OK) {
+        n64_recomp_memory_notify_fault(
+            handle, result, guest_address, width, N64_SEGMENTED_ACCESS_WRITE);
+    }
+    return result;
+}
+
+static inline n64_segmented_result n64_recomp_try_store_u8(
+    uint8_t *token, uint64_t address, uint8_t value)
+{
+    return n64_recomp_try_store(token, address, 1, value);
+}
+
+static inline n64_segmented_result n64_recomp_try_store_u16(
+    uint8_t *token, uint64_t address, uint16_t value)
+{
+    return n64_recomp_try_store(token, address, 2, value);
+}
+
+static inline n64_segmented_result n64_recomp_try_store_u32(
+    uint8_t *token, uint64_t address, uint32_t value)
+{
+    return n64_recomp_try_store(token, address, 4, value);
+}
+
+static inline n64_segmented_result n64_recomp_try_store_u64(
+    uint8_t *token, uint64_t address, uint64_t value)
+{
+    return n64_recomp_try_store(token, address, 8, value);
+}
+
+/*
  * Legacy convenience reads below keep the original value-returning probe
  * interface. They set last_error and return zero on failure; generated
  * production code must use n64_recomp_try_load() instead.
