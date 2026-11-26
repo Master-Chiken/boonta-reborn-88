@@ -133,6 +133,31 @@ int main(void)
                token, N64_ADDR(0x80000100), NULL) ==
            N64_SEGMENTED_INVALID_ARGUMENT);
 
+    assert(n64_recomp_try_store_u32(
+               token, N64_ADDR(0x80000110), UINT32_C(0x0F0E0D0C)) ==
+           N64_SEGMENTED_OK);
+    try_word = 0;
+    assert(n64_recomp_try_load_u32(
+               token, N64_ADDR(0x80000110), &try_word) == N64_SEGMENTED_OK);
+    assert(try_word == UINT32_C(0x0F0E0D0C));
+
+    assert(n64_recomp_try_store_u32(
+               token, N64_ADDR(0xB0000004), UINT32_C(0xBAD0BAD0)) ==
+           N64_SEGMENTED_READ_ONLY);
+    assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_OK);
+
+    assert(n64_recomp_try_store_u32(
+               token, N64_ADDR(0x80004000), UINT32_C(0xBAD0BAD0)) ==
+           N64_SEGMENTED_UNMAPPED_ADDRESS);
+    assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_OK);
+
+    assert(n64_recomp_try_store(
+               token, N64_ADDR(0x80003FFF), 2, UINT16_C(0x1234)) ==
+           N64_SEGMENTED_RANGE_CROSSES_REGION);
+    assert(n64_recomp_try_store(
+               token, N64_ADDR(0x80000110), 3, UINT32_C(0x12345678)) ==
+           N64_SEGMENTED_UNSUPPORTED_WIDTH);
+
     /* Generated load/store functions operate on guest addresses, not offsets. */
     assert(n64_recomp_store_u32(token, N64_ADDR(0x80000100),
                                 UINT32_C(0x12345678)) == N64_SEGMENTED_OK);
