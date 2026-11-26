@@ -21,6 +21,7 @@
 /* Compiled from the exact pinned N64ModernRuntime RSP::r128 accessor union. */
 extern int run_pinned_rsp_r128_accessor_probe(void);
 extern int run_pinned_rsp_dmem_accessor_probe(void);
+extern int run_opaque_rsp_dma_probe(uint8_t *rdram_token);
 
 static uint8_t test_rdram[128] ATTRIBUTE_ALIGN(32);
 static uint32_t mmio_scratch[8] ATTRIBUTE_ALIGN(32);
@@ -405,6 +406,19 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     CHECK_U32("CTX_RDRAM_LOAD",
         n64_recomp_load_u32(rdram_token, UINT64_C(0xFFFFFFFF80000050)),
         UINT32_C(0xCAFEBABE));
+
+    segmented_rdram[0x180] = UINT8_C(0x10);
+    segmented_rdram[0x181] = UINT8_C(0x21);
+    segmented_rdram[0x182] = UINT8_C(0x32);
+    segmented_rdram[0x183] = UINT8_C(0x43);
+    const int opaque_rsp_dma_result = run_opaque_rsp_dma_probe(rdram_token);
+    if (opaque_rsp_dma_result != 0) {
+        return fail_u32("CTX_RSP_DMA", (uint32_t)opaque_rsp_dma_result, 0);
+    }
+    CHECK_U32("CTX_RSP_DMA_WRITTEN",
+        segmented_rdram[0x180], UINT8_C(0xA0));
+    CHECK_SEGMENTED("CTX_RSP_DMA_CLEAR_ERROR",
+        n64_recomp_memory_last_error(rdram_token), N64_SEGMENTED_OK);
     if (N64_RECOMP_TO_PTR_VOID(rdram_token,
                                UINT64_C(0xFFFFFFFF80000050)) !=
         segmented_rdram + 0x50) {
