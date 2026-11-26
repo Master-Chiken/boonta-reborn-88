@@ -156,6 +156,14 @@ The GameCube DOL checks `RSP_MEM_B/BU`, word and halfword load/store helpers, si
 
 This is still a bounded synthetic probe. It does not call `recomp::rsp::run_task`, load an `OSTask` end-to-end, migrate the opaque segmented-memory token into the runtime DMA path, execute vector instructions, or run the game's RSP microcode.
 
+### Opaque segmented RDRAM DMA adapter — run 45891822170
+
+The reference header `tests/recomp-abi/n64_recomp_rsp_dma.h` now adapts the pinned RSP DMEM byte accessor to the segmented memory API. Its RDRAM→DMEM path uses `n64_recomp_load_u8`; its DMEM→RDRAM path uses `n64_recomp_store_u8`. It never performs host pointer arithmetic on the opaque `uint8_t* rdram` token.
+
+The Dolphin probe passes the token created by `run_segmented_probe` and uses the discontiguous `segmented_rdram` backing. It verifies both transfer directions, alignment to an 8-byte DRAM boundary, inclusive length, DMEM range rejection and an RDRAM read that crosses the physical backing boundary. The expected unmapped error is returned and recorded in the handle. Host tests, GameCube/Wii cross-compilation, DOL linking and Dolphin all pass in run [#45891822170](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45891822170).
+
+This demonstrates a safe adapter contract, not an upstream runtime integration. The original `dma_rdram_to_dmem` / `dma_dmem_to_rdram` definitions still use `MEM_B` lvalue access and have only been separately tested on a contiguous synthetic RDRAM array. The runtime must replace or route those helpers through the checked adapter before the opaque token reaches `run_task`.
+
 ### RSP task loading, DMEM and IMEM
 
 `librecomp/src/sp.cpp` and `librecomp/src/rsp.cpp` are a separate raw-memory path:
@@ -173,7 +181,7 @@ Source inspection at `N64ModernRuntime@63b808662fc8b604e09552f7c2c8cc7015e8313c`
 1. `librecomp/src/sp.cpp::osSpTaskStartGo_recomp(rdram, ctx)` obtains the `OSTask*` with `TO_PTR(OSTask, ctx->r4)`. Its optional `dump_frame` path reads an entire 8 MiB image using raw `rdram[i ^ 3]` byte indexing. It then calls `ultramodern::submit_rsp_task(rdram, ctx->r4)`.
 2. `ultramodern/include/ultramodern/rsp.hpp` defines the callback as `bool(RDRAM_ARG const OSTask* task)`; `ultramodern/src/rsp.cpp::run_task` forwards the RDRAM argument and task pointer unchanged to the registered callback.
 3. `librecomp/src/rsp.cpp::recomp::rsp::run_task(uint8_t* rdram, const OSTask* task)` copies the task into `dmem[0xFC0]`, calls `dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80 - 1)`, then invokes `ucode_func(rdram, task->t.ucode)`.
-4. The pinned `rsp.hpp` DMA functions use `MEM_B` lvalue reads/writes for the RDRAM side and `RSP_MEM_B` for DMEM. The scalar helper and DMA loops now have isolated BE/Dolphin tests (run #45888134135), but that test supplies a real bounded byte array and does not pass the opaque segmented-memory token.
+4. The pinned `rsp.hpp` DMA functions use `MEM_B` lvalue reads/writes for the RDRAM side and `RSP_MEM_B` for DMEM. Their original loops have an isolated BE/Dolphin test on a bounded contiguous byte array (run #45888134135). A separate reference adapter now exercises both transfer directions through the opaque segmented-memory token and returns a checked error at the backing boundary (run #45891822170), but the upstream callback path has not yet been switched to it.
 
 This means a complete migration must cover the whole chain, not just change `RSP_MEM_B`:
 - Resolve the guest `OSTask` address with a checked object-range lookup before dereferencing it.
@@ -207,7 +215,8 @@ The current inspection is a targeted static audit of the named files, not a comp
 - [x] Add a clean-room RSP DMEM scalar lane adapter with little-/big-endian host selection and host/PPC tests for 8/16/32-bit access, low-half stores and 4 KiB wrap (run [#86](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45689096458)).
 - [x] Execute the pinned `rsp.hpp` `RSP_MEM_B/BU`, word/halfword load/store helpers plus original `dma_rdram_to_dmem` and `dma_dmem_to_rdram` definitions through the BE-adapted DOL copy; verify signed/unsigned scalar access, 4 KiB wrap, inclusive DMA lengths and both transfer directions on Dolphin (run [#45888134135](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45888134135)). This is bounded synthetic RDRAM/DMEM execution, not `run_task`, IMEM or microcode validation.
 - [x] Verify pinned `RSP::r128.byte/element/u8/s16/u16` scalar accessor lanes on big-endian PowerPC using the exact extracted union methods with BE index and `may_alias` adapters in the Dolphin DOL (run [#45888134135](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45888134135)). This does not validate vector instruction semantics, VU state fields marked little-endian, or SIMD paths.
-- [ ] Migrate RSP microcode DMA and debug-dump reads to checked memory-context copies; the current opaque token must never be indexed as raw RDRAM.
+- [x] Prototype and execute RDRAM↔DMEM DMA through the opaque segmented-memory token using checked byte operations, with alignment, inclusive length, bounds and unmapped-backing tests (run [#45891822170](https://github.com/Master-Chicken/boonta-reborn-88)). This is a test adapter only.
+- [ ] Replace the real RSP microcode DMA and debug-dump raw-pointer paths with the checked adapter; the current opaque token must never be indexed as raw RDRAM.
 - [ ] Add real PI/MMIO device models and integration tests.
 
 No upstream repository has been modified. No Racer ROM, generated Racer source, assets, or other proprietary content is part of this audit.
