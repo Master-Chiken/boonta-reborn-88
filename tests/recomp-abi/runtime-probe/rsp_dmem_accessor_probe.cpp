@@ -3,6 +3,7 @@
  * N64ModernRuntime rsp.hpp, with the BE lane adapter applied by the extractor.
  */
 #include <recomp.h>
+#include <ultramodern/ultra64.h>
 #include "pinned_rsp_dmem_accessors.hpp"
 #include "../n64_recomp_rsp_dma.h"
 
@@ -129,4 +130,41 @@ extern "C" int run_opaque_rsp_dma_probe(uint8_t *rdram_token) {
         return 7;
     }
     return 0;
+}
+
+extern "C" int run_opaque_ostask_resolve_probe(uint8_t *rdram_token) {
+    constexpr uint64_t task_address = UINT64_C(0xFFFFFFFF80000300);
+    OSTask source_task{};
+    source_task.t.type = M_GFXTASK;
+    source_task.t.ucode_data = INT32_C(0x180);
+    source_task.t.ucode = INT32_C(0x240);
+    source_task.t.data_ptr = INT32_C(0x360);
+
+    if (n64_recomp_copy_to_guest(
+            rdram_token, task_address, &source_task, sizeof(source_task)) !=
+        N64_SEGMENTED_OK) {
+        return 1;
+    }
+
+    OSTask *resolved_task = N64_RECOMP_TO_PTR(OSTask, rdram_token, task_address);
+    if (resolved_task == nullptr ||
+        resolved_task->t.type != M_GFXTASK ||
+        resolved_task->t.ucode_data != INT32_C(0x180) ||
+        resolved_task->t.ucode != INT32_C(0x240) ||
+        resolved_task->t.data_ptr != INT32_C(0x360)) {
+        return 2;
+    }
+
+    /* The entire OSTask object must fit; a valid first byte is insufficient. */
+    OSTask *crossing_task = N64_RECOMP_TO_PTR(
+        OSTask, rdram_token, UINT64_C(0xFFFFFFFF80000FFF));
+    if (crossing_task != nullptr ||
+        n64_recomp_memory_last_error(rdram_token) !=
+            N64_SEGMENTED_RANGE_CROSSES_REGION) {
+        return 3;
+    }
+
+    n64_recomp_memory_clear_error(rdram_token);
+    return n64_recomp_memory_last_error(rdram_token) == N64_SEGMENTED_OK
+        ? 0 : 4;
 }
