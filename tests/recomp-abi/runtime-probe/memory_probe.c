@@ -553,6 +553,41 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     return 1;
 }
 
+static __attribute__((noinline, noipa)) int run_fpr_layout_probe(void) {
+    recomp_context ctx;
+    memset(&ctx, 0, sizeof(ctx));
+
+    /* FR=0: each odd single register aliases the upper half of its predecessor. */
+    ctx.f0.u32h = UINT32_C(0x11223344);
+    ctx.f0.u32l = UINT32_C(0x55667788);
+    ctx.f_odd = &ctx.f0.u32h;
+    ctx.f_odd[(1 - 1) * 2] = UINT32_C(0xA1B2C3D4);
+    CHECK_U32("FPR_FR0_ODD_F1", ctx.f0.u32h, UINT32_C(0xA1B2C3D4));
+    CHECK_U32("FPR_FR0_EVEN_F0", ctx.f0.u32l, UINT32_C(0x55667788));
+
+    /* FR=1: odd singles use the low word of their own 64-bit register. */
+    ctx.f1.u32h = UINT32_C(0x10293847);
+    ctx.f1.u32l = UINT32_C(0x56473829);
+    ctx.f_odd = &ctx.f1.u32l;
+    ctx.f_odd[(1 - 1) * 2] = UINT32_C(0xDEADBEEF);
+    CHECK_U32("FPR_FR1_ODD_F1", ctx.f1.u32l, UINT32_C(0xDEADBEEF));
+    CHECK_U32("FPR_FR1_HIGH_F1_UNCHANGED", ctx.f1.u32h,
+              UINT32_C(0x10293847));
+
+    /* Even and full-width views must retain their exact bit patterns. */
+    ctx.f2.u64 = UINT64_C(0x1122334455667788);
+    CHECK_U32("FPR_U64_HIGH_WORD", ctx.f2.u32h, UINT32_C(0x11223344));
+    CHECK_U32("FPR_U64_LOW_WORD", ctx.f2.u32l, UINT32_C(0x55667788));
+    CHECK_U32("FPR_FLOAT_HIGH_BITS",
+              *(const uint32_t *)(const void *)&ctx.f2.fh,
+              UINT32_C(0x11223344));
+    CHECK_U32("FPR_FLOAT_LOW_BITS",
+              *(const uint32_t *)(const void *)&ctx.f2.fl,
+              UINT32_C(0x55667788));
+
+    return 1;
+}
+
 static __attribute__((noinline, noipa)) int run_rsp_dmem_probe(void) {
     static const uint8_t expected_word[4] = {0x11, 0x22, 0x33, 0x44};
     memset(rsp_dmem_probe, 0, sizeof(rsp_dmem_probe));
@@ -685,8 +720,9 @@ int main(void) {
     set_probe_stage('S', 'T', 'A', 'R');
     probe_start_marker();
 
-    if (!run_memory_probe() || !run_segmented_probe() || !run_rsp_dmem_probe() ||
-        !run_rsp_vector_layout_probe() || !run_pinned_rsp_r128_accessor_probe()) {
+    if (!run_memory_probe() || !run_segmented_probe() || !run_fpr_layout_probe() ||
+        !run_rsp_dmem_probe() || !run_rsp_vector_layout_probe() ||
+        !run_pinned_rsp_r128_accessor_probe()) {
         set_probe_stage('F', 'A', 'I', 'L');
         probe_fail_marker();
         for (;;) {
