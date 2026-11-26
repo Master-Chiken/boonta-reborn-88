@@ -19,6 +19,7 @@ SOURCES  := .
 INCLUDES := . ..
 
 CFLAGS   = -g -O2 -Wall -Wextra -Werror -std=gnu11 $(MACHDEP) $(INCLUDE)
+CXXFLAGS = -g -O2 -Wall -Wextra -Werror -std=gnu++20 $(MACHDEP) $(INCLUDE)
 LDFLAGS  = -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 LIBS     := -logc -lm
 LIBDIRS  :=
