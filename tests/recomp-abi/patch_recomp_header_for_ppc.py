@@ -11,6 +11,34 @@ END = "\nstatic inline void DDIV(int64_t"
 MEMORY_ANCHOR = "#define MEM_W(offset, reg) \\\n"
 BYTE_LANE_EXPRESSION = "(((reg) + (offset)) ^ 3)"
 HALF_LANE_EXPRESSION = "(((reg) + (offset)) ^ 2)"
+FPR_LITTLE_ENDIAN_LAYOUT = """    struct {
+        float fl;
+        float fh;
+    };
+    struct {
+        uint32_t u32l;
+        uint32_t u32h;
+    };"""
+FPR_BIG_ENDIAN_LAYOUT = """#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    /* The high half of each 64-bit FPR occupies the first bytes on BE hosts. */
+    struct {
+        float fh;
+        float fl;
+    };
+    struct {
+        uint32_t u32h;
+        uint32_t u32l;
+    };
+#else
+    struct {
+        float fl;
+        float fh;
+    };
+    struct {
+        uint32_t u32l;
+        uint32_t u32h;
+    };
+#endif"""
 
 
 def main() -> int:
@@ -33,6 +61,14 @@ def main() -> int:
 
     if patched.count(MEMORY_ANCHOR) != 1:
         raise SystemExit("Pinned N64Recomp MEM_W insertion point did not match exactly once.")
+
+    if patched.count(FPR_LITTLE_ENDIAN_LAYOUT) != 1:
+        raise SystemExit("Pinned N64Recomp FPR union layout did not match exactly once.")
+    patched = patched.replace(
+        FPR_LITTLE_ENDIAN_LAYOUT,
+        FPR_BIG_ENDIAN_LAYOUT,
+        1,
+    )
 
     if patched.count(BYTE_LANE_EXPRESSION) != 2:
         raise SystemExit("Expected exactly two little-endian byte-lane expressions (MEM_B and MEM_BU).")
