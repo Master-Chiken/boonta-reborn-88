@@ -359,6 +359,10 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     uint64_t value = 0;
     uint64_t guest_address = 0;
     uint8_t *host_pointer = NULL;
+    uint8_t guest_copy[4] = {0};
+    const uint8_t copy_source[4] = {
+        UINT8_C(0xA5), UINT8_C(0x5A), UINT8_C(0xC3), UINT8_C(0x3C)
+    };
 
     memset(&memory, 0, sizeof(memory));
     memset(&callbacks, 0, sizeof(callbacks));
@@ -443,6 +447,47 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     CHECK_SEGMENTED("CTX_NO_ERROR_AFTER_LOAD",
         n64_recomp_memory_last_error(rdram_token),
         N64_SEGMENTED_OK);
+
+    /* Raw byte copies are RAM-only, bounded to one resolved backing span. */
+    segmented_rdram[0x60] = UINT8_C(0x11);
+    segmented_rdram[0x61] = UINT8_C(0x22);
+    segmented_rdram[0x62] = UINT8_C(0x33);
+    segmented_rdram[0x63] = UINT8_C(0x44);
+    CHECK_SEGMENTED("CTX_COPY_FROM_GUEST",
+        n64_recomp_copy_from_guest(
+            rdram_token, UINT64_C(0xFFFFFFFF80000060),
+            guest_copy, sizeof(guest_copy)),
+        N64_SEGMENTED_OK);
+    if (memcmp(guest_copy, "\x11\x22\x33\x44", sizeof(guest_copy)) != 0) {
+        return fail_u32("CTX_COPY_FROM_BYTES", guest_copy[0], UINT8_C(0x11));
+    }
+    CHECK_SEGMENTED("CTX_COPY_TO_GUEST",
+        n64_recomp_copy_to_guest(
+            rdram_token, UINT64_C(0xFFFFFFFF80000070),
+            copy_source, sizeof(copy_source)),
+        N64_SEGMENTED_OK);
+    if (memcmp(segmented_rdram + 0x70, copy_source, sizeof(copy_source)) != 0) {
+        return fail_u32("CTX_COPY_TO_BYTES", segmented_rdram[0x70], copy_source[0]);
+    }
+    CHECK_SEGMENTED("CTX_COPY_MMIO_REJECT",
+        n64_recomp_copy_from_guest(
+            rdram_token, UINT64_C(0xFFFFFFFFA4600010),
+            guest_copy, sizeof(guest_copy)),
+        N64_SEGMENTED_NOT_RAM_BACKED);
+    CHECK_SEGMENTED("CTX_COPY_ROM_WRITE_REJECT",
+        n64_recomp_copy_to_guest(
+            rdram_token, UINT64_C(0xFFFFFFFFB0000000),
+            copy_source, sizeof(copy_source)),
+        N64_SEGMENTED_READ_ONLY);
+    CHECK_SEGMENTED("CTX_COPY_REGION_CROSS_REJECT",
+        n64_recomp_copy_from_guest(
+            rdram_token, UINT64_C(0xFFFFFFFF80000FFF),
+            guest_copy, 2),
+        N64_SEGMENTED_RANGE_CROSSES_REGION);
+    CHECK_SEGMENTED("CTX_COPY_RECORDED_ERROR",
+        n64_recomp_memory_last_error(rdram_token),
+        N64_SEGMENTED_RANGE_CROSSES_REGION);
+    n64_recomp_memory_clear_error(rdram_token);
 
     CHECK_SEGMENTED("SEG_RDRAM_WRITE",
         n64_segmented_write(&memory, UINT64_C(0xFFFFFFFF80000040), 4,
