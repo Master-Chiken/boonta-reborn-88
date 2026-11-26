@@ -8,24 +8,29 @@ on:
         required: true
         type: choice
         options:
-          - automation/fix-gemini-secondary-key-20261108
-          - automation/task-lease-and-evidence-acceptance-20261107
-          - chore/sync-main-to-dev-8429930271375379263
-          - docs/paperclip-local-zero-cost-20261111
-          - docs/reconcile-n64-t2-ledger-20261111
-          - feat/paperclip-role-governance-20261112
-          - feat/role-aware-autonomous-context-20261112
-          - feat/scheduled-provider-pr-resume-20261112
-          - fix/automation-report-task-identity-20261111
-          - fix/autonomous-cycle-trusted-task-envelope-20261111
-          - fix/gemini-dispatch-reusable-permissions-20261110
-          - fix/gemini-transient-fetch-retry-20261109
-          - fix/groq-dispatch-gate-observability-20261112
-          - fix/groq-free-invocation-timeout-180s-20261111
-          - fix/groq-tool-json-temperature-20261110
-          - fix/regenerate-task-ledger-summary-pr410
-          - fix/retain-complete-autonomous-task-context
-          - infra/paperclip-control-plane-20261110
+          - automation/split-policy-target-checkouts-20261119
+          - automation/structured-patch-loop-integration-20261120
+          - automation-ledger-activation-20261115
+          - chore/strict-automation-gates-20261121
+          - feat/n64-bounded-memory-map-20261125
+          - feature/pause-overlay-guidance
+          - fix/agents-finish-without-owner-clarification-20261113
+          - fix/automation-resume-multifile-read-20261118
+          - fix/automation-resume-source-context-20261118
+          - fix/autonomous-summary-sync-20261113
+          - fix/deterministic-writer-cycle-contract-20261116
+          - fix/gemini-context-budget-20261118
+          - fix/groq-dispatch-origin-guard-20261118
+          - fix/patch-cycle-review-lock-20261120
+          - fix/queued-task-pr-resume-20261117
+          - gameplay/normalized-player-route-progress-20261120
+          - gameplay/per-course-rival-route-cursors-20261120
+          - gameplay/playable-fork-run-course-20261120
+          - gameplay/rival-branch-geometry-regression-20261120
+          - gameplay/rival-route-cursors-20261117
+          - security/enforce-task-write-scope-20261116
+          - security/opencode-default-deny-20261117
+          - archive/gameplay-cleanup-20261121
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -93,24 +98,29 @@ jobs:
           }
 
           case "$BRANCH_NAME" in
-            "automation/fix-gemini-secondary-key-20261108") PINNED_SHA="40a9db2ee79bafa0752899ded915bae8af3a4a8c" ;;
-            "automation/task-lease-and-evidence-acceptance-20261107") PINNED_SHA="1166a4c4edd3cf7416543caaba50a302d2e025e3" ;;
-            "chore/sync-main-to-dev-8429930271375379263") PINNED_SHA="1b8cc59355db88a0ba64e7b94203f264824cadf6" ;;
-            "docs/paperclip-local-zero-cost-20261111") PINNED_SHA="2ea042f6fa1759208a0798d297606420a93c86c6" ;;
-            "docs/reconcile-n64-t2-ledger-20261111") PINNED_SHA="cb59571694b22dc4d7543f15bc3bbed311af05b7" ;;
-            "feat/paperclip-role-governance-20261112") PINNED_SHA="a37e9df742371a9e537ad6ca8b75dd286192a06c" ;;
-            "feat/role-aware-autonomous-context-20261112") PINNED_SHA="80a8e470ccdeee8f9d6221ed527d131e0286528e" ;;
-            "feat/scheduled-provider-pr-resume-20261112") PINNED_SHA="6f2b9febf7dbf6b79318d68093a14ca3610c74bf" ;;
-            "fix/automation-report-task-identity-20261111") PINNED_SHA="aa22f34a5a231cca4f850deba4779709ac3c25cd" ;;
-            "fix/autonomous-cycle-trusted-task-envelope-20261111") PINNED_SHA="cd24fd67cd7d4669a3317f62a3c92e9ef63bb4b8" ;;
-            "fix/gemini-dispatch-reusable-permissions-20261110") PINNED_SHA="c7ae0927ba03b5bd3a4826f5d5d840a4d966655d" ;;
-            "fix/gemini-transient-fetch-retry-20261109") PINNED_SHA="973690f8b3a63299750959cb98b65200d03932d0" ;;
-            "fix/groq-dispatch-gate-observability-20261112") PINNED_SHA="4859401f39796e187beda1c4335be236edea42f2" ;;
-            "fix/groq-free-invocation-timeout-180s-20261111") PINNED_SHA="30e119962a51eac54147c29e8e5111f7767ac35f" ;;
-            "fix/groq-tool-json-temperature-20261110") PINNED_SHA="c592d3eb724ac8456dd9a340bed5c6edfa41b031" ;;
-            "fix/regenerate-task-ledger-summary-pr410") PINNED_SHA="81e6db46d3cbd174971e547c7657c0879c089117" ;;
-            "fix/retain-complete-autonomous-task-context") PINNED_SHA="dd276581c4bdf34cdba9457305b083724fd82646" ;;
-            "infra/paperclip-control-plane-20261110") PINNED_SHA="582dfc020a8068c0fa6b9feaa84f2cc35419cd7a" ;;
+            "automation/split-policy-target-checkouts-20261119") PINNED_SHA="5f5accc3299793cbf35367286d4ef69248ad6fbe" ;;
+            "automation/structured-patch-loop-integration-20261120") PINNED_SHA="11eed9dde15bca7b5ad26bff59df12d6ad2a2bae" ;;
+            "automation-ledger-activation-20261115") PINNED_SHA="451e239072f8d94b638fe67d2c22ce9e3826f324" ;;
+            "chore/strict-automation-gates-20261121") PINNED_SHA="a4b97a7dc58dc263cc2ac2dc40c14bdbd4e85ccb" ;;
+            "feat/n64-bounded-memory-map-20261125") PINNED_SHA="3150a5851dafa36c61f366567150822901714901" ;;
+            "feature/pause-overlay-guidance") PINNED_SHA="84d58ba7bf58aed270b227f422103cd460c52a7d" ;;
+            "fix/agents-finish-without-owner-clarification-20261113") PINNED_SHA="67ab3839a3d49808c5a0217e4949985e304b4589" ;;
+            "fix/automation-resume-multifile-read-20261118") PINNED_SHA="0a1623ac2573abcfbe87bc0a1a8c1024ead29698" ;;
+            "fix/automation-resume-source-context-20261118") PINNED_SHA="53b958aa66a5a6355117fba5cdd4dc8a51bc0a38" ;;
+            "fix/autonomous-summary-sync-20261113") PINNED_SHA="e3c1aaf90641f270a47dfe85c59cdf3676db21b9" ;;
+            "fix/deterministic-writer-cycle-contract-20261116") PINNED_SHA="76719432191d36ab9430bef2ad8f13958fa07f23" ;;
+            "fix/gemini-context-budget-20261118") PINNED_SHA="f36069f77a1fad5de27c9d4567956d73857e3f1d" ;;
+            "fix/groq-dispatch-origin-guard-20261118") PINNED_SHA="e0b63c1eb0ebdd9a6e433c2603e69af41ac2bdb0" ;;
+            "fix/patch-cycle-review-lock-20261120") PINNED_SHA="28960c7fc029f91f2637991e9d4d83113e77673a" ;;
+            "fix/queued-task-pr-resume-20261117") PINNED_SHA="6726b0d8aa34b5107f46f4755e37d44eda8625cb" ;;
+            "gameplay/normalized-player-route-progress-20261120") PINNED_SHA="19beab26f7274b8c473be4172d8f62b8b5ae7c73" ;;
+            "gameplay/per-course-rival-route-cursors-20261120") PINNED_SHA="3c2da3c3be233e72581e38b27f3e60bae17d3c9b" ;;
+            "gameplay/playable-fork-run-course-20261120") PINNED_SHA="25bf689431074cd6278d826b71a46b7d636d8a63" ;;
+            "gameplay/rival-branch-geometry-regression-20261120") PINNED_SHA="e13c31d55efcba3c98e689ca7235c65a8b0f7ba9" ;;
+            "gameplay/rival-route-cursors-20261117") PINNED_SHA="ff5cdd59244deae763b10ae6516358754a9344c4" ;;
+            "security/enforce-task-write-scope-20261116") PINNED_SHA="f52d7fc1d9d07cda8594cb977b455fe1ea2ff651" ;;
+            "security/opencode-default-deny-20261117") PINNED_SHA="42f5c3f7f30ca5f8e0fc661950a3dd4efd303325" ;;
+            "archive/gameplay-cleanup-20261121") PINNED_SHA="25bf689431074cd6278d826b71a46b7d636d8a63" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
@@ -130,7 +140,7 @@ jobs:
           EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
         run: |
           set -euo pipefail
-          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" && "$BRANCH_NAME" != "archive/rival-ai-history-20261107" ]] || {
+          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" && "$BRANCH_NAME" != "archive/rival-ai-history-20261107" && "$BRANCH_NAME" != "archive/branch-heads-20261126" ]] || {
             echo "::error::Permanent refs cannot be retired."
             exit 1
           }
@@ -157,14 +167,40 @@ jobs:
 
           ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
           ARCHIVE_CHECKPOINT="cb7e18e574bae0441e5df6eaca618a3b92c63fc9"
+          NEW_ARCHIVE_BRANCH="archive/branch-heads-20261126"
+          NEW_ARCHIVE_CHECKPOINT="b8aac5311f1552a99205eea08f42c695504981e8"
+          new_archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$NEW_ARCHIVE_BRANCH")"
+          [[ "$(jq -r '.object.sha' <<< "$new_archive_ref")" == "$NEW_ARCHIVE_CHECKPOINT" ]] || {
+            echo "::error::The pinned 2026-11-26 recovery archive moved or is missing."
+            exit 1
+          }
           archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
           [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
             echo "::error::The pinned rival-AI history archive moved or is missing."
             exit 1
           }
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
+
+          require_protected_archive() {
+            local archive_name="$1"
+            local archive_json
+            archive_json="$(jq -c --arg branch "$archive_name" 'add | map(select(.name == $branch)) | if length == 1 then .[0] else empty end' <<< "$branch_pages")"
+            [[ -n "$archive_json" ]] || {
+              echo "::error::Required recovery archive $archive_name is missing from branch inventory."
+              exit 1
+            }
+            [[ "$(jq -r '.protected' <<< "$archive_json")" == "true" ]] || {
+              echo "::error::Required recovery archive $archive_name is not protected; enable an active branch protection rule before retiring branches."
+              exit 1
+            }
+          }
+          require_protected_archive "archive/branch-heads-20261019"
+          require_protected_archive "$ARCHIVE_BRANCH"
+          require_protected_archive "$NEW_ARCHIVE_BRANCH"
+
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/$NEW_ARCHIVE_BRANCH:refs/remotes/origin/$NEW_ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
           if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$NEW_ARCHIVE_BRANCH" &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/dev; then
             echo "::error::Branch tip is not reachable from a verified archive, main or dev."
@@ -178,7 +214,7 @@ jobs:
           EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
         run: |
           set -euo pipefail
-          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" && "$BRANCH_NAME" != "archive/rival-ai-history-20261107" ]] || {
+          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" && "$BRANCH_NAME" != "archive/rival-ai-history-20261107" && "$BRANCH_NAME" != "archive/branch-heads-20261126" ]] || {
             echo "::error::Permanent refs cannot be retired."
             exit 1
           }
@@ -203,14 +239,40 @@ jobs:
 
           ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
           ARCHIVE_CHECKPOINT="cb7e18e574bae0441e5df6eaca618a3b92c63fc9"
+          NEW_ARCHIVE_BRANCH="archive/branch-heads-20261126"
+          NEW_ARCHIVE_CHECKPOINT="b8aac5311f1552a99205eea08f42c695504981e8"
+          new_archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$NEW_ARCHIVE_BRANCH")"
+          [[ "$(jq -r '.object.sha' <<< "$new_archive_ref")" == "$NEW_ARCHIVE_CHECKPOINT" ]] || {
+            echo "::error::The pinned 2026-11-26 recovery archive moved or is missing."
+            exit 1
+          }
           archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
           [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
             echo "::error::The pinned rival-AI history archive moved or is missing."
             exit 1
           }
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
+
+          require_protected_archive() {
+            local archive_name="$1"
+            local archive_json
+            archive_json="$(jq -c --arg branch "$archive_name" 'add | map(select(.name == $branch)) | if length == 1 then .[0] else empty end' <<< "$branch_pages")"
+            [[ -n "$archive_json" ]] || {
+              echo "::error::Required recovery archive $archive_name is missing from branch inventory."
+              exit 1
+            }
+            [[ "$(jq -r '.protected' <<< "$archive_json")" == "true" ]] || {
+              echo "::error::Required recovery archive $archive_name is not protected; enable an active branch protection rule before retiring branches."
+              exit 1
+            }
+          }
+          require_protected_archive "archive/branch-heads-20261019"
+          require_protected_archive "$ARCHIVE_BRANCH"
+          require_protected_archive "$NEW_ARCHIVE_BRANCH"
+
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/$NEW_ARCHIVE_BRANCH:refs/remotes/origin/$NEW_ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
           if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$NEW_ARCHIVE_BRANCH" &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/dev; then
             echo "::error::Branch tip is not reachable from a verified archive, main or dev."
