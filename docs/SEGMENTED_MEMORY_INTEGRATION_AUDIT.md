@@ -148,6 +148,14 @@ Host run [#86](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45
 
 The same DOL then executed the DMEM vectors on big-endian PowerPC in Dolphin. GDB stopped at `probe_start_marker` (PC `0x80003494`) then `probe_pass_marker` (PC `0x800034a8`); `probe_fail_marker` was not reached. This validates the clean-room DMEM scalar adapter under Dolphin, not the upstream RSP vector engine or any RSP microcode.
 
+### Pinned RSP DMEM helpers and DMA copy loops — run 45888134135
+
+The workflow now extracts the exact scalar helper block and the original `dma_rdram_to_dmem` / `dma_dmem_to_rdram` definitions from pinned `N64ModernRuntime/librecomp/include/librecomp/rsp.hpp` at `63b808662fc8b604e09552f7c2c8cc7015e8313c`. It applies the BE lane adapter only to the ephemeral extracted test header, and the original DMA helpers use the patched `recomp.h` `MEM_B` path for RDRAM.
+
+The GameCube DOL checks `RSP_MEM_B/BU`, word and halfword load/store helpers, signed halfword extension, the `0xFFF → 0x000` wrap, and four-byte RDRAM↔DMEM transfers in both directions, including the original inclusive length and 8-byte DRAM alignment. Host tests, GameCube/Wii cross-compilation, DOL linking and Dolphin execution passed in run [#45888134135](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45888134135). The GDB harness reached `probe_pass_marker`.
+
+This is still a bounded synthetic probe. It does not call `recomp::rsp::run_task`, load an `OSTask` end-to-end, migrate the opaque segmented-memory token into the runtime DMA path, execute vector instructions, or run the game's RSP microcode.
+
 ### RSP task loading, DMEM and IMEM
 
 `librecomp/src/sp.cpp` and `librecomp/src/rsp.cpp` are a separate raw-memory path:
@@ -158,7 +166,7 @@ The same DOL then executed the DMEM vectors on big-endian PowerPC in Dolphin. GD
 
 The RSP adapter must read RDRAM via checked spans or a bounded copy API before the ucode is executed. The microcode dump must use the same path. It must not index the opaque token or assume all source bytes live in the first host buffer. DMEM/IMEM remain separate fixed-size RSP memory windows.
 
-**Separate endian gate:** the current DOL validates the CPU-side N64 byte-lane adapter, but it does not execute RSP vector code. The unconditional RSP DMEM `^ 3` lane transform is a second host-endian assumption and must be reviewed for big-endian PowerPC independently. Add byte/halfword/word RSP DMEM vectors on host and Dolphin before enabling any RSP microcode.
+**Remaining RSP gate:** the scalar `RSP_MEM_*` accessors and the two pinned RDRAM↔DMEM DMA helper functions now have isolated big-endian PPC/Dolphin test coverage. The extracted test copy applies natural BE lanes; the actual upstream runtime is not patched or integrated. Before enabling Racer RSP microcode, migrate task loading/DMA to checked memory-context spans, execute the full `run_task` setup and microcode path, and test vector instruction semantics plus VU state fields marked little-endian.
 
 ### libultra / controller / flash helpers
 
