@@ -247,6 +247,8 @@ The public runtime interfaces do not state callback pointer lifetimes. The pinne
 
 The audio and renderer paths should not be classified the same way: the former consumes/copies during the callback, while the latter deliberately retains the RDRAM base across the renderer lifetime.
 
+A further graphics-queue nuance is important before changing ownership semantics. In pinned `events.cpp`, the graphics queue stores `SpTaskAction{ *task }` (an `OSTask` value), then the worker calls `sp_complete()` before `send_dl()` and `dp_complete()` after `send_dl()`. The source comment explicitly says games usually preserve RSP inputs until RDP completion. Thus, the graphics task record itself is already snapshotted; its referenced guest display-list/texture/framebuffer ranges remain guest addresses and must be read through a valid renderer memory interface until the backend has consumed them. The non-graphics RSP queue is different: it stores an unowned `OSTask*` and should be converted to a by-value task item with an explicit stop variant.
+
 ### 3. Contiguous allocator and reverse mapping assumptions
 
 [`heap.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/librecomp/src/heap.cpp#L7-L50) places `O1HeapInstance` at `&rdram[heap_offset]`, initializes O1Heap over the remaining contiguous RDRAM tail, returns a native pointer from `alloc`, and derives guest addresses by subtracting the RDRAM base. [`mod_config_api.cpp`](https://github.com/N64Recomp/N64ModernRuntime/blob/63b808662fc8b604e09552f7c2c8cc7015e8313c/librecomp/src/mod_config_api.cpp#L38-L75) repeats the pointer-subtraction pattern for returned strings and reconstructs a host pointer for free.
