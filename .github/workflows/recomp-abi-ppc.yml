@@ -128,6 +128,18 @@ jobs:
           test "$(git -C "$repo_dir" rev-parse HEAD)" = "36286fb9a96f325a64b3c600131ba00af44654fc"
           test -s "$repo_dir/include/recomp.h"
           echo "Pinned N64Recomp header: $(git -C "$repo_dir" rev-parse HEAD)"
+
+          runtime_dir="$RUNNER_TEMP/N64ModernRuntime"
+          mkdir -p "$runtime_dir"
+          git -C "$runtime_dir" init
+          git -C "$runtime_dir" remote add origin https://github.com/dguillot-gh/N64ModernRuntime.git
+          git -C "$runtime_dir" fetch --depth=1 origin 63b808662fc8b604e09552f7c2c8cc7015e8313c
+          git -C "$runtime_dir" checkout --detach FETCH_HEAD
+          test "$(git -C "$runtime_dir" rev-parse HEAD)" = "63b808662fc8b604e09552f7c2c8cc7015e8313c"
+          test -s "$runtime_dir/librecomp/include/librecomp/rsp_vu.hpp"
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/extract_rsp_r128_accessor.py" \
+            --source "$runtime_dir/librecomp/include/librecomp/rsp_vu.hpp" \
+            --output "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe/pinned_rsp_r128_accessor.hpp"
           python3 "$GITHUB_WORKSPACE/tests/recomp-abi/patch_recomp_header_for_ppc.py" \
             "$repo_dir/include/recomp.h"
 
