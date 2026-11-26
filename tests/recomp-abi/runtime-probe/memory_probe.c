@@ -453,6 +453,31 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     CHECK_U32("CTX_TRY_LOAD_SIGNED_BYTE_VALUE",
         (uint32_t)(int32_t)try_signed_byte, UINT32_C(0xFFFFFF80));
 
+    CHECK_SEGMENTED("CTX_TRY_STORE_WORD",
+        n64_recomp_try_store_u32(
+            rdram_token, UINT64_C(0xFFFFFFFF800000A0),
+            UINT32_C(0x13579BDF)),
+        N64_SEGMENTED_OK);
+    try_word = 0;
+    CHECK_SEGMENTED("CTX_TRY_STORE_READBACK",
+        n64_recomp_try_load_u32(
+            rdram_token, UINT64_C(0xFFFFFFFF800000A0), &try_word),
+        N64_SEGMENTED_OK);
+    CHECK_U32("CTX_TRY_STORE_READBACK_VALUE", try_word, UINT32_C(0x13579BDF));
+
+    CHECK_SEGMENTED("CTX_TRY_STORE_ROM_REJECT",
+        n64_recomp_try_store(
+            rdram_token, UINT64_C(0xFFFFFFFFB0000000), 4,
+            UINT32_C(0xDEADBEEF)),
+        N64_SEGMENTED_READ_ONLY);
+    CHECK_SEGMENTED("CTX_TRY_STORE_CROSS_REJECT",
+        n64_recomp_try_store(
+            rdram_token, UINT64_C(0xFFFFFFFF80000FFF), 2,
+            UINT16_C(0x1234)),
+        N64_SEGMENTED_RANGE_CROSSES_REGION);
+    CHECK_SEGMENTED("CTX_TRY_STORE_NO_SHARED_ERROR_WRITE",
+        n64_recomp_memory_last_error(rdram_token), N64_SEGMENTED_OK);
+
     segmented_rdram[0x180] = UINT8_C(0x10);
     segmented_rdram[0x181] = UINT8_C(0x21);
     segmented_rdram[0x182] = UINT8_C(0x32);
