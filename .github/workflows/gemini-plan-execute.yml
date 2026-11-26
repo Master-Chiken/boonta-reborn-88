@@ -566,7 +566,7 @@ jobs:
         id: 'mint_identity_token'
         if: |-
           ${{ steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID }}
-        uses: 'actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc' # ratchet:actions/create-github-app-token@v2
+        uses: 'actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc' # ratchet:actions/create-github-app-token@v3
         with:
           app-id: '${{ vars.APP_ID }}'
           private-key: '${{ secrets.APP_PRIVATE_KEY }}'
