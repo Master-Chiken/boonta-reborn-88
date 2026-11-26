@@ -209,6 +209,8 @@ The second proof validates the adapter contract over a segmented memory context;
 
 **Remaining RSP gate:** the scalar `RSP_MEM_*` accessors and the two pinned RDRAM↔DMEM DMA helper functions now have isolated big-endian PPC/Dolphin test coverage. The extracted test copy applies natural BE lanes; the actual upstream runtime is not patched or integrated. Before enabling Racer RSP microcode, migrate task loading/DMA to checked memory-context spans, execute the full `run_task` setup and microcode path, and test vector instruction semantics plus VU state fields marked little-endian.
 
+The shutdown path is part of this same change: `join_event_threads()` currently enqueues `nullptr` as the worker-exit sentinel, then joins the SP task thread. A value queue cannot preserve this sentinel as a null object pointer. Use an explicit queue item such as `SpTaskItem{kind = Task|Stop, task = ...}` (or `std::optional<OSTask>`) and enqueue `Stop` before joining. The task variant should own its copied `OSTask`; the address fields inside the structure remain N64 guest addresses and must be resolved when buffers are consumed.
+
 ### Checked guest byte spans and pinned OSTask resolution — run 45892729669
 
 The opaque memory API now provides `n64_recomp_copy_from_guest` and `n64_recomp_copy_to_guest`. Each function resolves the complete byte range as RAM-backed before copying with `memmove`; it preserves byte order, rejects MMIO/ROM and rejects a range that crosses a backing-region boundary. Failures are written to the handle's error state with the guest address, copy length and access direction.
