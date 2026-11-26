@@ -722,8 +722,8 @@ int main(void) {
     probe_start_marker();
 
     if (!run_memory_probe() || !run_segmented_probe() || !run_fpr_layout_probe() ||
-        !run_rsp_dmem_probe() || !run_pinned_rsp_dmem_accessor_probe() ||
-        !run_rsp_vector_layout_probe() || !run_pinned_rsp_r128_accessor_probe()) {
+        !run_rsp_dmem_probe() || run_pinned_rsp_dmem_accessor_probe() != 0 ||
+        !run_rsp_vector_layout_probe() || run_pinned_rsp_r128_accessor_probe() != 0) {
         set_probe_stage('F', 'A', 'I', 'L');
         probe_fail_marker();
         for (;;) {
