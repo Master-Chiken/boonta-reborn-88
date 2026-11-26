@@ -1,7 +1,7 @@
 # PowerPC ABI probe for the N64Recomp header
 
 Date: 2026-11-25  
-Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback, target-endian scalar memory lanes and a big-endian FPR layout adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map and opaque-context execution, RSP DMEM scalar helper tests, RSP RDRAM↔DMEM DMA helper tests, pinned `RSP::r128` accessor tests, and FPR offset/FR-mode tests all pass** in workflow run [#45888134135](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/45888134135) on implementation commit `c3d2389d7d1977c001753ff51e91f8db1942e2a2`. The synthetic GameCube DOL reached GDB `probe_pass_marker` under Dolphin. This is ABI/accessor/helper evidence only: the full upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full RSP task/microcode path, GX renderer, audio or controller integration has been validated.
+Status: the pinned header requires a clean-room 64x64-to-128 multiply fallback, target-endian scalar memory lanes and a big-endian FPR layout adapter for devkitPPC. **Host tests, GameCube/Wii cross-compilation, DOL linking, segmented-map and opaque-context execution, pinned RSP DMEM/RDRAM DMA helpers, pinned `RSP::r128` accessors, and the opaque-context RSP DMA adapter all pass** in workflow run [#45891822170](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45891822170) on implementation commit `c9a2455708ef2089e9aa46c2f3516966b737caf9`. The synthetic GameCube DOL reached GDB `probe_pass_marker` under Dolphin. This is bounded reference-adapter evidence only: the full upstream runtime and generated Racer code remain unmodified and unintegrated. No physical Wii, physical GameCube, full RSP task/microcode path, GX renderer, audio or controller integration has been validated.
 
 ## Question
 
@@ -286,6 +286,13 @@ The GameCube DOL checks direct signed/unsigned byte access, word and halfword lo
 
 This proves the extracted scalar helpers and DMA copy loops with bounded synthetic RDRAM/DMEM only. It does not validate `recomp::rsp::run_task`, the full RSP task lifecycle, IMEM/DMEM task loading, the opaque segmented-memory context in runtime DMA, RSP vector instruction semantics, or actual microcode execution.
 
+### Opaque segmented-memory RSP DMA adapter — run 45891822170
+
+A separate clean-room prototype, `tests/recomp-abi/n64_recomp_rsp_dma.h`, now connects the tested pinned `RSP_MEM_BU` DMEM accessor to the existing opaque `n64_recomp_memory_api.h`. Its RDRAM↔DMEM byte loops use `n64_recomp_load_u8` and `n64_recomp_store_u8`; the token is never treated as a host array. The loop preserves the pinned runtime's inclusive length and 8-byte DRAM alignment, checks the 4 KiB DMEM bounds, and propagates segmented-memory errors.
+
+The Dolphin probe runs this adapter against the physically separate `segmented_rdram` backing used by `run_segmented_probe`. It verifies both transfer directions and the resulting bytes, then attempts a transfer beyond the backing buffer and checks that `N64_SEGMENTED_UNMAPPED_ADDRESS` is returned and retained as the handle's last error. Run [#45891822170](https://github.com/Master-Chicken/boonta-reborn-88/actions/runs/45891822170) passed host tests, GameCube/Wii cross-compilation, DOL linking and Dolphin execution.
+
+This is an integration prototype, not a patch to upstream `rsp.hpp` or `recomp::rsp::run_task`. It proves the copy algorithm can use the opaque handle safely; the real runtime task callback chain still needs to call it instead of its raw `MEM_B` pointer-lvalue DMA helpers.
 ### Still not integrated or proven
 
 - The pinned upstream `recomp.h` still has its original direct pointer arithmetic. Generated Racer code does not yet call this segmented resolver.
