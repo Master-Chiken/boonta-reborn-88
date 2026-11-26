@@ -11,10 +11,15 @@ START = "#define RSP_MEM_B(offset, addr) \\\n"
 END = "#define RSP_ADD32(a, b) \\\n"
 
 REPLACEMENTS = (
-    ("^ 3", "^ RSP_BYTE_XOR", 2),
-    ("[i ^ 3]", "[i ^ RSP_BYTE_XOR]", 2),
-    ("[(i + 2) ^ 3]", "[i ^ (RSP_BYTE_XOR & 1)]", 2),
-    ("[(i + 2) ^ 3]", "[(i + 2) ^ RSP_BYTE_XOR]", 1),
+    ("(((offset) + (addr)) ^ 3)", "(((offset) + (addr)) ^ RSP_BYTE_XOR)", 2),
+    ("reinterpret_cast<uint8_t*>(&out)[i ^ 3]",
+     "reinterpret_cast<uint8_t*>(&out)[i ^ RSP_BYTE_XOR]", 1),
+    ("reinterpret_cast<uint8_t*>(&val)[i ^ 3]",
+     "reinterpret_cast<uint8_t*>(&val)[i ^ RSP_BYTE_XOR]", 1),
+    ("reinterpret_cast<uint8_t*>(&out)[(i + 2) ^ 3]",
+     "reinterpret_cast<uint8_t*>(&out)[i ^ (RSP_BYTE_XOR & 1)]", 2),
+    ("reinterpret_cast<uint8_t*>(&val)[(i + 2) ^ 3]",
+     "reinterpret_cast<uint8_t*>(&val)[(i + 2) ^ RSP_BYTE_XOR]", 1),
 )
 
 
