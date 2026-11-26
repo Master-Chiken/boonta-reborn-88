@@ -114,8 +114,8 @@ int main(void)
                token, N64_ADDR(0x80004000), &try_word) ==
            N64_SEGMENTED_UNMAPPED_ADDRESS);
     assert(try_word == UINT32_C(0xCAFEBABE));
-    assert(n64_recomp_memory_last_error(token) ==
-           N64_SEGMENTED_UNMAPPED_ADDRESS);
+    /* Per-call status is returned directly; no shared sticky error is written. */
+    assert(n64_recomp_memory_last_error(token) == N64_SEGMENTED_OK);
 
     try_value = UINT64_C(0x0123456789ABCDEF);
     assert(n64_recomp_try_load(
