@@ -578,12 +578,12 @@ static __attribute__((noinline, noipa)) int run_fpr_layout_probe(void) {
     ctx.f2.u64 = UINT64_C(0x1122334455667788);
     CHECK_U32("FPR_U64_HIGH_WORD", ctx.f2.u32h, UINT32_C(0x11223344));
     CHECK_U32("FPR_U64_LOW_WORD", ctx.f2.u32l, UINT32_C(0x55667788));
-    CHECK_U32("FPR_FLOAT_HIGH_BITS",
-              *(const uint32_t *)(const void *)&ctx.f2.fh,
-              UINT32_C(0x11223344));
-    CHECK_U32("FPR_FLOAT_LOW_BITS",
-              *(const uint32_t *)(const void *)&ctx.f2.fl,
-              UINT32_C(0x55667788));
+    uint32_t float_high_bits = 0;
+    uint32_t float_low_bits = 0;
+    memcpy(&float_high_bits, &ctx.f2.fh, sizeof(float_high_bits));
+    memcpy(&float_low_bits, &ctx.f2.fl, sizeof(float_low_bits));
+    CHECK_U32("FPR_FLOAT_HIGH_BITS", float_high_bits, UINT32_C(0x11223344));
+    CHECK_U32("FPR_FLOAT_LOW_BITS", float_low_bits, UINT32_C(0x55667788));
 
     return 1;
 }
