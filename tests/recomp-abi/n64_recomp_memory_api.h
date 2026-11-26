@@ -15,6 +15,8 @@
 
 #include "n64_segmented_memory.h"
 
+#include <string.h>
+
 typedef struct n64_recomp_memory_handle n64_recomp_memory_handle;
 
 typedef void (*n64_recomp_memory_fault_fn)(
@@ -186,6 +188,72 @@ static inline n64_segmented_result n64_recomp_store_u64(
     uint8_t *token, uint64_t address, uint64_t value)
 {
     return n64_recomp_store(token, address, 8, value);
+}
+
+/*
+ * Copy raw guest bytes through a checked, RAM-only span. The guest range must
+ * fit in one backing region; callers that cross a region boundary must split
+ * the request deliberately. This preserves the guest byte sequence rather
+ * than converting it to a host numeric integer.
+ */
+static inline n64_segmented_result n64_recomp_copy_from_guest(
+    uint8_t *token,
+    uint64_t guest_address,
+    void *destination,
+    size_t length)
+{
+    n64_recomp_memory_handle *handle = n64_recomp_memory_from_token(token);
+    uint8_t *source = NULL;
+    n64_segmented_result result;
+
+    if (handle == NULL || handle->memory == NULL ||
+        destination == NULL || length == 0) {
+        result = N64_SEGMENTED_INVALID_ARGUMENT;
+    } else {
+        result = n64_segmented_host_pointer_for_guest(
+            handle->memory, guest_address, length,
+            N64_SEGMENTED_ACCESS_READ, &source);
+    }
+
+    if (result != N64_SEGMENTED_OK) {
+        n64_recomp_memory_record_fault(
+            handle, result, guest_address, length, N64_SEGMENTED_ACCESS_READ);
+        return result;
+    }
+
+    memmove(destination, source, length);
+    handle->last_error = N64_SEGMENTED_OK;
+    return N64_SEGMENTED_OK;
+}
+
+static inline n64_segmented_result n64_recomp_copy_to_guest(
+    uint8_t *token,
+    uint64_t guest_address,
+    const void *source,
+    size_t length)
+{
+    n64_recomp_memory_handle *handle = n64_recomp_memory_from_token(token);
+    uint8_t *destination = NULL;
+    n64_segmented_result result;
+
+    if (handle == NULL || handle->memory == NULL ||
+        source == NULL || length == 0) {
+        result = N64_SEGMENTED_INVALID_ARGUMENT;
+    } else {
+        result = n64_segmented_host_pointer_for_guest(
+            handle->memory, guest_address, length,
+            N64_SEGMENTED_ACCESS_WRITE, &destination);
+    }
+
+    if (result != N64_SEGMENTED_OK) {
+        n64_recomp_memory_record_fault(
+            handle, result, guest_address, length, N64_SEGMENTED_ACCESS_WRITE);
+        return result;
+    }
+
+    memmove(destination, source, length);
+    handle->last_error = N64_SEGMENTED_OK;
+    return N64_SEGMENTED_OK;
 }
 
 /*
