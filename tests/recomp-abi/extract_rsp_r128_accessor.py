@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Extract the exact pinned N64ModernRuntime RSP::r128 union for a PPC probe."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+
+def extract_union(source: str) -> str:
+    anchor = "    union r128 {"
+    if source.count(anchor) != 1:
+        raise SystemExit("Expected exactly one RSP::r128 union in pinned rsp_vu.hpp")
+
+    start = source.index(anchor) + len("    ")
+    brace = source.index("{", start)
+    depth = 0
+    end = None
+    for offset in range(brace, len(source)):
+        char = source[offset]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                end = offset + 1
+                break
+
+    if end is None or source[end:].lstrip()[:1] != ";":
+        raise SystemExit("Could not find the closing '};' for RSP::r128")
+
+    block = source[start:end + 1]  # include the union's terminating semicolon
+    required = {
+        "byte": 2,
+        "element": 2,
+        "u8": 2,
+        "s16": 2,
+        "u16": 2,
+    }
+    for method, count in required.items():
+        needle = f"auto {method}(u32 index)"
+        if block.count(needle) != count:
+            raise SystemExit(
+                f"Pinned RSP::r128 accessor {method} changed: "
+                f"expected {count} overloads, found {block.count(needle)}"
+            )
+
+    return block
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+
+    source = args.source.read_text(encoding="utf-8")
+    union = extract_union(source)
+    result = (
+        "#ifndef BOONTA_PINNED_RSP_R128_ACCESSOR_HPP\n"
+        "#define BOONTA_PINNED_RSP_R128_ACCESSOR_HPP\n\n"
+        "#include <stdint.h>\n"
+        "using u32 = uint32_t;\n"
+        "struct RSP {\n"
+        f"{union}\n"
+        "};\n\n"
+        "#endif\n"
+    )
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(result, encoding="utf-8")
+    print(f"Extracted exact pinned RSP::r128 union to {args.output}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
