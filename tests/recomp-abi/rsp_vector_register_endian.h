@@ -10,13 +10,17 @@
  *   element(index)-> raw[7 - index]
  * This is the little-endian host representation used by the desktop runtime.
  *
- * For a big-endian host, the two uint64_t words keep their numeric identity,
- * but each word's byte representation is reversed relative to LE. The
- * architectural high 64-bit half is u128[1], and the low 64-bit half is
- * u128[0]. Therefore logical lanes 0..7 live in the BE memory bytes of
- * u128[1] (raw offsets 8..15), and lanes 8..15 in u128[0] (raw 0..7).
+ * A big-endian Wii stores the first logical vector byte at the first
+ * byte of the native register object. Thus the target-endian adapter uses
+ * natural byte/halfword indices on BE, while the desktop little-endian
+ * representation retains the upstream reversed indices.
  *
- * This reference is intentionally separate from upstream rsp_vu.hpp.
+ * Do not interpret the two uint64_t storage elements as universally named
+ * "high" and "low" halves: their native memory order is target-endian.
+ *
+ * This host-side reference remains separate from upstream rsp_vu.hpp; the
+ * Dolphin DOL additionally exercises accessors extracted from the pinned
+ * upstream union declaration.
  */
 
 #include <stdint.h>
@@ -36,7 +40,7 @@ static inline uint32_t n64_rsp_vector_byte_storage_index(uint32_t logical_index)
 {
     uint32_t index = logical_index & UINT32_C(15);
 #if N64_RSP_VECTOR_HOST_BIG_ENDIAN
-    return (index + UINT32_C(8)) & UINT32_C(15);
+    return index;
 #else
     return UINT32_C(15) - index;
 #endif
@@ -46,7 +50,7 @@ static inline uint32_t n64_rsp_vector_half_storage_index(uint32_t logical_index)
 {
     uint32_t index = logical_index & UINT32_C(7);
 #if N64_RSP_VECTOR_HOST_BIG_ENDIAN
-    return (index + UINT32_C(4)) & UINT32_C(7);
+    return index;
 #else
     return UINT32_C(7) - index;
 #endif
