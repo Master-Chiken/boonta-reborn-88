@@ -140,6 +140,9 @@ jobs:
           python3 "$GITHUB_WORKSPACE/tests/recomp-abi/extract_rsp_r128_accessor.py" \
             --source "$runtime_dir/librecomp/include/librecomp/rsp_vu.hpp" \
             --output "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe/pinned_rsp_r128_accessor.hpp"
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/extract_rsp_dmem_accessors.py" \
+            --source "$runtime_dir/librecomp/include/librecomp/rsp.hpp" \
+            --output "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe/pinned_rsp_dmem_accessors.hpp"
           python3 "$GITHUB_WORKSPACE/tests/recomp-abi/patch_recomp_header_for_ppc.py" \
             "$repo_dir/include/recomp.h"
 
