@@ -30,6 +30,23 @@ def extract_union(source: str) -> str:
         raise SystemExit("Could not find the closing '};' for RSP::r128")
 
     block = source[start:end + 1]  # include the union's terminating semicolon
+
+    # The pinned desktop runtime reverses byte/halfword indices for LE hosts.
+    # Wii/GameCube PPC are BE, so adapt this ephemeral copy to native lane order.
+    lane_adapters = (
+        ("((uint8_t*)&u128)[15 - index]", "((uint8_t*)&u128)[index]", 4),
+        ("((uint16_t*)&u128)[7 - index]", "((uint16_t*)&u128)[index]", 4),
+        ("((int16_t*)&u128)[7 - index]", "((int16_t*)&u128)[index]", 2),
+    )
+    for old, new, expected in lane_adapters:
+        count = block.count(old)
+        if count != expected:
+            raise SystemExit(
+                f"Pinned RSP::r128 lane expression {old!r} changed: "
+                f"expected {expected}, found {count}"
+            )
+        block = block.replace(old, new)
+
     required = {
         "byte": 2,
         "element": 2,
