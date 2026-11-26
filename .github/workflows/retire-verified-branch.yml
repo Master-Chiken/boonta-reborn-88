@@ -179,6 +179,24 @@ jobs:
             echo "::error::The pinned rival-AI history archive moved or is missing."
             exit 1
           }
+
+          require_protected_archive() {
+            local archive_name="$1"
+            local archive_json
+            archive_json="$(jq -c --arg branch "$archive_name" 'add | map(select(.name == $branch)) | if length == 1 then .[0] else empty end' <<< "$branch_pages")"
+            [[ -n "$archive_json" ]] || {
+              echo "::error::Required recovery archive $archive_name is missing from branch inventory."
+              exit 1
+            }
+            [[ "$(jq -r '.protected' <<< "$archive_json")" == "true" ]] || {
+              echo "::error::Required recovery archive $archive_name is not protected; enable an active branch protection rule before retiring branches."
+              exit 1
+            }
+          }
+          require_protected_archive "archive/branch-heads-20261019"
+          require_protected_archive "$ARCHIVE_BRANCH"
+          require_protected_archive "$NEW_ARCHIVE_BRANCH"
+
           git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/$NEW_ARCHIVE_BRANCH:refs/remotes/origin/$NEW_ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
           if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
@@ -233,6 +251,24 @@ jobs:
             echo "::error::The pinned rival-AI history archive moved or is missing."
             exit 1
           }
+
+          require_protected_archive() {
+            local archive_name="$1"
+            local archive_json
+            archive_json="$(jq -c --arg branch "$archive_name" 'add | map(select(.name == $branch)) | if length == 1 then .[0] else empty end' <<< "$branch_pages")"
+            [[ -n "$archive_json" ]] || {
+              echo "::error::Required recovery archive $archive_name is missing from branch inventory."
+              exit 1
+            }
+            [[ "$(jq -r '.protected' <<< "$archive_json")" == "true" ]] || {
+              echo "::error::Required recovery archive $archive_name is not protected; enable an active branch protection rule before retiring branches."
+              exit 1
+            }
+          }
+          require_protected_archive "archive/branch-heads-20261019"
+          require_protected_archive "$ARCHIVE_BRANCH"
+          require_protected_archive "$NEW_ARCHIVE_BRANCH"
+
           git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/$NEW_ARCHIVE_BRANCH:refs/remotes/origin/$NEW_ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
           if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
