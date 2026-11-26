@@ -359,6 +359,9 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     uint8_t *rdram_token;
     uint64_t value = 0;
     uint64_t guest_address = 0;
+    uint64_t try_value = UINT64_C(0x0123456789ABCDEF);
+    uint32_t try_word = UINT32_C(0xCAFEBABE);
+    int8_t try_signed_byte = 0;
     uint8_t *host_pointer = NULL;
     uint8_t guest_copy[4] = {0};
     const uint8_t copy_source[4] = {
@@ -411,6 +414,44 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
     CHECK_U32("CTX_RDRAM_LOAD",
         n64_recomp_load_u32(rdram_token, UINT64_C(0xFFFFFFFF80000050)),
         UINT32_C(0xCAFEBABE));
+
+    /*
+     * Execute the status-returning memory API on native big-endian PPC.
+     * A successful zero load and a failed load must remain distinguishable;
+     * failures must not overwrite the caller's output or the legacy shared
+     * last_error field.
+     */
+    CHECK_SEGMENTED("CTX_TRY_LOAD_ZERO",
+        n64_recomp_try_load_u32(
+            rdram_token, UINT64_C(0xFFFFFFFF80000080), &try_word),
+        N64_SEGMENTED_OK);
+    CHECK_U32("CTX_TRY_LOAD_ZERO_VALUE", try_word, 0);
+
+    try_word = UINT32_C(0xDEADBEEF);
+    CHECK_SEGMENTED("CTX_TRY_LOAD_UNMAPPED",
+        n64_recomp_try_load_u32(
+            rdram_token, UINT64_C(0xFFFFFFFF80001000), &try_word),
+        N64_SEGMENTED_UNMAPPED_ADDRESS);
+    CHECK_U32("CTX_TRY_LOAD_UNMAPPED_OUTPUT_UNCHANGED",
+        try_word, UINT32_C(0xDEADBEEF));
+    CHECK_SEGMENTED("CTX_TRY_LOAD_NO_SHARED_ERROR_WRITE",
+        n64_recomp_memory_last_error(rdram_token), N64_SEGMENTED_OK);
+
+    try_value = UINT64_C(0x0123456789ABCDEF);
+    CHECK_SEGMENTED("CTX_TRY_LOAD_CROSSES_BACKING",
+        n64_recomp_try_load(
+            rdram_token, UINT64_C(0xFFFFFFFF80000FFF), 2, &try_value),
+        N64_SEGMENTED_RANGE_CROSSES_REGION);
+    CHECK_U64("CTX_TRY_LOAD_CROSS_OUTPUT_UNCHANGED",
+        try_value, UINT64_C(0x0123456789ABCDEF));
+
+    segmented_rdram[0x91] = UINT8_C(0x80);
+    CHECK_SEGMENTED("CTX_TRY_LOAD_SIGNED_BYTE",
+        n64_recomp_try_load_s8(
+            rdram_token, UINT64_C(0xFFFFFFFF80000091), &try_signed_byte),
+        N64_SEGMENTED_OK);
+    CHECK_U32("CTX_TRY_LOAD_SIGNED_BYTE_VALUE",
+        (uint32_t)(int32_t)try_signed_byte, UINT32_C(0xFFFFFF80));
 
     segmented_rdram[0x180] = UINT8_C(0x10);
     segmented_rdram[0x181] = UINT8_C(0x21);
