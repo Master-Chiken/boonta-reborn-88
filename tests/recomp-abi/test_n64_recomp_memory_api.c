@@ -244,6 +244,9 @@ int main(void)
     assert(n64_recomp_try_load_u32(
                token, N64_ADDR(0x80000100), NULL) ==
            N64_SEGMENTED_INVALID_ARGUMENT);
+    assert(n64_recomp_try_load_s64(
+               token, N64_ADDR(0x80000100), NULL) ==
+           N64_SEGMENTED_INVALID_ARGUMENT);
 
     assert(n64_recomp_try_store_u32(
                token, N64_ADDR(0x80000110), UINT32_C(0x0F0E0D0C)) ==
