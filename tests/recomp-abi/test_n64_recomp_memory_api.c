@@ -65,39 +65,37 @@ static void synthetic_fault_begin(void)
     synthetic_fault.active = 1;
 }
 
-typedef int (*synthetic_guest_function)(uint8_t *token);
+typedef void (*synthetic_guest_function)(uint8_t *token);
 
 static int synthetic_invoke_guest(
     synthetic_guest_function function, uint8_t *token)
 {
     if (synthetic_fault.failed) return -1;
-    if (function(token) != 0) return -1;
+    function(token);
+    /* Generated guest functions are void: the caller observes the fault frame. */
     return synthetic_fault.failed ? -1 : 0;
 }
 
-static int synthetic_guest_leaf(uint8_t *token)
+static void synthetic_guest_leaf(uint8_t *token)
 {
     uint32_t value;
     if (n64_recomp_try_load_u32(
             token, synthetic_leaf_address, &value) != N64_SEGMENTED_OK) {
-        return -1;
+        return;
     }
     ++synthetic_leaf_continuations;
-    return 0;
 }
 
-static int synthetic_guest_middle(uint8_t *token)
+static void synthetic_guest_middle(uint8_t *token)
 {
-    if (synthetic_invoke_guest(synthetic_guest_leaf, token) != 0) return -1;
+    if (synthetic_invoke_guest(synthetic_guest_leaf, token) != 0) return;
     ++synthetic_middle_continuations;
-    return 0;
 }
 
-static int synthetic_guest_root(uint8_t *token)
+static void synthetic_guest_root(uint8_t *token)
 {
-    if (synthetic_invoke_guest(synthetic_guest_middle, token) != 0) return -1;
+    if (synthetic_invoke_guest(synthetic_guest_middle, token) != 0) return;
     ++synthetic_root_continuations;
-    return 0;
 }
 
 static uint8_t rdram[0x4000];
