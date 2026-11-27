@@ -37,6 +37,7 @@ typedef struct synthetic_fault_frame {
 } synthetic_fault_frame;
 
 static _Thread_local synthetic_fault_frame synthetic_fault;
+static uint64_t synthetic_leaf_address;
 static unsigned synthetic_leaf_continuations;
 static unsigned synthetic_middle_continuations;
 static unsigned synthetic_root_continuations;
@@ -78,7 +79,7 @@ static int synthetic_guest_leaf(uint8_t *token)
 {
     uint32_t value;
     if (n64_recomp_try_load_u32(
-            token, N64_ADDR(0x80000100), &value) != N64_SEGMENTED_OK) {
+            token, synthetic_leaf_address, &value) != N64_SEGMENTED_OK) {
         return -1;
     }
     ++synthetic_leaf_continuations;
@@ -184,6 +185,7 @@ int main(void)
      * is captured by the per-thread fault observer; each caller then returns
      * without running its continuation.
      */
+    synthetic_leaf_address = N64_ADDR(0x80000100);
     synthetic_leaf_continuations = 0;
     synthetic_middle_continuations = 0;
     synthetic_root_continuations = 0;
@@ -194,17 +196,13 @@ int main(void)
     assert(synthetic_middle_continuations == 1);
     assert(synthetic_root_continuations == 1);
 
+    synthetic_leaf_address = N64_ADDR(0x80004000);
     synthetic_leaf_continuations = 0;
     synthetic_middle_continuations = 0;
     synthetic_root_continuations = 0;
     synthetic_fault_begin();
-    /* The leaf address is intentionally made invalid for this invocation. */
-    {
-        uint32_t saved_rdram_size = (uint32_t)memory.rdram_size;
-        memory.rdram_size = 0x100;
-        assert(synthetic_invoke_guest(synthetic_guest_root, token) == -1);
-        memory.rdram_size = saved_rdram_size;
-    }
+    /* The leaf address is intentionally unmapped for this invocation. */
+    assert(synthetic_invoke_guest(synthetic_guest_root, token) == -1);
     assert(synthetic_fault.failed);
     assert(synthetic_fault.result == N64_SEGMENTED_UNMAPPED_ADDRESS);
     assert(synthetic_fault.guest_address == N64_ADDR(0x80000100));
