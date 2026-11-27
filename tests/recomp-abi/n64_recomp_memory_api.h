@@ -226,6 +226,9 @@ static inline n64_segmented_result n64_recomp_try_load_s32(
 static inline n64_segmented_result n64_recomp_try_load_s64(
     uint8_t *token, uint64_t address, int64_t *output)
 {
+    if (output == NULL) {
+        return n64_recomp_try_load(token, address, 8, NULL);
+    }
     uint64_t value;
     n64_segmented_result result =
         n64_recomp_try_load(token, address, 8, &value);
