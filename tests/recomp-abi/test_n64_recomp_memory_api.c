@@ -203,7 +203,7 @@ int main(void)
     assert(synthetic_invoke_guest(synthetic_guest_root, token) == -1);
     assert(synthetic_fault.failed);
     assert(synthetic_fault.result == N64_SEGMENTED_UNMAPPED_ADDRESS);
-    assert(synthetic_fault.guest_address == N64_ADDR(0x80000100));
+    assert(synthetic_fault.guest_address == synthetic_leaf_address);
     assert(synthetic_fault.width == 4);
     assert(synthetic_fault.access == N64_SEGMENTED_ACCESS_READ);
     assert(synthetic_leaf_continuations == 0);
