@@ -505,6 +505,14 @@ static __attribute__((noinline, noipa)) int run_segmented_probe(void) {
         (uint32_t *)(void *)segmented_extended) {
         return fail_u32("CTX_TO_PTR_EXTENSION", 0, 1);
     }
+    if (N64_RECOMP_TO_PTR(uint32_t, rdram_token,
+                          UINT64_C(0xFFFFFFFF80800001)) != NULL) {
+        return fail_u32("CTX_TO_PTR_MISALIGNED_ACCEPTED", 1, 0);
+    }
+    CHECK_SEGMENTED("CTX_TO_PTR_MISALIGNED_REJECT",
+        n64_recomp_memory_last_error(rdram_token),
+        N64_SEGMENTED_MISALIGNED_ADDRESS);
+    n64_recomp_memory_clear_error(rdram_token);
     if (N64_RECOMP_TO_PTR_VOID(rdram_token,
                                UINT64_C(0xFFFFFFFFA4600010)) != NULL) {
         return fail_u32("CTX_TO_PTR_MMIO_NULL", 1, 0);
