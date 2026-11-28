@@ -157,7 +157,7 @@ extern "C" int run_opaque_ostask_resolve_probe(uint8_t *rdram_token) {
 
     /* The entire OSTask object must fit; a valid first byte is insufficient. */
     OSTask *crossing_task = N64_RECOMP_TO_PTR(
-        OSTask, rdram_token, UINT64_C(0xFFFFFFFF80000FFF));
+        OSTask, rdram_token, UINT64_C(0xFFFFFFFF80000FF8));
     if (crossing_task != nullptr ||
         n64_recomp_memory_last_error(rdram_token) !=
             N64_SEGMENTED_RANGE_CROSSES_REGION) {
