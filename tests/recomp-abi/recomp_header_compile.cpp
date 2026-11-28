@@ -1,6 +1,7 @@
 #include <recomp.h>
 
 #include "n64_memory_be.h"
+#include "ppc_memory_lane_compat.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -13,15 +14,23 @@
 #error "This probe must be compiled for the big-endian PowerPC target"
 #endif
 
-#ifndef __SIZEOF_INT128__
-#error "The pinned recompiler header requires compiler support for __int128"
+#if !RECOMP_MEM_HOST_IS_BIG_ENDIAN
+#error "The patched N64 memory macros must select natural big-endian byte lanes"
 #endif
+
+static_assert(RECOMP_MEM_BYTE_LANE(0x100) == 0x100, "PowerPC byte lanes must not be XOR-adjusted");
+static_assert(RECOMP_MEM_HALF_LANE(0x100) == 0x100, "PowerPC halfword lanes must not be XOR-adjusted");
 
 static_assert(sizeof(void *) == 4, "Wii/GameCube target pointers must be 32-bit");
 static_assert(sizeof(uintptr_t) == 4, "Wii/GameCube uintptr_t must be 32-bit");
 static_assert(sizeof(gpr) == 8, "N64 general-purpose register slots are 64-bit");
 static_assert(sizeof(fpr) == 8, "N64 floating-point register slots are 64-bit");
-static_assert(sizeof(__int128) == 16, "128-bit intermediate arithmetic is required");
+static_assert(offsetof(fpr, d) == 0, "FPR double must start at offset zero");
+static_assert(offsetof(fpr, u64) == 0, "FPR 64-bit integer must start at offset zero");
+static_assert(offsetof(fpr, fh) == 0, "Big-endian FPR high float must be first");
+static_assert(offsetof(fpr, fl) == 4, "Big-endian FPR low float must be second");
+static_assert(offsetof(fpr, u32h) == 0, "Big-endian FPR high word must be first");
+static_assert(offsetof(fpr, u32l) == 4, "Big-endian FPR low word must be second");
 static_assert(offsetof(recomp_context, hi) == 512, "Unexpected recomp_context HI offset");
 static_assert(offsetof(recomp_context, lo) == 520, "Unexpected recomp_context LO offset");
 static_assert(offsetof(recomp_context, f_odd) == 528, "Unexpected recomp_context pointer offset");

@@ -39,9 +39,62 @@ jobs:
             tests/recomp-abi/test_n64_memory_be.c \
             -o /tmp/test_n64_memory_be
           /tmp/test_n64_memory_be
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_n64_segmented_memory.c \
+            -o /tmp/test_n64_segmented_memory
+          /tmp/test_n64_segmented_memory
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_n64_recomp_memory_api.c \
+            -o /tmp/test_n64_recomp_memory_api
+          /tmp/test_n64_recomp_memory_api
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_rsp_dmem_endian.c \
+            -o /tmp/test_rsp_dmem_endian
+          /tmp/test_rsp_dmem_endian
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_rsp_dmem_lane_selector.c \
+            -o /tmp/test_rsp_dmem_lane_le
+          /tmp/test_rsp_dmem_lane_le
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_rsp_vector_register_endian.c \
+            -o /tmp/test_rsp_vector_register_endian
+          /tmp/test_rsp_vector_register_endian
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_rsp_vector_register_lane_selector.c \
+            -o /tmp/test_rsp_vector_lane_le
+          /tmp/test_rsp_vector_lane_le
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            -DN64_RSP_VECTOR_FORCE_BIG_ENDIAN_FOR_TEST=1 \
+            tests/recomp-abi/test_rsp_vector_register_lane_selector.c \
+            -o /tmp/test_rsp_vector_lane_be
+          /tmp/test_rsp_vector_lane_be
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            -DN64_RSP_FORCE_BIG_ENDIAN_FOR_TEST=1 \
+            tests/recomp-abi/test_rsp_dmem_lane_selector.c \
+            -o /tmp/test_rsp_dmem_lane_be
+          /tmp/test_rsp_dmem_lane_be
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_memory_lane_selector.c \
+            -o /tmp/test_memory_lane_le
+          /tmp/test_memory_lane_le
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            -DRECOMP_MEMORY_FORCE_BIG_ENDIAN_FOR_TEST=1 \
+            tests/recomp-abi/test_memory_lane_selector.c \
+            -o /tmp/test_memory_lane_be
+          /tmp/test_memory_lane_be
+          cc -std=c11 -Wall -Wextra -Werror -pedantic \
+            tests/recomp-abi/test_ppc_mul64.c \
+            -o /tmp/test_ppc_mul64
+          /tmp/test_ppc_mul64
+
+      - name: Test Dolphin GDB Remote Serial Protocol client
+        run: |
+          python3 -m unittest discover \
+            -s tests/recomp-abi/runtime-probe \
+            -p 'test_*.py' -v
 
   cross-compile-upstream-header:
-    name: Compile pinned N64Recomp header for GameCube and Wii
+    name: Compile pinned N64Recomp header with portable multiply fallback
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
@@ -76,6 +129,23 @@ jobs:
           test -s "$repo_dir/include/recomp.h"
           echo "Pinned N64Recomp header: $(git -C "$repo_dir" rev-parse HEAD)"
 
+          runtime_dir="$RUNNER_TEMP/N64ModernRuntime"
+          mkdir -p "$runtime_dir"
+          git -C "$runtime_dir" init
+          git -C "$runtime_dir" remote add origin https://github.com/dguillot-gh/N64ModernRuntime.git
+          git -C "$runtime_dir" fetch --depth=1 origin 63b808662fc8b604e09552f7c2c8cc7015e8313c
+          git -C "$runtime_dir" checkout --detach FETCH_HEAD
+          test "$(git -C "$runtime_dir" rev-parse HEAD)" = "63b808662fc8b604e09552f7c2c8cc7015e8313c"
+          test -s "$runtime_dir/librecomp/include/librecomp/rsp_vu.hpp"
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/extract_rsp_r128_accessor.py" \
+            --source "$runtime_dir/librecomp/include/librecomp/rsp_vu.hpp" \
+            --output "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe/pinned_rsp_r128_accessor.hpp"
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/extract_rsp_dmem_accessors.py" \
+            --source "$runtime_dir/librecomp/include/librecomp/rsp.hpp" \
+            --output "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe/pinned_rsp_dmem_accessors.hpp"
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/patch_recomp_header_for_ppc.py" \
+            "$repo_dir/include/recomp.h"
+
       - name: Cross-compile ABI probe for GameCube and Wii
         shell: bash
         run: |
@@ -97,7 +167,118 @@ jobs:
               -I"$header_dir" -I"$GITHUB_WORKSPACE/tests/recomp-abi" \
               -c "$source_file" \
               -o "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o"
-            powerpc-eabi-readelf -h "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o" \
-              | grep -E 'Class:.*ELF32|Data:.*big endian|Machine:.*PowerPC'
+            readelf_header="$(powerpc-eabi-readelf -h "$RUNNER_TEMP/recomp-abi-build/recomp-header-$target.o")"
+            grep -qE 'Class:.*ELF32' <<< "$readelf_header"
+            grep -qE 'Data:.*big endian' <<< "$readelf_header"
+            grep -qE 'Machine:.*PowerPC' <<< "$readelf_header"
+            echo "$readelf_header" | grep -E 'Class:|Data:|Machine:'
             echo "::endgroup::"
           done
+
+      - name: Build a native GameCube DOL that executes the N64 memory helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$DEVKITPPC/bin:$PATH"
+          cd "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe"
+          make clean
+          make N64RECOMP_INCLUDE="$RUNNER_TEMP/N64Recomp/include" \
+            N64MODERN_RUNTIME_INCLUDE="$RUNNER_TEMP/N64ModernRuntime/ultramodern/include"
+          python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/pad_dol.py" recomp_memory_probe.dol
+          test -s recomp_memory_probe.dol
+          test -s recomp_memory_probe.elf
+          python3 "$GITHUB_WORKSPACE/gamecube-demo/tools/validate_artifacts.py" recomp_memory_probe.dol recomp_memory_probe.elf
+          symbols_file=recomp_memory_probe.symbols
+          : > "$symbols_file"
+          nm_output="$(powerpc-eabi-nm -n recomp_memory_probe.elf)"
+          echo "Probe marker symbols reported by nm:"
+          printf '%s\n' "$nm_output" | grep -E 'probe_(start|pass|fail)_marker|g_probe_' || true
+          for symbol in g_probe_stage g_probe_failure_code g_probe_failure_label g_probe_failure_actual g_probe_failure_expected probe_start_marker probe_pass_marker probe_fail_marker; do
+            echo "Resolving required symbol: $symbol"
+            address="$(printf '%s\n' "$nm_output" | awk -v wanted="$symbol" '$NF == wanted { print $(NF-2); found = 1 } END { if (!found) exit 1 }')" || {
+              echo "::error::Required symbol $symbol is missing from recomp_memory_probe.elf"
+              exit 1
+            }
+            test -n "$address"
+            printf '%s %s\n' "$symbol" "$address" >> "$symbols_file"
+          done
+          printf '%s\n' "$nm_output" | awk 'NF >= 3 && $NF != "" && $(NF-1) ~ /^[tT]$/ { print $NF, $(NF-2) }' >> "$symbols_file"
+          cat "$symbols_file"
+
+      - name: Upload the native PowerPC memory-probe DOL and symbols
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned actions/upload-artifact v7.0.2
+        with:
+          name: recomp-powerpc-memory-probe
+          path: |
+            tests/recomp-abi/runtime-probe/recomp_memory_probe.dol
+            tests/recomp-abi/runtime-probe/recomp_memory_probe.symbols
+          if-no-files-found: error
+          retention-days: 3
+
+  run-powerpc-memory-probe-in-dolphin:
+    name: Execute the native PowerPC memory probe in Dolphin
+    needs: [cross-compile-upstream-header]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the GameCube DOL and symbols
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned actions/download-artifact v4.3.0
+        with:
+          name: recomp-powerpc-memory-probe
+          path: memory-probe-artifact
+
+      - name: Install Dolphin headless dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu
+
+      - name: Run the PowerPC DOL and inspect its stage over GDB
+        shell: bash
+        run: |
+          set -euo pipefail
+          dol="$(find "$GITHUB_WORKSPACE/memory-probe-artifact" -type f -name recomp_memory_probe.dol -print -quit)"
+          symbols="$(find "$GITHUB_WORKSPACE/memory-probe-artifact" -type f -name recomp_memory_probe.symbols -print -quit)"
+          test -n "$dol"
+          test -n "$symbols"
+          command -v dolphin-emu-nogui
+          dolphin-emu-nogui --version
+          mkdir -p "$GITHUB_WORKSPACE/recomp-probe-logs" /tmp/recomp-dolphin-user
+          python3 "$GITHUB_WORKSPACE/tests/recomp-abi/runtime-probe/dolphin_gdb_probe.py" \
+            --dolphin dolphin-emu-nogui \
+            --dol "$dol" \
+            --symbols "$symbols" \
+            --user-dir /tmp/recomp-dolphin-user \
+            --stdout-log /tmp/recomp-dolphin-stdout.log \
+            --port 55000 \
+            --run-seconds 1.5 \
+            --connect-timeout 30
+          cat /tmp/recomp-dolphin-stdout.log
+          cp /tmp/recomp-dolphin-stdout.log "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin-stdout.log"
+          cp /tmp/recomp-dolphin-user/Logs/dolphin.log "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin.log" 2>/dev/null || true
+
+      - name: Collect Dolphin startup logs
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/recomp-probe-logs"
+          cp /tmp/recomp-dolphin-stdout.log "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin-stdout.log" 2>/dev/null || true
+          cp /tmp/recomp-dolphin-user/Logs/dolphin.log "$GITHUB_WORKSPACE/recomp-probe-logs/dolphin.log" 2>/dev/null || true
+
+      - name: Upload Dolphin OSReport and startup logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned actions/upload-artifact v7.0.2
+        with:
+          name: recomp-powerpc-memory-probe-logs
+          path: recomp-probe-logs/
+          if-no-files-found: warn
+          retention-days: 3
