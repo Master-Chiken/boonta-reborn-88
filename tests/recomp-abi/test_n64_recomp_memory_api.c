@@ -147,6 +147,7 @@ int main(void)
     int8_t try_signed_byte;
     guest_object *object;
     uint8_t *saved_rdram;
+    size_t saved_rdram_size;
 
     memset(&memory, 0, sizeof(memory));
     memset(&callbacks, 0, sizeof(callbacks));
@@ -330,12 +331,15 @@ int main(void)
     n64_recomp_memory_clear_error(token);
 
     saved_rdram = memory.rdram;
+    saved_rdram_size = memory.rdram_size;
     memory.rdram = rdram + 1; /* Guest address is aligned; host backing is not. */
+    memory.rdram_size = sizeof(rdram) - 1;
     assert(N64_RECOMP_TO_PTR(
                guest_object, token, N64_ADDR(0x80000200)) == NULL);
     assert(n64_recomp_memory_last_error(token) ==
            N64_SEGMENTED_MISALIGNED_ADDRESS);
     memory.rdram = saved_rdram;
+    memory.rdram_size = saved_rdram_size;
     n64_recomp_memory_clear_error(token);
 
     assert(n64_recomp_to_host_pointer_aligned(
