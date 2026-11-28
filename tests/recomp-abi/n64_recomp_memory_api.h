@@ -61,6 +61,7 @@ static inline void n64_recomp_memory_handle_init(
         if (validation == N64_SEGMENTED_OK) {
             handle->memory_snapshot = *memory;
             handle->memory_snapshot_valid = 1;
+            handle->memory = NULL; /* The validated snapshot now owns the map. */
         }
     }
     handle->last_error = validation;
@@ -192,7 +193,7 @@ static inline n64_segmented_result n64_recomp_try_load(
     uint64_t value = 0;
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL || output == NULL) {
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL || output == NULL) {
         result = N64_SEGMENTED_INVALID_ARGUMENT;
     } else {
         result = n64_recomp_memory_read(
@@ -321,7 +322,7 @@ static inline n64_segmented_result n64_recomp_try_store(
     n64_recomp_memory_handle *handle = n64_recomp_memory_from_token(token);
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL) {
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL) {
         result = N64_SEGMENTED_INVALID_ARGUMENT;
     } else {
         result = n64_recomp_memory_write(
@@ -371,7 +372,7 @@ static inline uint64_t n64_recomp_load_unsigned(
     uint64_t value = 0;
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL) {
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL) {
         n64_recomp_memory_record_fault(
             handle, N64_SEGMENTED_INVALID_ARGUMENT, guest_address, width,
             N64_SEGMENTED_ACCESS_READ);
@@ -430,7 +431,7 @@ static inline n64_segmented_result n64_recomp_store(
     n64_recomp_memory_handle *handle = n64_recomp_memory_from_token(token);
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL) {
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL) {
         result = N64_SEGMENTED_INVALID_ARGUMENT;
     } else {
         result = n64_recomp_memory_write(handle, guest_address, width, value);
@@ -485,7 +486,7 @@ static inline n64_segmented_result n64_recomp_copy_from_guest(
     uint8_t *source = NULL;
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL ||
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL ||
         destination == NULL || length == 0) {
         result = N64_SEGMENTED_INVALID_ARGUMENT;
     } else {
@@ -515,7 +516,7 @@ static inline n64_segmented_result n64_recomp_copy_to_guest(
     uint8_t *destination = NULL;
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL ||
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL ||
         source == NULL || length == 0) {
         result = N64_SEGMENTED_INVALID_ARGUMENT;
     } else {
@@ -547,7 +548,7 @@ static inline void *n64_recomp_to_host_pointer(
     uint8_t *host_pointer = NULL;
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL) {
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL) {
         result = N64_SEGMENTED_INVALID_ARGUMENT;
     } else {
         result = n64_recomp_memory_host_pointer(
@@ -580,7 +581,7 @@ static inline void *n64_recomp_to_host_pointer_aligned(
     uint8_t *host_pointer = NULL;
     n64_segmented_result result;
 
-    if (handle == NULL || handle->memory == NULL ||
+    if (handle == NULL || n64_recomp_memory_map(handle) == NULL ||
         alignment == 0 || (alignment & (alignment - 1)) != 0) {
         result = N64_SEGMENTED_INVALID_ARGUMENT;
     } else if ((guest_address & (uint64_t)(alignment - 1)) != 0) {
