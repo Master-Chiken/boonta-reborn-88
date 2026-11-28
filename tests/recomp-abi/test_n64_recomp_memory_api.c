@@ -98,11 +98,11 @@ static void synthetic_guest_root(uint8_t *token)
     ++synthetic_root_continuations;
 }
 
-static uint8_t rdram[0x4000];
-static uint8_t extended[0x2000];
-static uint8_t mod_ram[0x100];
-static uint8_t heap[0x200];
-static uint8_t rom[16];
+static _Alignas(16) uint8_t rdram[0x4000];
+static _Alignas(16) uint8_t extended[0x2000];
+static _Alignas(16) uint8_t mod_ram[0x100];
+static _Alignas(16) uint8_t heap[0x200];
+static _Alignas(16) uint8_t rom[16];
 
 static int mmio_access(
     void *context,
@@ -146,6 +146,7 @@ int main(void)
     uint32_t try_word;
     int8_t try_signed_byte;
     guest_object *object;
+    uint8_t *saved_rdram;
 
     memset(&memory, 0, sizeof(memory));
     memset(&callbacks, 0, sizeof(callbacks));
@@ -320,6 +321,28 @@ int main(void)
     assert(N64_RECOMP_TO_PTR_VOID(token, N64_ADDR(0xA0000100)) == rdram + 0x100);
     assert(N64_RECOMP_TO_PTR(guest_object, token, N64_ADDR(0x80800010)) ==
            (guest_object *)(void *)(extended + 0x10));
+
+    /* Typed object pointers reject misaligned guest and host backing ranges. */
+    assert(N64_RECOMP_TO_PTR(
+               guest_object, token, N64_ADDR(0x80000201)) == NULL);
+    assert(n64_recomp_memory_last_error(token) ==
+           N64_SEGMENTED_MISALIGNED_ADDRESS);
+    n64_recomp_memory_clear_error(token);
+
+    saved_rdram = memory.rdram;
+    memory.rdram = rdram + 1; /* Guest address is aligned; host backing is not. */
+    assert(N64_RECOMP_TO_PTR(
+               guest_object, token, N64_ADDR(0x80000200)) == NULL);
+    assert(n64_recomp_memory_last_error(token) ==
+           N64_SEGMENTED_MISALIGNED_ADDRESS);
+    memory.rdram = saved_rdram;
+    n64_recomp_memory_clear_error(token);
+
+    assert(n64_recomp_to_host_pointer_aligned(
+               token, N64_ADDR(0x80000200), sizeof(guest_object), 3) == NULL);
+    assert(n64_recomp_memory_last_error(token) ==
+           N64_SEGMENTED_INVALID_ARGUMENT);
+    n64_recomp_memory_clear_error(token);
 
     /* MMIO is accessed by the typed callback, never converted into a C pointer. */
     value = n64_recomp_load_u32(token, N64_ADDR(0xA4600010));
