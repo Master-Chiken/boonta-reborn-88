@@ -494,8 +494,57 @@ static inline void *n64_recomp_to_host_pointer(
     return host_pointer;
 }
 
+/*
+ * Typed object resolution must satisfy both the guest ABI alignment and the
+ * alignment of the host backing pointer. The latter matters when segmented
+ * regions are backed by separately allocated MEM1/MEM2 buffers.
+ */
+static inline void *n64_recomp_to_host_pointer_aligned(
+    uint8_t *token,
+    uint64_t guest_address,
+    size_t object_size,
+    size_t alignment)
+{
+    n64_recomp_memory_handle *handle = n64_recomp_memory_from_token(token);
+    uint8_t *host_pointer = NULL;
+    n64_segmented_result result;
+
+    if (handle == NULL || handle->memory == NULL ||
+        alignment == 0 || (alignment & (alignment - 1)) != 0) {
+        result = N64_SEGMENTED_INVALID_ARGUMENT;
+    } else if ((guest_address & (uint64_t)(alignment - 1)) != 0) {
+        result = N64_SEGMENTED_MISALIGNED_ADDRESS;
+    } else {
+        result = n64_segmented_host_pointer_for_guest(
+            handle->memory, guest_address, object_size,
+            N64_SEGMENTED_ACCESS_READ, &host_pointer);
+        if (result == N64_SEGMENTED_OK &&
+            ((uintptr_t)host_pointer & (uintptr_t)(alignment - 1)) != 0) {
+            host_pointer = NULL;
+            result = N64_SEGMENTED_MISALIGNED_ADDRESS;
+        }
+    }
+
+    if (result != N64_SEGMENTED_OK) {
+        n64_recomp_memory_record_fault(
+            handle, result, guest_address, object_size,
+            N64_SEGMENTED_ACCESS_READ);
+        return NULL;
+    }
+
+    handle->last_error = N64_SEGMENTED_OK;
+    return host_pointer;
+}
+
+#if defined(__cplusplus)
+#define N64_RECOMP_ALIGNOF(type) alignof(type)
+#else
+#define N64_RECOMP_ALIGNOF(type) _Alignof(type)
+#endif
+
 #define N64_RECOMP_TO_PTR(type, token, guest_address) \
-    ((type *)n64_recomp_to_host_pointer((token), (guest_address), sizeof(type)))
+    ((type *)n64_recomp_to_host_pointer_aligned( \
+        (token), (guest_address), sizeof(type), N64_RECOMP_ALIGNOF(type)))
 
 #define N64_RECOMP_TO_PTR_VOID(token, guest_address) \
     ((void *)n64_recomp_to_host_pointer((token), (guest_address), 1))
