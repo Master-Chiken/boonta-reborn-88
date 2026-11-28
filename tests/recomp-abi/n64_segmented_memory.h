@@ -399,7 +399,7 @@ static inline void n64_segmented_write_be(
     }
 }
 
-static inline n64_segmented_result n64_segmented_read(
+static inline n64_segmented_result n64_segmented_read_validated(
     const n64_segmented_memory *memory,
     uint64_t n64_address,
     size_t width,
@@ -411,9 +411,6 @@ static inline n64_segmented_result n64_segmented_read(
 
     if (memory == NULL || value == NULL) return N64_SEGMENTED_INVALID_ARGUMENT;
     if (!n64_segmented_width_supported(width)) return N64_SEGMENTED_UNSUPPORTED_WIDTH;
-
-    result = n64_segmented_memory_validate(memory);
-    if (result != N64_SEGMENTED_OK) return result;
 
     result = n64_segmented_resolve(
         memory, n64_address, width, N64_SEGMENTED_ACCESS_READ, &span);
@@ -451,7 +448,20 @@ static inline n64_segmented_result n64_segmented_read(
     }
 }
 
-static inline n64_segmented_result n64_segmented_write(
+static inline n64_segmented_result n64_segmented_read(
+    const n64_segmented_memory *memory,
+    uint64_t n64_address,
+    size_t width,
+    uint64_t *value)
+{
+    n64_segmented_result result;
+    if (memory == NULL) return N64_SEGMENTED_INVALID_ARGUMENT;
+    result = n64_segmented_memory_validate(memory);
+    if (result != N64_SEGMENTED_OK) return result;
+    return n64_segmented_read_validated(memory, n64_address, width, value);
+}
+
+static inline n64_segmented_result n64_segmented_write_validated(
     const n64_segmented_memory *memory,
     uint64_t n64_address,
     size_t width,
@@ -462,9 +472,6 @@ static inline n64_segmented_result n64_segmented_write(
 
     if (memory == NULL) return N64_SEGMENTED_INVALID_ARGUMENT;
     if (!n64_segmented_width_supported(width)) return N64_SEGMENTED_UNSUPPORTED_WIDTH;
-
-    result = n64_segmented_memory_validate(memory);
-    if (result != N64_SEGMENTED_OK) return result;
 
     result = n64_segmented_resolve(
         memory, n64_address, width, N64_SEGMENTED_ACCESS_WRITE, &span);
@@ -495,13 +502,26 @@ static inline n64_segmented_result n64_segmented_write(
     }
 }
 
+static inline n64_segmented_result n64_segmented_write(
+    const n64_segmented_memory *memory,
+    uint64_t n64_address,
+    size_t width,
+    uint64_t value)
+{
+    n64_segmented_result result;
+    if (memory == NULL) return N64_SEGMENTED_INVALID_ARGUMENT;
+    result = n64_segmented_memory_validate(memory);
+    if (result != N64_SEGMENTED_OK) return result;
+    return n64_segmented_write_validated(memory, n64_address, width, value);
+}
+
 /*
  * Resolve a guest address to a host pointer only when the entire range is
  * backed by one RAM segment. This is the safe replacement primitive for
  * libultra's TO_PTR(type, address). It refuses MMIO and ROM, which must be
  * reached via typed callbacks rather than arbitrary C pointer dereferences.
  */
-static inline n64_segmented_result n64_segmented_host_pointer_for_guest(
+static inline n64_segmented_result n64_segmented_host_pointer_for_guest_validated(
     const n64_segmented_memory *memory,
     uint64_t n64_address,
     size_t length,
@@ -515,9 +535,6 @@ static inline n64_segmented_result n64_segmented_host_pointer_for_guest(
         return N64_SEGMENTED_INVALID_ARGUMENT;
     }
     *host_pointer = NULL;
-
-    result = n64_segmented_memory_validate(memory);
-    if (result != N64_SEGMENTED_OK) return result;
 
     result = n64_segmented_resolve(memory, n64_address, length, access, &span);
     if (result != N64_SEGMENTED_OK) return result;
@@ -537,6 +554,21 @@ static inline n64_segmented_result n64_segmented_host_pointer_for_guest(
     default:
         return N64_SEGMENTED_UNMAPPED_ADDRESS;
     }
+}
+
+static inline n64_segmented_result n64_segmented_host_pointer_for_guest(
+    const n64_segmented_memory *memory,
+    uint64_t n64_address,
+    size_t length,
+    n64_segmented_access access,
+    uint8_t **host_pointer)
+{
+    n64_segmented_result result;
+    if (memory == NULL) return N64_SEGMENTED_INVALID_ARGUMENT;
+    result = n64_segmented_memory_validate(memory);
+    if (result != N64_SEGMENTED_OK) return result;
+    return n64_segmented_host_pointer_for_guest_validated(
+        memory, n64_address, length, access, host_pointer);
 }
 
 /*
