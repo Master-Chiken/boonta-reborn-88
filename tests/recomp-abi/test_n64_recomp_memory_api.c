@@ -146,8 +146,10 @@ int main(void)
     uint32_t try_word;
     int8_t try_signed_byte;
     guest_object *object;
+    n64_segmented_memory misaligned_memory;
+    n64_recomp_memory_handle misaligned_handle;
+    uint8_t *misaligned_token;
     uint8_t *saved_rdram;
-    size_t saved_rdram_size;
 
     memset(&memory, 0, sizeof(memory));
     memset(&callbacks, 0, sizeof(callbacks));
@@ -177,6 +179,8 @@ int main(void)
     assert(n64_segmented_memory_validate(&memory) == N64_SEGMENTED_OK);
     n64_recomp_memory_handle_init(&handle, &memory, synthetic_fault_observer, NULL);
     token = n64_recomp_memory_token(&handle);
+    assert(handle.memory_snapshot_valid);
+    assert(handle.memory == NULL); /* Valid configuration lives in the handle snapshot. */
     assert(token == (uint8_t *)(void *)&handle);
     assert(n64_recomp_memory_from_token(token) == &handle);
 
@@ -323,6 +327,14 @@ int main(void)
     assert(N64_RECOMP_TO_PTR(guest_object, token, N64_ADDR(0x80800010)) ==
            (guest_object *)(void *)(extended + 0x10));
 
+    /* Mutating the caller's source map cannot alter an initialized handle. */
+    saved_rdram = memory.rdram;
+    memory.rdram = extended;
+    assert(N64_RECOMP_TO_PTR(
+               guest_object, token, N64_ADDR(0x80000200)) ==
+           (guest_object *)(void *)(rdram + 0x200));
+    memory.rdram = saved_rdram;
+
     /* Typed object pointers reject misaligned guest and host backing ranges. */
     assert(N64_RECOMP_TO_PTR(
                guest_object, token, N64_ADDR(0x80000201)) == NULL);
@@ -330,17 +342,18 @@ int main(void)
            N64_SEGMENTED_MISALIGNED_ADDRESS);
     n64_recomp_memory_clear_error(token);
 
-    saved_rdram = memory.rdram;
-    saved_rdram_size = memory.rdram_size;
-    memory.rdram = rdram + 1; /* Guest address is aligned; host backing is not. */
-    memory.rdram_size = sizeof(rdram) - 1;
+    misaligned_memory = memory;
+    misaligned_memory.rdram = rdram + 1;
+    misaligned_memory.rdram_size = sizeof(rdram) - 1;
+    n64_recomp_memory_handle_init(
+        &misaligned_handle, &misaligned_memory, NULL, NULL);
+    assert(misaligned_handle.memory_snapshot_valid);
+    misaligned_token = n64_recomp_memory_token(&misaligned_handle);
     assert(N64_RECOMP_TO_PTR(
-               guest_object, token, N64_ADDR(0x80000200)) == NULL);
-    assert(n64_recomp_memory_last_error(token) ==
+               guest_object, misaligned_token, N64_ADDR(0x80000200)) == NULL);
+    assert(n64_recomp_memory_last_error(misaligned_token) ==
            N64_SEGMENTED_MISALIGNED_ADDRESS);
-    memory.rdram = saved_rdram;
-    memory.rdram_size = saved_rdram_size;
-    n64_recomp_memory_clear_error(token);
+    n64_recomp_memory_clear_error(misaligned_token);
 
     assert(n64_recomp_to_host_pointer_aligned(
                token, N64_ADDR(0x80000200), sizeof(guest_object), 3) == NULL);
